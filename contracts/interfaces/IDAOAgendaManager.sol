@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.7.6;
-pragma abicoder v2;
+pragma solidity ^0.8.17;
 
 import { LibAgenda } from "../lib/Agenda.sol";
-import { IDAOCommittee } from "../interfaces/IDAOCommittee.sol";
+// import { IDAOCommittee } from "../interfaces/IDAOCommittee.sol";
 
 interface IDAOAgendaManager  {
     struct Ratio {
@@ -78,7 +77,7 @@ interface IDAOAgendaManager  {
     function getStatus(uint256 _createAgendaFees) external pure returns (LibAgenda.AgendaStatus);
 
     // getter
-    function committee() external view returns (IDAOCommittee);
+    // function committee() external view returns (IDAOCommittee);
     function createAgendaFees() external view returns (uint256);
     function minimumNoticePeriodSeconds() external view returns (uint256);
     function minimumVotingPeriodSeconds() external view returns (uint256);
