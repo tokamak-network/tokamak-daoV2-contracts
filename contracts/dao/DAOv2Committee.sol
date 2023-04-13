@@ -724,7 +724,7 @@ contract DAOCommittee is
 
     function _decodeAgendaData(bytes calldata input)
         internal
-        view
+        pure
         returns (AgendaCreatingData memory data)
     {
         (data.target, data.noticePeriodSeconds, data.votingPeriodSeconds, data.atomicExecute, data.functionBytecode) = 

@@ -10,13 +10,13 @@ module.exports = {
       {
         version: '0.8.17',
         settings: {
-          optimizer: { enabled: true, runs: 10_000 },
+          optimizer: { enabled: true, runs: 200 },
         },
       },
       {
         version: '0.7.6', // Required for previous version
         settings: {
-          optimizer: { enabled: true, runs: 10_000 },
+          optimizer: { enabled: true, runs: 200 },
         },
       },
     ],
