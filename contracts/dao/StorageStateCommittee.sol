@@ -4,11 +4,14 @@ pragma abicoder v2;
 
 import { IStorageStateCommittee } from "../interfaces/IStorageStateCommittee.sol";
 import { ICandidateFactory } from "../interfaces/ICandidateFactory.sol";
-import { ILayer2Registry } from "../interfaces/ILayer2Registry.sol";
 import { ISeigManager } from "../interfaces/ISeigManager.sol";
 import { IDAOAgendaManager } from "../interfaces/IDAOAgendaManager.sol";
 import { IDAOVault } from "../interfaces/IDAOVault.sol";
 import { ICandidate } from "../interfaces/ICandidate.sol";
+// import { ILayer2Registry } from "../interfaces/ILayer2Registry.sol";
+
+//new add
+import { ILayer2Manager } from "../interfaces/ILayer2Manager.sol";
 
 contract StorageStateCommittee is IStorageStateCommittee {
     enum AgendaStatus { NONE, NOTICE, VOTING, EXEC, ENDED, PENDING, RISK }
@@ -18,7 +21,7 @@ contract StorageStateCommittee is IStorageStateCommittee {
     IDAOVault public override daoVault;
     IDAOAgendaManager public override agendaManager;
     ICandidateFactory public override candidateFactory;
-    ILayer2Registry public override layer2Registry;
+    ILayer2Manager public override layer2Manager;
     ISeigManager public override seigManager;
 
     address[] public override candidates;
@@ -41,8 +44,8 @@ contract StorageStateCommittee is IStorageStateCommittee {
         _;
     }
 
-    modifier validLayer2Registry() {
-        require(address(layer2Registry) != address(0), "StorageStateCommittee: invalid Layer2Registry");
+    modifier validLayer2Manager() {
+        require(address(layer2Manager) != address(0), "StorageStateCommittee: invalid Layer2Manager");
         _;
     }
 

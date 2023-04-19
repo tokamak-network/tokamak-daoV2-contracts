@@ -3,10 +3,13 @@ pragma solidity ^0.8.17;
 pragma abicoder v2;
 
 import { ICandidateFactory } from "../interfaces/ICandidateFactory.sol";
-import { ILayer2Registry } from "../interfaces/ILayer2Registry.sol";
+// import { ILayer2Registry } from "../interfaces/ILayer2Registry.sol";
 import { ISeigManager } from "../interfaces/ISeigManager.sol";
 import { IDAOAgendaManager } from "../interfaces/IDAOAgendaManager.sol";
 import { IDAOVault } from "../interfaces/IDAOVault.sol";
+
+//new add
+import { ILayer2Manager } from "../interfaces/ILayer2Manager.sol";
 
 interface IStorageStateCommittee {
     struct CandidateInfo {
@@ -21,7 +24,7 @@ interface IStorageStateCommittee {
     function daoVault() external returns (IDAOVault);
     function agendaManager() external returns (IDAOAgendaManager);
     function candidateFactory() external returns (ICandidateFactory);
-    function layer2Registry() external returns (ILayer2Registry);
+    function layer2Manager() external returns (ILayer2Manager);
     function seigManager() external returns (ISeigManager);
     function candidates(uint256 _index) external returns (address);
     function members(uint256 _index) external returns (address);
