@@ -23,7 +23,7 @@ contract DAOv2CommitteeProxy is
 
     function initialize(
         address _ton,
-        address _seigManager,
+        address _seigManagerV2,
         address _layer2Manager,
         address _agendaManager,
         address _candidateFactory,
@@ -31,15 +31,15 @@ contract DAOv2CommitteeProxy is
     ) external onlyProxyOwner {
         require(
             _ton != address(0)
-            || _seigManager != address(0)
+            || _seigManagerV2 != address(0)
             || _layer2Manager != address(0)
             || _agendaManager != address(0)
             || _candidateFactory != address(0),
             "DAOv2CommitteeProxy: input is zero"
         );
         ton = _ton;
-        seigManager = ISeigManager(_seigManager);
-        layer2Registry = ILayer2Manager(_layer2Manager);
+        seigManagerV2 = ISeigManagerV2(_seigManagerV2);
+        layer2Manager = ILayer2Manager(_layer2Manager);
         agendaManager = IDAOAgendaManager(_agendaManager);
         candidateFactory = ICandidateFactory(_candidateFactory);
         daoVault = IDAOVault(_daoVault);

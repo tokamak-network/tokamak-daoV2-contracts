@@ -4,7 +4,7 @@ pragma abicoder v2;
 
 import { IStorageStateCommittee } from "../interfaces/IStorageStateCommittee.sol";
 import { ICandidateFactory } from "../interfaces/ICandidateFactory.sol";
-import { ISeigManager } from "../interfaces/ISeigManager.sol";
+// import { ISeigManager } from "../interfaces/ISeigManager.sol";
 import { IDAOAgendaManager } from "../interfaces/IDAOAgendaManager.sol";
 import { IDAOVault } from "../interfaces/IDAOVault.sol";
 import { ICandidate } from "../interfaces/ICandidate.sol";
@@ -12,6 +12,7 @@ import { ICandidate } from "../interfaces/ICandidate.sol";
 
 //new add
 import { ILayer2Manager } from "../interfaces/ILayer2Manager.sol";
+import { ISeigManagerV2 } from "../interfaces/ISeigManagerV2.sol";
 
 contract StorageStateCommittee is IStorageStateCommittee {
     enum AgendaStatus { NONE, NOTICE, VOTING, EXEC, ENDED, PENDING, RISK }
@@ -22,7 +23,7 @@ contract StorageStateCommittee is IStorageStateCommittee {
     IDAOAgendaManager public override agendaManager;
     ICandidateFactory public override candidateFactory;
     ILayer2Manager public override layer2Manager;
-    ISeigManager public override seigManager;
+    ISeigManagerV2 public override seigManagerV2;
 
     address[] public override candidates;
     address[] public override members;
@@ -49,8 +50,8 @@ contract StorageStateCommittee is IStorageStateCommittee {
         _;
     }
 
-    modifier validSeigManager() {
-        require(address(seigManager) != address(0), "StorageStateCommittee: invalid SeigManagere");
+    modifier validSeigManagerV2() {
+        require(address(seigManagerV2) != address(0), "StorageStateCommittee: invalid SeigManagerV2");
         _;
     }
 

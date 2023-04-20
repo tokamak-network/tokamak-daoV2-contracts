@@ -113,10 +113,10 @@ contract DAOCommittee is
     //////////////////////////////////////////////////////////////////////
     // setters
 
-    /// @notice Set SeigManager contract address
-    /// @param _seigManager New SeigManager contract address
-    function setSeigManager(address _seigManager) external override onlyProxyOwner nonZero(_seigManager) {
-        seigManager = ISeigManager(_seigManager);
+    /// @notice Set SeigManagerV2 contract address
+    /// @param _seigManagerV2 New SeigManagerV2 contract address
+    function setSeigManagerV2(address _seigManagerV2) external override onlyProxyOwner nonZero(_seigManagerV2) {
+        seigManagerV2 = ISeigManagerV2(_seigManagerV2);
     }
      
     /// @notice Set SeigManager contract address on candidate contracts
@@ -159,10 +159,10 @@ contract DAOCommittee is
         daoVault = IDAOVault(_daoVault);
     }
 
-    /// @notice Set Layer2Registry contract address
-    /// @param _layer2Registry New Layer2Registry contract address
-    function setLayer2Registry(address _layer2Registry) external override onlyOwner nonZero(_layer2Registry) {
-        layer2Registry = ILayer2Registry(_layer2Registry);
+    /// @notice Set Layer2Manager contract address
+    /// @param _layer2Manager New Layer2Manager contract address
+    function setLayer2Manager(address _layer2Manager) external override onlyOwner nonZero(_layer2Manager) {
+        layer2Manager = ILayer2Manager(_layer2Manager);
     }
 
     /// @notice Set DAOAgendaManager contract address
@@ -217,8 +217,8 @@ contract DAOCommittee is
     function createCandidate(string calldata _memo)
         external
         override
-        validSeigManager
-        validLayer2Registry
+        validSeigManagerV2
+        validLayer2Manager
         validCommitteeL2Factory
     {
         require(!isExistCandidate(msg.sender), "DAOCommittee: candidate already registerd");
@@ -229,7 +229,7 @@ contract DAOCommittee is
             false,
             _memo,
             address(this),
-            address(seigManager)
+            address(seigManagerV2)
         );
 
         require(
@@ -240,10 +240,10 @@ contract DAOCommittee is
             _candidateInfos[msg.sender].candidateContract == address(0),
             "DAOCommittee: The candidate already has contract"
         );
-        require(
-            layer2Registry.registerAndDeployCoinage(candidateContract, address(seigManager)),
-            "DAOCommittee: failed to registerAndDeployCoinage"
-        );
+        // require(
+        //     layer2Registry.registerAndDeployCoinage(candidateContract, address(seigManager)),
+        //     "DAOCommittee: failed to registerAndDeployCoinage"
+        // );
 
         _candidateInfos[msg.sender] = CandidateInfo({
             candidateContract: candidateContract,
@@ -258,14 +258,38 @@ contract DAOCommittee is
         emit CandidateContractCreated(msg.sender, candidateContract, _memo);
     }
 
+    function createCandidateCall(
+        uint32 _sequencerIndex,
+        bytes32 _name,
+        uint16 _commission,
+        uint256 amount
+    )
+        external
+        validSeigManagerV2
+        validLayer2Manager
+        returns (bool)
+    {   
+        require(_sequencerIndex <= layer2Manager.indexSequencers(), "wrong index");
+        
+        //msg.sender는 Layer2Manager에게 미리 aamount만큼 pprove해야한다
+        (bool success, bytes memory data) = address(layer2Manager).delegatecall(
+            abi.encodeWithSignature(
+                "createCandidate(uint32,bytes32,uint16,uint256)", 
+                _sequencerIndex,_name,_commission,amount
+            )
+        );
+
+        return success;
+    }
+
     /// @notice Registers the exist layer2 on DAO
     /// @param _layer2 Layer2 contract address to be registered
     /// @param _memo A memo for the candidate
     function registerLayer2Candidate(address _layer2, string memory _memo)
         external
         override
-        validSeigManager
-        validLayer2Registry
+        validSeigManagerV2
+        validLayer2Manager
         validCommitteeL2Factory
     {
         _registerLayer2Candidate(msg.sender, _layer2, _memo);
@@ -279,8 +303,8 @@ contract DAOCommittee is
         external
         override
         onlyOwner
-        validSeigManager
-        validLayer2Registry
+        validSeigManagerV2
+        validLayer2Manager
         validCommitteeL2Factory
     {
         _registerLayer2Candidate(_operator, _layer2, _memo);
@@ -666,8 +690,8 @@ contract DAOCommittee is
 
     function _registerLayer2Candidate(address _operator, address _layer2, string memory _memo)
         internal
-        validSeigManager
-        validLayer2Registry
+        validSeigManagerV2
+        validLayer2Manager
         validCommitteeL2Factory
     {
         require(!isExistCandidate(_layer2), "DAOCommittee: candidate already registerd");
@@ -695,7 +719,7 @@ contract DAOCommittee is
             true,
             _memo,
             address(this),
-            address(seigManager)
+            address(seigManagerV2)
         );
 
         require(

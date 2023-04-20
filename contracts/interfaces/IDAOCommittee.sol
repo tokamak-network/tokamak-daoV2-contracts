@@ -6,10 +6,10 @@ import { IStorageStateCommittee } from "../interfaces/IStorageStateCommittee.sol
 
 interface IDAOCommittee is IStorageStateCommittee {
     //--owner
-    function setSeigManager(address _seigManager) external;
+    function setSeigManagerV2(address _seigManagerV2) external;
     function setCandidatesSeigManager(address[] calldata _candidateContracts, address _seigManager) external;
     function setCandidatesCommittee(address[] calldata _candidateContracts, address _committee) external;
-    function setLayer2Registry(address _layer2Registry) external;
+    function setLayer2Manager(address _layer2Manager) external;
     function setAgendaManager(address _agendaManager) external;
     function setCandidateFactory(address _candidateFactory) external;
     function setTon(address _ton) external;

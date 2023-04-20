@@ -44,6 +44,7 @@ interface ILayer2Manager {
     function claim(uint32 _layerIndex) external;
 
     //**** view ****//
+    function indexSequencers() external view returns (uint256);
     function minimumSecurityDepositAmount(address l1Bridge, address l2ton) external view returns (uint256 amount);
     function balanceOfLton(address account) external view returns (uint256 amount);
     function curTotalLayer2Deposits() external view returns (uint256 amount);
