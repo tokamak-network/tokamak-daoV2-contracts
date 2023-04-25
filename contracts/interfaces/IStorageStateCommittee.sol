@@ -14,7 +14,8 @@ import { ISeigManagerV2 } from "../interfaces/ISeigManagerV2.sol";
 
 interface IStorageStateCommittee {
     struct CandidateInfo {
-        address candidateContract;
+        uint32 sequencerIndex;
+        uint32 candidateIndex;
         uint256 indexMembers;
         uint128 memberJoinedTime;
         uint128 rewardPeriod;
@@ -35,6 +36,6 @@ interface IStorageStateCommittee {
     function activityRewardPerSecond() external returns (uint256);
 
     function isMember(address _candidate) external returns (bool);
-    function candidateContract(address _candidate) external returns (address);
+    // function candidateContract(address _candidate) external returns (address);
 }
 

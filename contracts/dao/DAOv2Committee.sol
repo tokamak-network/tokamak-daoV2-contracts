@@ -171,10 +171,18 @@ contract DAOCommittee is
         agendaManager = IDAOAgendaManager(_agendaManager);
     }
 
-    /// @notice Set CandidateFactory contract address
-    /// @param _candidateFactory New CandidateFactory contract address
-    function setCandidateFactory(address _candidateFactory) external override onlyOwner nonZero(_candidateFactory) {
-        candidateFactory = ICandidateFactory(_candidateFactory);
+    // /// @notice Set CandidateFactory contract address
+    // /// @param _candidateFactory New CandidateFactory contract address
+    // function setCandidateFactory(address _candidateFactory) external override onlyOwner nonZero(_candidateFactory) {
+    //     candidateFactory = ICandidateFactory(_candidateFactory);
+    // }
+
+    function setCandidates(address _candidate) external onlyOwner nonZero(_candidate) {
+        candidate = ICandidate(_candidate);
+    }
+
+    function setOptimismSequencer(address _sequencer) external onlyOwner nonZero(_sequencer) {
+
     }
 
     /// @notice Set TON contract address
@@ -212,51 +220,51 @@ contract DAOCommittee is
     //////////////////////////////////////////////////////////////////////
     // Managing members
 
-    /// @notice Creates a candidate contract and register it on SeigManager
-    /// @param _memo A memo for the candidate
-    function createCandidate(string calldata _memo)
-        external
-        override
-        validSeigManagerV2
-        validLayer2Manager
-        validCommitteeL2Factory
-    {
-        require(!isExistCandidate(msg.sender), "DAOCommittee: candidate already registerd");
+    // /// @notice Creates a candidate contract and register it on SeigManager
+    // /// @param _memo A memo for the candidate
+    // function createCandidate(string calldata _memo)
+    //     external
+    //     override
+    //     validSeigManagerV2
+    //     validLayer2Manager
+    //     validCommitteeL2Factory
+    // {
+    //     require(!isExistCandidate(msg.sender), "DAOCommittee: candidate already registerd");
 
-        // Candidate
-        address candidateContract = candidateFactory.deploy(
-            msg.sender,
-            false,
-            _memo,
-            address(this),
-            address(seigManagerV2)
-        );
+    //     // Candidate
+    //     address candidateContract = candidateFactory.deploy(
+    //         msg.sender,
+    //         false,
+    //         _memo,
+    //         address(this),
+    //         address(seigManagerV2)
+    //     );
 
-        require(
-            candidateContract != address(0),
-            "DAOCommittee: deployed candidateContract is zero"
-        );
-        require(
-            _candidateInfos[msg.sender].candidateContract == address(0),
-            "DAOCommittee: The candidate already has contract"
-        );
-        // require(
-        //     layer2Registry.registerAndDeployCoinage(candidateContract, address(seigManager)),
-        //     "DAOCommittee: failed to registerAndDeployCoinage"
-        // );
+    //     require(
+    //         candidateContract != address(0),
+    //         "DAOCommittee: deployed candidateContract is zero"
+    //     );
+    //     require(
+    //         _candidateInfos[msg.sender].candidateContract == address(0),
+    //         "DAOCommittee: The candidate already has contract"
+    //     );
+    //     require(
+    //         layer2Registry.registerAndDeployCoinage(candidateContract, address(seigManager)),
+    //         "DAOCommittee: failed to registerAndDeployCoinage"
+    //     );
 
-        _candidateInfos[msg.sender] = CandidateInfo({
-            candidateContract: candidateContract,
-            memberJoinedTime: 0,
-            indexMembers: 0,
-            rewardPeriod: 0,
-            claimedTimestamp: 0
-        });
+    //     _candidateInfos[msg.sender] = CandidateInfo({
+    //         candidateContract: candidateContract,
+    //         memberJoinedTime: 0,
+    //         indexMembers: 0,
+    //         rewardPeriod: 0,
+    //         claimedTimestamp: 0
+    //     });
 
-        candidates.push(msg.sender);
+    //     candidates.push(msg.sender);
        
-        emit CandidateContractCreated(msg.sender, candidateContract, _memo);
-    }
+    //     emit CandidateContractCreated(msg.sender, candidateContract, _memo);
+    // }
 
     function createCandidateCall(
         uint32 _sequencerIndex,
@@ -269,9 +277,10 @@ contract DAOCommittee is
         validLayer2Manager
         returns (bool)
     {   
+        require(!isExistCandidate(msg.sender), "DAOCommittee: candidate already registerd");
         require(_sequencerIndex <= layer2Manager.indexSequencers(), "wrong index");
         
-        //msg.sender는 Layer2Manager에게 미리 aamount만큼 pprove해야한다
+        //msg.sender는 Layer2Manager에게 미리 amount만큼 approve해야한다
         (bool success, bytes memory data) = address(layer2Manager).delegatecall(
             abi.encodeWithSignature(
                 "createCandidate(uint32,bytes32,uint16,uint256)", 
@@ -279,36 +288,86 @@ contract DAOCommittee is
             )
         );
 
+        uint32 candidateIndex = layer2Manager.indexCandidates()-1;
+
+        _candidateInfos[msg.sender] = CandidateInfo({
+            sequencerIndex: _sequencerIndex,
+            candidateIndex: candidateIndex,
+            memberJoinedTime: 0,
+            indexMembers: 0,
+            rewardPeriod: 0,
+            claimedTimestamp: 0
+        });
+
+        candidates.push(msg.sender);
+
         return success;
     }
 
-    /// @notice Registers the exist layer2 on DAO
-    /// @param _layer2 Layer2 contract address to be registered
-    /// @param _memo A memo for the candidate
-    function registerLayer2Candidate(address _layer2, string memory _memo)
+    function createOptimismSequencerCall(
+        bytes32 _name,
+        address addressManager,
+        address l2ton,
+        uint256 amount 
+    )
         external
-        override
         validSeigManagerV2
         validLayer2Manager
-        validCommitteeL2Factory
+        returns (bool)
     {
-        _registerLayer2Candidate(msg.sender, _layer2, _memo);
+        require(!isExistCandidate(msg.sender), "DAOCommittee: candidate already registerd");
+
+        //msg.sender는 Layer2Manager에게 미리 amount만큼 approve해야한다
+        (bool success, bytes memory data) = address(layer2Manager).delegatecall(
+            abi.encodeWithSignature(
+                "createOptimismSequencer(bytes32,address,address,uint256)", 
+                _name,addressManager,l2ton,amount
+            )
+        );
+
+        uint32 sequencerIndex = layer2Manager.indexSequencers()-1;
+
+        _candidateInfos[msg.sender] = CandidateInfo({
+            sequencerIndex: sequencerIndex,
+            candidateIndex: 0,
+            memberJoinedTime: 0,
+            indexMembers: 0,
+            rewardPeriod: 0,
+            claimedTimestamp: 0
+        });
+
+        candidates.push(msg.sender);
+
+        return success;
     }
 
-    /// @notice Registers the exist layer2 on DAO by owner
-    /// @param _operator Operator address of the layer2 contract
-    /// @param _layer2 Layer2 contract address to be registered
-    /// @param _memo A memo for the candidate
-    function registerLayer2CandidateByOwner(address _operator, address _layer2, string memory _memo)
-        external
-        override
-        onlyOwner
-        validSeigManagerV2
-        validLayer2Manager
-        validCommitteeL2Factory
-    {
-        _registerLayer2Candidate(_operator, _layer2, _memo);
-    }
+    // /// @notice Registers the exist layer2 on DAO
+    // /// @param _layer2 Layer2 contract address to be registered
+    // /// @param _memo A memo for the candidate
+    // function registerLayer2Candidate(address _layer2, string memory _memo)
+    //     external
+    //     override
+    //     validSeigManagerV2
+    //     validLayer2Manager
+    //     validCommitteeL2Factory
+    // {
+    //     _registerLayer2Candidate(msg.sender, _layer2, _memo);
+    // }
+
+    // /// @notice Registers the exist layer2 on DAO by owner
+    // /// @param _operator Operator address of the layer2 contract
+    // /// @param _layer2 Layer2 contract address to be registered
+    // /// @param _memo A memo for the candidate
+    // function registerLayer2CandidateByOwner(address _operator, address _layer2, string memory _memo)
+    //     external
+    //     override
+    //     onlyOwner
+    //     validSeigManagerV2
+    //     validLayer2Manager
+    //     validCommitteeL2Factory
+    // {
+    //     _registerLayer2Candidate(_operator, _layer2, _memo);
+    // }
 
     /// @notice Replaces an existing member
     /// @param _memberIndex The member slot index to be replaced
@@ -320,17 +379,19 @@ contract DAOCommittee is
         override
         validMemberIndex(_memberIndex)
         returns (bool)
-    {
-        address newMember = ICandidate(msg.sender).candidate();
+    {   
+        require(isExistCandidate(msg.sender), "DAOCommittee: not registerd");
+        address newMember = msg.sender;
+    
         CandidateInfo storage candidateInfo = _candidateInfos[newMember];
-        require(
-            ICandidate(msg.sender).isCandidateContract(),
-            "DAOCommittee: sender is not a candidate contract"
-        );
-        require(
-            candidateInfo.candidateContract == msg.sender,
-            "DAOCommittee: invalid candidate contract"
-        );
+        // require(
+        //     ICandidate(msg.sender).isCandidateContract(),
+        //     "DAOCommittee: sender is not a candidate contract"
+        // );
+        // require(
+        //     candidateInfo.candidateContract == msg.sender,
+        //     "DAOCommittee: invalid candidate contract"
+        // );
         require(
             candidateInfo.memberJoinedTime == 0,
             "DAOCommittee: already member"
@@ -883,7 +944,7 @@ contract DAOCommittee is
     }
 
     function isExistCandidate(address _candidate) public view override returns (bool isExist) {
-        return _candidateInfos[_candidate].candidateContract != address(0);
+        return _candidateInfos[_candidate].sequencerIndex != 0;
     }
 
     function getClaimableActivityReward(address _candidate) public view override returns (uint256) {

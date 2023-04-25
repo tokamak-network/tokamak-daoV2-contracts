@@ -25,6 +25,8 @@ contract StorageStateCommittee is IStorageStateCommittee {
     ILayer2Manager public override layer2Manager;
     ISeigManagerV2 public override seigManagerV2;
 
+    ICandidate public candidate;
+
     address[] public override candidates;
     address[] public override members;
     uint256 public override maxMember;
@@ -61,8 +63,8 @@ contract StorageStateCommittee is IStorageStateCommittee {
     }
 
     modifier onlyMemberContract() {
-        address candidate = ICandidate(msg.sender).candidate();
-        require(isMember(candidate), "StorageStateCommittee: not a member");
+        address candidate1 = ICandidate(msg.sender).candidate();
+        require(isMember(candidate1), "StorageStateCommittee: not a member");
         _;
     }
     
@@ -70,11 +72,11 @@ contract StorageStateCommittee is IStorageStateCommittee {
         return _candidateInfos[_candidate].memberJoinedTime > 0;
     }
 
-    function candidateContract(address _candidate) public view override returns (address) {
-        return _candidateInfos[_candidate].candidateContract;
-    }
+    // function candidateContract(address _candidate) public view override returns (address) {
+    //     return _candidateInfos[_candidate].candidateContract;
+    // }
 
-    function candidateInfos(address _candidate) external override returns (CandidateInfo memory) {
+    function candidateInfos(address _candidate) external view override returns (CandidateInfo memory) {
         return _candidateInfos[_candidate];
     }
 
