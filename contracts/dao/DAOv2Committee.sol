@@ -15,6 +15,14 @@ import { IDAOAgendaManager } from "../interfaces/IDAOAgendaManager.sol";
 import { LibAgenda } from "../lib/Agenda.sol";
 import { ERC165Checker } from "../../node_modules/@openzeppelin/contracts/utils/introspection/ERC165Checker.sol";
 
+interface ICandidate2 {
+    function balanceOfLton(uint32 _index) external view returns (uint256 amount);
+}
+
+interface ISequencer {
+    function balanceOfLton(uint32 _index) external view returns (uint256 amount);
+}
+
 contract DAOCommittee is 
     StorageStateCommittee, 
     ProxyAccessCommon, 
@@ -178,7 +186,7 @@ contract DAOCommittee is
     // }
 
     function setCandidates(address _candidate) external onlyOwner nonZero(_candidate) {
-        candidate = ICandidate(_candidate);
+        candidate = ICandidate2(_candidate);
     }
 
     function setOptimismSequencer(address _sequencer) external onlyOwner nonZero(_sequencer) {
@@ -398,7 +406,7 @@ contract DAOCommittee is
         );
         
         address prevMember = members[_memberIndex];
-        address prevMemberContract = candidateContract(prevMember);
+        // address prevMemberContract = candidateContract(prevMember);
 
         candidateInfo.memberJoinedTime = uint128(block.timestamp);
         candidateInfo.indexMembers = _memberIndex;
@@ -410,12 +418,39 @@ contract DAOCommittee is
             return true;
         }
 
-        require(
-            ICandidate(msg.sender).totalStaked() > ICandidate(prevMemberContract).totalStaked(),
-            "not enough amount"
-        );
-
         CandidateInfo storage prevCandidateInfo = _candidateInfos[prevMember];
+
+        //candidateIndex가 0이면 시퀀서로 등록된 것이다.
+        /* 
+            1. 뉴멤버가 시퀀서일때
+                1-1. 이전 멤버도 시퀀서일때
+                1-2. 이전 멤버는 candidate일때
+            2. 뉴멤버가 candidate일때
+                2-1. 이전 멤버는 시퀀서일때
+                2-2. 이전 멤버도 candidate일때
+        */
+        if (candidateInfo.candidateIndex == 0) {
+            if(prevCandidateInfo.candidateIndex == 0) {
+                require(
+                    ICandidate(candidate).balanceOfLton(candidateInfo.sequencerIndex) > ICandidate(prevMemberContract).totalStaked(),
+                    "not enough amount"
+                );
+            } else {
+
+            }
+        } else {
+            if(prevCandidateInfo.candidateIndex == 0) {
+
+            } else {
+
+            }
+        }
+        // require(
+        //     ICandidate(msg.sender).totalStaked() > ICandidate(prevMemberContract).totalStaked(),
+        //     "not enough amount"
+        // );
+
+        // CandidateInfo storage prevCandidateInfo = _candidateInfos[prevMember];
         prevCandidateInfo.indexMembers = 0;
         prevCandidateInfo.rewardPeriod = uint128(uint256(prevCandidateInfo.rewardPeriod).add(block.timestamp.sub(prevCandidateInfo.memberJoinedTime)));
         prevCandidateInfo.memberJoinedTime = 0;
