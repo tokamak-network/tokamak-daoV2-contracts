@@ -13,6 +13,7 @@ import { ICandidate } from "../interfaces/ICandidate.sol";
 //new add
 import { ILayer2Manager } from "../interfaces/ILayer2Manager.sol";
 import { ISeigManagerV2 } from "../interfaces/ISeigManagerV2.sol";
+import { ISequencer } from "../interfaces/ISequencer.sol";
 
 contract StorageStateCommittee is IStorageStateCommittee {
     enum AgendaStatus { NONE, NOTICE, VOTING, EXEC, ENDED, PENDING, RISK }
@@ -26,6 +27,7 @@ contract StorageStateCommittee is IStorageStateCommittee {
     ISeigManagerV2 public override seigManagerV2;
 
     ICandidate public candidate;
+    ISequencer public sequencer;
 
     address[] public override candidates;
     address[] public override members;

@@ -19,9 +19,9 @@ interface ICandidate2 {
     function balanceOfLton(uint32 _index) external view returns (uint256 amount);
 }
 
-interface ISequencer {
-    function balanceOfLton(uint32 _index) external view returns (uint256 amount);
-}
+// interface ISequencer {
+//     function balanceOfLton(uint32 _index) external view returns (uint256 amount);
+// }
 
 contract DAOCommittee is 
     StorageStateCommittee, 
@@ -190,7 +190,7 @@ contract DAOCommittee is
     }
 
     function setOptimismSequencer(address _sequencer) external onlyOwner nonZero(_sequencer) {
-
+        sequencer = ISequencer(_sequencer);
     }
 
     /// @notice Set TON contract address
@@ -423,26 +423,35 @@ contract DAOCommittee is
         //candidateIndex가 0이면 시퀀서로 등록된 것이다.
         /* 
             1. 뉴멤버가 시퀀서일때
-                1-1. 이전 멤버도 시퀀서일때
-                1-2. 이전 멤버는 candidate일때
+                1-1. 이전 멤버도 시퀀서일때 (시퀀서끼리 비교)
+                1-2. 이전 멤버는 candidate일때 (시퀀서 vs candidate)
             2. 뉴멤버가 candidate일때
-                2-1. 이전 멤버는 시퀀서일때
-                2-2. 이전 멤버도 candidate일때
+                2-1. 이전 멤버는 시퀀서일때 (candidate vs 시퀀서)
+                2-2. 이전 멤버도 candidate일때 (candidate끼리 비교)
         */
         if (candidateInfo.candidateIndex == 0) {
             if(prevCandidateInfo.candidateIndex == 0) {
                 require(
-                    ICandidate(candidate).balanceOfLton(candidateInfo.sequencerIndex) > ICandidate(prevMemberContract).totalStaked(),
+                    sequencer.balanceOfLton(candidateInfo.sequencerIndex) > sequencer.balanceOfLton(prevCandidateInfo.sequencerIndex),
                     "not enough amount"
                 );
             } else {
-
+                require(
+                    sequencer.balanceOfLton(candidateInfo.sequencerIndex) > candidate.balanceOfLton(prevCandidateInfo.sequencerIndex),
+                    "not enough amount"
+                );
             }
         } else {
             if(prevCandidateInfo.candidateIndex == 0) {
-
+                require(
+                    candidate.balanceOfLton(candidateInfo.sequencerIndex) > sequencer.balanceOfLton(prevCandidateInfo.sequencerIndex),
+                    "not enough amount"
+                );
             } else {
-
+                require(
+                    candidate.balanceOfLton(candidateInfo.sequencerIndex) > candidate.balanceOfLton(prevCandidateInfo.sequencerIndex),
+                    "not enough amount"
+                );
             }
         }
         // require(
@@ -462,13 +471,17 @@ contract DAOCommittee is
     
     /// @notice Retires member
     /// @return Whether or not the execution succeeded
-    function retireMember() onlyMemberContract external override returns (bool) {
-        address candidate = ICandidate(msg.sender).candidate();
-        CandidateInfo storage candidateInfo = _candidateInfos[candidate];
+    function retireMember() onlyMember external override returns (bool) {
+        // address candidate = ICandidate(msg.sender).candidate();
+        CandidateInfo storage candidateInfo = _candidateInfos[msg.sender];
         require(
-            candidateInfo.candidateContract == msg.sender,
-            "DAOCommittee: invalid candidate contract"
+            candidateInfo.indexMembers != 0,
+            "DAOCommittee: already not member"
         );
+        // require(
+        //     candidateInfo.candidateContract == msg.sender,
+        //     "DAOCommittee: invalid candidate contract"
+        // );
         members[candidateInfo.indexMembers] = address(0);
         candidateInfo.rewardPeriod = uint128(uint256(candidateInfo.rewardPeriod).add(block.timestamp.sub(candidateInfo.memberJoinedTime)));
         candidateInfo.memberJoinedTime = 0;
@@ -480,19 +493,19 @@ contract DAOCommittee is
         return true;
     }
 
-    /// @notice Set memo
-    /// @param _candidate candidate address
-    /// @param _memo New memo on this candidate
-    function setMemoOnCandidate(
-        address _candidate,
-        string calldata _memo
-    )
-        external
-        override
-    {
-        address candidateContract = candidateContract(_candidate);
-        setMemoOnCandidateContract(candidateContract, _memo);
-    }
+    // /// @notice Set memo
+    // /// @param _candidate candidate address
+    // /// @param _memo New memo on this candidate
+    // function setMemoOnCandidate(
+    //     address _candidate,
+    //     string calldata _memo
+    // )
+    //     external
+    //     override
+    // {
+    //     address candidateContract = candidateContract(_candidate);
+    //     setMemoOnCandidateContract(candidateContract, _memo);
+    // }
 
     /// @notice Set memo
     /// @param _candidateContract candidate contract address
