@@ -2,7 +2,7 @@
 pragma solidity ^0.8.17;
 pragma abicoder v2;
 
-import { ICandidateFactory } from "../interfaces/ICandidateFactory.sol";
+// import { ICandidateFactory } from "../interfaces/ICandidateFactory.sol";
 // import { ILayer2Registry } from "../interfaces/ILayer2Registry.sol";
 // import { ISeigManager } from "../interfaces/ISeigManager.sol";
 import { IDAOAgendaManager } from "../interfaces/IDAOAgendaManager.sol";
@@ -25,7 +25,6 @@ interface IStorageStateCommittee {
     function ton() external returns (address);
     function daoVault() external returns (IDAOVault);
     function agendaManager() external returns (IDAOAgendaManager);
-    function candidateFactory() external returns (ICandidateFactory);
     function layer2Manager() external returns (ILayer2Manager);
     function seigManagerV2() external returns (ISeigManagerV2);
     function candidates(uint256 _index) external returns (address);

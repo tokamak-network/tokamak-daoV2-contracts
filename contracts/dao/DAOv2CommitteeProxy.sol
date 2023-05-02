@@ -26,7 +26,8 @@ contract DAOv2CommitteeProxy is
         address _seigManagerV2,
         address _layer2Manager,
         address _agendaManager,
-        address _candidateFactory,
+        address _candidate,
+        address _sequencer,
         address _daoVault
     ) external onlyProxyOwner {
         require(
@@ -34,14 +35,16 @@ contract DAOv2CommitteeProxy is
             || _seigManagerV2 != address(0)
             || _layer2Manager != address(0)
             || _agendaManager != address(0)
-            || _candidateFactory != address(0),
+            || _candidate != address(0),
+            || _sequencer != address(0),
             "DAOv2CommitteeProxy: input is zero"
         );
         ton = _ton;
         seigManagerV2 = ISeigManagerV2(_seigManagerV2);
         layer2Manager = ILayer2Manager(_layer2Manager);
         agendaManager = IDAOAgendaManager(_agendaManager);
-        candidateFactory = ICandidateFactory(_candidateFactory);
+        candidate = ICandidate(_candidate);
+        sequencer = ISequencer(_sequencer);
         daoVault = IDAOVault(_daoVault);
         quorum = 2;
         activityRewardPerSecond = 3170979198376458;

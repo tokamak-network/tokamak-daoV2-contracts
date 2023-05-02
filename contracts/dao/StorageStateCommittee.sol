@@ -3,7 +3,7 @@ pragma solidity ^0.8.17;
 pragma abicoder v2;
 
 import { IStorageStateCommittee } from "../interfaces/IStorageStateCommittee.sol";
-import { ICandidateFactory } from "../interfaces/ICandidateFactory.sol";
+// import { ICandidateFactory } from "../interfaces/ICandidateFactory.sol";
 // import { ISeigManager } from "../interfaces/ISeigManager.sol";
 import { IDAOAgendaManager } from "../interfaces/IDAOAgendaManager.sol";
 import { IDAOVault } from "../interfaces/IDAOVault.sol";
@@ -22,7 +22,7 @@ contract StorageStateCommittee is IStorageStateCommittee {
     address public override ton;
     IDAOVault public override daoVault;
     IDAOAgendaManager public override agendaManager;
-    ICandidateFactory public override candidateFactory;
+    // ICandidateFactory public override candidateFactory;
     ILayer2Manager public override layer2Manager;
     ISeigManagerV2 public override seigManagerV2;
 
@@ -44,10 +44,10 @@ contract StorageStateCommittee is IStorageStateCommittee {
         _;
     }
     
-    modifier validCommitteeL2Factory() {
-        require(address(candidateFactory) != address(0), "StorageStateCommittee: invalid CommitteeL2Factory");
-        _;
-    }
+    // modifier validCommitteeL2Factory() {
+    //     require(address(candidateFactory) != address(0), "StorageStateCommittee: invalid CommitteeL2Factory");
+    //     _;
+    // }
 
     modifier validLayer2Manager() {
         require(address(layer2Manager) != address(0), "StorageStateCommittee: invalid Layer2Manager");
