@@ -3,19 +3,19 @@ pragma solidity ^0.8.17;
 pragma abicoder v2;
 
 import "./StorageStateCommittee.sol";
-import { OnApprove } from "./OnApprove.sol";
 import "../common/ProxyAccessCommon.sol";
+import { OnApprove } from "./OnApprove.sol";
 
 import { SafeMath } from "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import { IERC20 } from  "../../node_modules/@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import { IDAOCommittee } from "../interfaces/IDAOCommittee.sol";
-import { ICandidate } from "../interfaces/ICandidate.sol";
+import { IDAOV2Committee } from "../interfaces/IDAOV2Committee.sol";
+// import { ICandidate } from "../interfaces/ICandidate.sol";
 import { ILayer2 } from "../interfaces/ILayer2.sol";
 import { IDAOAgendaManager } from "../interfaces/IDAOAgendaManager.sol";
 import { LibAgenda } from "../lib/Agenda.sol";
 import { ERC165Checker } from "../../node_modules/@openzeppelin/contracts/utils/introspection/ERC165Checker.sol";
 
-interface ICandidate2 {
+interface ICandidate {
     function balanceOfLton(uint32 _index) external view returns (uint256 amount);
 }
 
@@ -23,10 +23,10 @@ interface ICandidate2 {
 //     function balanceOfLton(uint32 _index) external view returns (uint256 amount);
 // }
 
-contract DAOCommittee is 
+contract DAOv2Committee is 
     StorageStateCommittee, 
     ProxyAccessCommon, 
-    IDAOCommittee 
+    IDAOV2Committee 
 {
     using SafeMath for uint256;
     using LibAgenda for *;
@@ -127,40 +127,6 @@ contract DAOCommittee is
         seigManagerV2 = ISeigManagerV2(_seigManagerV2);
     }
      
-    /// @notice Set SeigManager contract address on candidate contracts
-    /// @param _candidateContracts Candidate contracts to be set
-    /// @param _seigManager New SeigManager contract address
-    function setCandidatesSeigManager(
-        address[] calldata _candidateContracts,
-        address _seigManager
-    )
-        external
-        override
-        onlyProxyOwner
-        nonZero(_seigManager)
-    {
-        for (uint256 i = 0; i < _candidateContracts.length; i++) {
-            ICandidate(_candidateContracts[i]).setSeigManager(_seigManager);
-        }
-    }
-
-    /// @notice Set DAOCommitteeProxy contract address on candidate contracts
-    /// @param _candidateContracts Candidate contracts to be set
-    /// @param _committee New DAOCommitteeProxy contract address
-    function setCandidatesCommittee(
-        address[] calldata _candidateContracts,
-        address _committee
-    )
-        external
-        override
-        onlyProxyOwner
-        nonZero(_committee)
-    {
-        for (uint256 i = 0; i < _candidateContracts.length; i++) {
-            ICandidate(_candidateContracts[i]).setCommittee(_committee);
-        }
-    }
-
     /// @notice Set DAOVault contract address
     /// @param _daoVault New DAOVault contract address
     function setDaoVault(address _daoVault) external override onlyProxyOwner nonZero(_daoVault) {
@@ -179,14 +145,8 @@ contract DAOCommittee is
         agendaManager = IDAOAgendaManager(_agendaManager);
     }
 
-    // /// @notice Set CandidateFactory contract address
-    // /// @param _candidateFactory New CandidateFactory contract address
-    // function setCandidateFactory(address _candidateFactory) external override onlyOwner nonZero(_candidateFactory) {
-    //     candidateFactory = ICandidateFactory(_candidateFactory);
-    // }
-
     function setCandidates(address _candidate) external onlyOwner nonZero(_candidate) {
-        candidate = ICandidate2(_candidate);
+        candidate = ICandidate(_candidate);
     }
 
     function setOptimismSequencer(address _sequencer) external onlyOwner nonZero(_sequencer) {
@@ -225,329 +185,6 @@ contract DAOCommittee is
         emit ChangedSlotMaximum(prevMaxMember, _newMaxMember);
     }
 
-    //////////////////////////////////////////////////////////////////////
-    // Managing members
-
-    // /// @notice Creates a candidate contract and register it on SeigManager
-    // /// @param _memo A memo for the candidate
-    // function createCandidate(string calldata _memo)
-    //     external
-    //     override
-    //     validSeigManagerV2
-    //     validLayer2Manager
-    //     validCommitteeL2Factory
-    // {
-    //     require(!isExistCandidate(msg.sender), "DAOCommittee: candidate already registerd");
-
-    //     // Candidate
-    //     address candidateContract = candidateFactory.deploy(
-    //         msg.sender,
-    //         false,
-    //         _memo,
-    //         address(this),
-    //         address(seigManagerV2)
-    //     );
-
-    //     require(
-    //         candidateContract != address(0),
-    //         "DAOCommittee: deployed candidateContract is zero"
-    //     );
-    //     require(
-    //         _candidateInfos[msg.sender].candidateContract == address(0),
-    //         "DAOCommittee: The candidate already has contract"
-    //     );
-    //     require(
-    //         layer2Registry.registerAndDeployCoinage(candidateContract, address(seigManager)),
-    //         "DAOCommittee: failed to registerAndDeployCoinage"
-    //     );
-
-    //     _candidateInfos[msg.sender] = CandidateInfo({
-    //         candidateContract: candidateContract,
-    //         memberJoinedTime: 0,
-    //         indexMembers: 0,
-    //         rewardPeriod: 0,
-    //         claimedTimestamp: 0
-    //     });
-
-    //     candidates.push(msg.sender);
-       
-    //     emit CandidateContractCreated(msg.sender, candidateContract, _memo);
-    // }
-
-    function createCandidateCall(
-        uint32 _sequencerIndex,
-        bytes32 _name,
-        uint16 _commission,
-        uint256 amount
-    )
-        external
-        validSeigManagerV2
-        validLayer2Manager
-        returns (bool)
-    {   
-        require(!isExistCandidate(msg.sender), "DAOCommittee: candidate already registerd");
-        require(_sequencerIndex <= layer2Manager.indexSequencers(), "wrong index");
-        
-        //msg.sender는 Layer2Manager에게 미리 amount만큼 approve해야한다
-        (bool success, bytes memory data) = address(layer2Manager).delegatecall(
-            abi.encodeWithSignature(
-                "createCandidate(uint32,bytes32,uint16,uint256)", 
-                _sequencerIndex,_name,_commission,amount
-            )
-        );
-        
-        //layer2Manager에서 indexCandidates는 로직에서 더하고 값을 넣으므로 index값은 같다.
-        uint32 candidateIndex = layer2Manager.indexCandidates();
-
-        _candidateInfos[msg.sender] = CandidateInfo({
-            sequencerIndex: _sequencerIndex,
-            candidateIndex: candidateIndex,
-            memberJoinedTime: 0,
-            indexMembers: 0,
-            rewardPeriod: 0,
-            claimedTimestamp: 0
-        });
-
-        candidates.push(msg.sender);
-
-        return success;
-    }
-
-    function createOptimismSequencerCall(
-        bytes32 _name,
-        address addressManager,
-        address l2ton,
-        uint256 amount 
-    )
-        external
-        validSeigManagerV2
-        validLayer2Manager
-        returns (bool)
-    {
-        require(!isExistCandidate(msg.sender), "DAOCommittee: candidate already registerd");
-
-        //msg.sender는 Layer2Manager에게 미리 amount만큼 approve해야한다
-        (bool success, bytes memory data) = address(layer2Manager).delegatecall(
-            abi.encodeWithSignature(
-                "createOptimismSequencer(bytes32,address,address,uint256)", 
-                _name,addressManager,l2ton,amount
-            )
-        );
-
-        uint32 sequencerIndex = layer2Manager.indexSequencers();
-
-        _candidateInfos[msg.sender] = CandidateInfo({
-            sequencerIndex: sequencerIndex,
-            candidateIndex: 0,
-            memberJoinedTime: 0,
-            indexMembers: 0,
-            rewardPeriod: 0,
-            claimedTimestamp: 0
-        });
-
-        candidates.push(msg.sender);
-
-        return success;
-    }
-
-    // /// @notice Registers the exist layer2 on DAO
-    // /// @param _layer2 Layer2 contract address to be registered
-    // /// @param _memo A memo for the candidate
-    // function registerLayer2Candidate(address _layer2, string memory _memo)
-    //     external
-    //     override
-    //     validSeigManagerV2
-    //     validLayer2Manager
-    //     validCommitteeL2Factory
-    // {
-    //     _registerLayer2Candidate(msg.sender, _layer2, _memo);
-    // }
-
-    // /// @notice Registers the exist layer2 on DAO by owner
-    // /// @param _operator Operator address of the layer2 contract
-    // /// @param _layer2 Layer2 contract address to be registered
-    // /// @param _memo A memo for the candidate
-    // function registerLayer2CandidateByOwner(address _operator, address _layer2, string memory _memo)
-    //     external
-    //     override
-    //     onlyOwner
-    //     validSeigManagerV2
-    //     validLayer2Manager
-    //     validCommitteeL2Factory
-    // {
-    //     _registerLayer2Candidate(_operator, _layer2, _memo);
-    // }
-
-    /// @notice Replaces an existing member
-    /// @param _memberIndex The member slot index to be replaced
-    /// @return Whether or not the execution succeeded
-    function changeMember(
-        uint256 _memberIndex
-    )
-        external
-        override
-        validMemberIndex(_memberIndex)
-        returns (bool)
-    {   
-        require(isExistCandidate(msg.sender), "DAOCommittee: not registerd");
-        address newMember = msg.sender;
-    
-        CandidateInfo storage candidateInfo = _candidateInfos[newMember];
-        // require(
-        //     ICandidate(msg.sender).isCandidateContract(),
-        //     "DAOCommittee: sender is not a candidate contract"
-        // );
-        // require(
-        //     candidateInfo.candidateContract == msg.sender,
-        //     "DAOCommittee: invalid candidate contract"
-        // );
-        require(
-            candidateInfo.memberJoinedTime == 0,
-            "DAOCommittee: already member"
-        );
-        
-        address prevMember = members[_memberIndex];
-        // address prevMemberContract = candidateContract(prevMember);
-
-        candidateInfo.memberJoinedTime = uint128(block.timestamp);
-        candidateInfo.indexMembers = _memberIndex;
-
-        members[_memberIndex] = newMember;
-
-        if (prevMember == address(0)) {
-            emit ChangedMember(_memberIndex, prevMember, newMember);
-            return true;
-        }
-
-        CandidateInfo storage prevCandidateInfo = _candidateInfos[prevMember];
-
-        //candidateIndex가 0이면 시퀀서로 등록된 것이다.
-        /* 
-            1. 뉴멤버가 시퀀서일때
-                1-1. 이전 멤버도 시퀀서일때 (시퀀서끼리 비교)
-                1-2. 이전 멤버는 candidate일때 (시퀀서 vs candidate)
-            2. 뉴멤버가 candidate일때
-                2-1. 이전 멤버는 시퀀서일때 (candidate vs 시퀀서)
-                2-2. 이전 멤버도 candidate일때 (candidate끼리 비교)
-        */
-        if (candidateInfo.candidateIndex == 0) {
-            if(prevCandidateInfo.candidateIndex == 0) {
-                require(
-                    sequencer.balanceOfLton(candidateInfo.sequencerIndex) > sequencer.balanceOfLton(prevCandidateInfo.sequencerIndex),
-                    "not enough amount"
-                );
-            } else {
-                require(
-                    sequencer.balanceOfLton(candidateInfo.sequencerIndex) > candidate.balanceOfLton(prevCandidateInfo.sequencerIndex),
-                    "not enough amount"
-                );
-            }
-        } else {
-            if(prevCandidateInfo.candidateIndex == 0) {
-                require(
-                    candidate.balanceOfLton(candidateInfo.sequencerIndex) > sequencer.balanceOfLton(prevCandidateInfo.sequencerIndex),
-                    "not enough amount"
-                );
-            } else {
-                require(
-                    candidate.balanceOfLton(candidateInfo.sequencerIndex) > candidate.balanceOfLton(prevCandidateInfo.sequencerIndex),
-                    "not enough amount"
-                );
-            }
-        }
-        // require(
-        //     ICandidate(msg.sender).totalStaked() > ICandidate(prevMemberContract).totalStaked(),
-        //     "not enough amount"
-        // );
-
-        // CandidateInfo storage prevCandidateInfo = _candidateInfos[prevMember];
-        prevCandidateInfo.indexMembers = 0;
-        prevCandidateInfo.rewardPeriod = uint128(uint256(prevCandidateInfo.rewardPeriod).add(block.timestamp.sub(prevCandidateInfo.memberJoinedTime)));
-        prevCandidateInfo.memberJoinedTime = 0;
-
-        emit ChangedMember(_memberIndex, prevMember, newMember);
-
-        return true;
-    }
-    
-    /// @notice Retires member
-    /// @return Whether or not the execution succeeded
-    function retireMember() onlyMember external override returns (bool) {
-        // address candidate = ICandidate(msg.sender).candidate();
-        CandidateInfo storage candidateInfo = _candidateInfos[msg.sender];
-        require(
-            candidateInfo.indexMembers != 0,
-            "DAOCommittee: already not member"
-        );
-        // require(
-        //     candidateInfo.candidateContract == msg.sender,
-        //     "DAOCommittee: invalid candidate contract"
-        // );
-        members[candidateInfo.indexMembers] = address(0);
-        candidateInfo.rewardPeriod = uint128(uint256(candidateInfo.rewardPeriod).add(block.timestamp.sub(candidateInfo.memberJoinedTime)));
-        candidateInfo.memberJoinedTime = 0;
-
-        uint256 prevIndex = candidateInfo.indexMembers;
-        candidateInfo.indexMembers = 0;
-        emit ChangedMember(prevIndex, candidate, address(0));
-
-        return true;
-    }
-
-    // /// @notice Set memo
-    // /// @param _candidate candidate address
-    // /// @param _memo New memo on this candidate
-    // function setMemoOnCandidate(
-    //     address _candidate,
-    //     string calldata _memo
-    // )
-    //     external
-    //     override
-    // {
-    //     address candidateContract = candidateContract(_candidate);
-    //     setMemoOnCandidateContract(candidateContract, _memo);
-    // }
-
-    // /// @notice Set memo
-    // /// @param _candidateContract candidate contract address
-    // /// @param _memo New memo on this candidate
-    // function setMemoOnCandidateContract(
-    //     address _candidateContract,
-    //     string calldata _memo
-    // )
-    //     public
-    //     override
-    // {
-    //     address candidate = ICandidate(_candidateContract).candidate();
-    //     address contractOwner = candidate;
-    //     if (ICandidate(_candidateContract).isLayer2Candidate()) {
-    //         contractOwner = ILayer2(candidate).operator();
-    //     }
-    //     require(
-    //         msg.sender == contractOwner,
-    //         "DAOCommittee: sender is not the candidate of this contract"
-    //     );
-
-    //     ICandidate(_candidateContract).setMemo(_memo);
-    //     emit ChangedMemo(candidate, _memo);
-    // }
-
-    function setNameOnRegistrant(
-        bytes32 _name
-    )
-        external
-    {
-        require(isExistCandidate(msg.sender), "DAOCommittee: not registerd");
-        //msg.sender가 sequencer인지 candidate인지 알기 위해서 소환
-        CandidateInfo memory candidateInfo = _candidateInfos[msg.sender];
-        if(candidateInfo.candidateIndex == 0) {
-            //msg.sender가 sqeuencer일때 name 변경
-        } else {
-            //msg.sender가 candidate일때 name 변경
-        }
-        
-    }
-
     /// @notice Decreases the number of member slot
     /// @param _reducingMemberIndex Reducing member slot index
     /// @param _quorum New quorum
@@ -580,29 +217,6 @@ contract DAOCommittee is
 
         emit ChangedMember(_reducingMemberIndex, reducingMember, address(0));
         emit ChangedSlotMaximum(maxMember.add(1), maxMember);
-    }
-
-    //////////////////////////////////////////////////////////////////////
-    // Managing agenda
-
-    function onApprove(
-        address owner,
-        address spender,
-        uint256 tonAmount,
-        bytes calldata data
-    ) external override returns (bool) {
-        AgendaCreatingData memory agendaData = _decodeAgendaData(data);
-
-        _createAgenda(
-            owner,
-            agendaData.target,
-            agendaData.noticePeriodSeconds,
-            agendaData.votingPeriodSeconds,
-            agendaData.atomicExecute,
-            agendaData.functionBytecode
-        );
-
-        return true;
     }
 
     /// @notice Set new quorum
@@ -673,6 +287,248 @@ contract DAOCommittee is
         agendaManager.setExecutingPeriodSeconds(_executingPeriodSeconds);
     }
 
+    /// @notice Set status and result of specific agenda
+    /// @param _agendaID Agenda ID
+    /// @param _status New status
+    /// @param _result New result
+    function setAgendaStatus(uint256 _agendaID, uint256 _status, uint256 _result) external override onlyOwner {
+        agendaManager.setResult(_agendaID, LibAgenda.AgendaResult(_result));
+        agendaManager.setStatus(_agendaID, LibAgenda.AgendaStatus(_status));
+    }
+
+    //////////////////////////////////////////////////////////////////////
+    // Managing members
+
+    function createCandidate(
+        uint32 _sequencerIndex,
+        bytes32 _name,
+        uint16 _commission,
+        uint256 amount
+    )
+        external
+        override
+        validSeigManagerV2
+        validLayer2Manager
+        returns (bool)
+    {   
+        require(!isExistCandidate(msg.sender), "DAOCommittee: candidate already registerd");
+        require(_sequencerIndex <= layer2Manager.indexSequencers(), "wrong index");
+        
+        //msg.sender는 Layer2Manager에게 미리 amount만큼 approve해야한다
+        (bool success, bytes memory data) = address(layer2Manager).delegatecall(
+            abi.encodeWithSignature(
+                "createCandidate(uint32,bytes32,uint16,uint256)", 
+                _sequencerIndex,_name,_commission,amount
+            )
+        );
+        
+        //layer2Manager에서 indexCandidates는 로직에서 더하고 값을 넣으므로 index값은 같다.
+        uint32 candidateIndex = layer2Manager.indexCandidates();
+
+        _candidateInfos[msg.sender] = CandidateInfo({
+            sequencerIndex: _sequencerIndex,
+            candidateIndex: candidateIndex,
+            memberJoinedTime: 0,
+            indexMembers: 0,
+            rewardPeriod: 0,
+            claimedTimestamp: 0
+        });
+
+        candidates.push(msg.sender);
+
+        return success;
+    }
+
+    function createOptimismSequencer(
+        bytes32 _name,
+        address addressManager,
+        address l2ton,
+        uint256 amount 
+    )
+        external
+        override
+        validSeigManagerV2
+        validLayer2Manager
+        returns (bool)
+    {
+        require(!isExistCandidate(msg.sender), "DAOCommittee: candidate already registerd");
+
+        //msg.sender는 Layer2Manager에게 미리 amount만큼 approve해야한다
+        (bool success, bytes memory data) = address(layer2Manager).delegatecall(
+            abi.encodeWithSignature(
+                "createOptimismSequencer(bytes32,address,address,uint256)", 
+                _name,addressManager,l2ton,amount
+            )
+        );
+
+        uint32 sequencerIndex = layer2Manager.indexSequencers();
+
+        _candidateInfos[msg.sender] = CandidateInfo({
+            sequencerIndex: sequencerIndex,
+            candidateIndex: 0,
+            memberJoinedTime: 0,
+            indexMembers: 0,
+            rewardPeriod: 0,
+            claimedTimestamp: 0
+        });
+
+        candidates.push(msg.sender);
+
+        return success;
+    }
+
+    /// @notice Replaces an existing member
+    /// @param _memberIndex The member slot index to be replaced
+    /// @return Whether or not the execution succeeded
+    function changeMember(
+        uint256 _memberIndex
+    )
+        external
+        override
+        validMemberIndex(_memberIndex)
+        returns (bool)
+    {   
+        require(isExistCandidate(msg.sender), "DAOCommittee: not registerd");
+        address newMember = msg.sender;
+    
+        CandidateInfo storage candidateInfo = _candidateInfos[newMember];
+        require(
+            candidateInfo.memberJoinedTime == 0,
+            "DAOCommittee: already member"
+        );
+        
+        address prevMember = members[_memberIndex];
+        // address prevMemberContract = candidateContract(prevMember);
+
+        candidateInfo.memberJoinedTime = uint128(block.timestamp);
+        candidateInfo.indexMembers = _memberIndex;
+
+        members[_memberIndex] = newMember;
+
+        if (prevMember == address(0)) {
+            emit ChangedMember(_memberIndex, prevMember, newMember);
+            return true;
+        }
+
+        CandidateInfo storage prevCandidateInfo = _candidateInfos[prevMember];
+
+        //candidateIndex가 0이면 시퀀서로 등록된 것이다.
+        /* 
+            1. 뉴멤버가 시퀀서일때
+                1-1. 이전 멤버도 시퀀서일때 (시퀀서끼리 비교)
+                1-2. 이전 멤버는 candidate일때 (시퀀서 vs candidate)
+            2. 뉴멤버가 candidate일때
+                2-1. 이전 멤버는 시퀀서일때 (candidate vs 시퀀서)
+                2-2. 이전 멤버도 candidate일때 (candidate끼리 비교)
+        */
+        if (candidateInfo.candidateIndex == 0) {
+            if(prevCandidateInfo.candidateIndex == 0) {
+                require(
+                    sequencer.balanceOfLton(candidateInfo.sequencerIndex) > sequencer.balanceOfLton(prevCandidateInfo.sequencerIndex),
+                    "not enough amount"
+                );
+            } else {
+                require(
+                    sequencer.balanceOfLton(candidateInfo.sequencerIndex) > candidate.balanceOfLton(prevCandidateInfo.sequencerIndex),
+                    "not enough amount"
+                );
+            }
+        } else {
+            if(prevCandidateInfo.candidateIndex == 0) {
+                require(
+                    candidate.balanceOfLton(candidateInfo.sequencerIndex) > sequencer.balanceOfLton(prevCandidateInfo.sequencerIndex),
+                    "not enough amount"
+                );
+            } else {
+                require(
+                    candidate.balanceOfLton(candidateInfo.sequencerIndex) > candidate.balanceOfLton(prevCandidateInfo.sequencerIndex),
+                    "not enough amount"
+                );
+            }
+        }
+        
+        prevCandidateInfo.indexMembers = 0;
+        prevCandidateInfo.rewardPeriod = uint128(uint256(prevCandidateInfo.rewardPeriod).add(block.timestamp.sub(prevCandidateInfo.memberJoinedTime)));
+        prevCandidateInfo.memberJoinedTime = 0;
+
+        emit ChangedMember(_memberIndex, prevMember, newMember);
+
+        return true;
+    }
+
+    function setNameOnRegistrant(
+        bytes32 _name
+    )
+        external
+    {
+        require(isExistCandidate(msg.sender), "DAOCommittee: not registerd");
+        //msg.sender가 sequencer인지 candidate인지 알기 위해서 소환
+        CandidateInfo memory candidateInfo = _candidateInfos[msg.sender];
+        if(candidateInfo.candidateIndex == 0) {
+            //msg.sender가 sqeuencer일때 name 변경
+        } else {
+            //msg.sender가 candidate일때 name 변경
+        }
+
+        emit ChangedMemo(msg.sender, _name);
+    }
+
+    /// @notice Call updateSeigniorage on SeigManager
+    /// @return Whether or not the execution succeeded
+    function updateSeigniorage() public returns (bool) {
+        return seigManagerV2.updateSeigniorage();
+    }
+
+    //////////////////////////////////////////////////////////////////////
+    // member
+
+    /// @notice Retires member
+    /// @return Whether or not the execution succeeded
+    function retireMember() onlyMember external override returns (bool) {
+        // address candidate = ICandidate(msg.sender).candidate();
+        CandidateInfo storage candidateInfo = _candidateInfos[msg.sender];
+        require(
+            candidateInfo.indexMembers != 0,
+            "DAOCommittee: already not member"
+        );
+        // require(
+        //     candidateInfo.candidateContract == msg.sender,
+        //     "DAOCommittee: invalid candidate contract"
+        // );
+        members[candidateInfo.indexMembers] = address(0);
+        candidateInfo.rewardPeriod = uint128(uint256(candidateInfo.rewardPeriod).add(block.timestamp.sub(candidateInfo.memberJoinedTime)));
+        candidateInfo.memberJoinedTime = 0;
+
+        uint256 prevIndex = candidateInfo.indexMembers;
+        candidateInfo.indexMembers = 0;
+        emit ChangedMember(prevIndex, candidate, address(0));
+
+        return true;
+    }
+
+    //////////////////////////////////////////////////////////////////////
+    // Managing agenda
+
+    function onApprove(
+        address owner,
+        address spender,
+        uint256 tonAmount,
+        bytes calldata data
+    ) external override returns (bool) {
+        AgendaCreatingData memory agendaData = _decodeAgendaData(data);
+
+        _createAgenda(
+            owner,
+            agendaData.target,
+            agendaData.noticePeriodSeconds,
+            agendaData.votingPeriodSeconds,
+            agendaData.atomicExecute,
+            agendaData.functionBytecode
+        );
+
+        return true;
+    }
+
     /// @notice Vote on an agenda
     /// @param _agendaID The agenda ID
     /// @param _vote voting type
@@ -687,12 +543,7 @@ contract DAOCommittee is
         validAgendaManager
     {
         require(isExistCandidate(msg.sender), "DAOCommittee: not registerd");
-        // CandidateInfo storage candidateInfo = _candidateInfos[candidate];
         CandidateInfo storage candidateInfo = _candidateInfos[msg.sender];
-        // require(
-        //     candidateInfo.candidateContract == msg.sender,
-        //     "DAOCommittee: invalid candidate contract"
-        // );
         
         agendaManager.castVote(
             _agendaID,
@@ -764,52 +615,21 @@ contract DAOCommittee is
 
         emit AgendaExecuted(_agendaID, target);
     }
-
-    /// @notice Set status and result of specific agenda
-    /// @param _agendaID Agenda ID
-    /// @param _status New status
-    /// @param _result New result
-    function setAgendaStatus(uint256 _agendaID, uint256 _status, uint256 _result) external override onlyOwner {
-        agendaManager.setResult(_agendaID, LibAgenda.AgendaResult(_result));
-        agendaManager.setStatus(_agendaID, LibAgenda.AgendaStatus(_status));
-    }
-
-    function updateSeigniorage2() public returns (bool) {
-        return seigManagerV2.updateSeigniorage();
-    }
      
-    // /// @notice Call updateSeigniorage on SeigManager
-    // /// @param _candidate Candidate address to be updated
-    // /// @return Whether or not the execution succeeded
-    // function updateSeigniorage(address _candidate) public override returns (bool) {
-    //     address candidateContract = _candidateInfos[_candidate].candidateContract;
-    //     return ICandidate(candidateContract).updateSeigniorage();
-    // }
-
-    // /// @notice Call updateSeigniorage on SeigManager
-    // /// @param _candidates Candidate addresses to be updated
-    // /// @return Whether or not the execution succeeded
-    // function updateSeigniorages(address[] calldata _candidates) external override returns (bool) {
-    //     for (uint256 i = 0; i < _candidates.length; i++) {
-    //         require(
-    //             updateSeigniorage(_candidates[i]),
-    //             "DAOCommittee: failed to update seigniorage"
-    //         );
-    //     }
-
-    //     return true;
-    // }
-
     /// @notice Claims the activity reward for member
     function claimActivityReward(address _receiver) external override {
-        address candidate = ICandidate(msg.sender).candidate();
-        CandidateInfo storage candidateInfo = _candidateInfos[candidate];
-        require(
-            candidateInfo.candidateContract == msg.sender,
-            "DAOCommittee: invalid candidate contract"
-        );
+        require(isExistCandidate(msg.sender), "DAOCommittee: not registerd");
+        //msg.sender가 sequencer인지 candidate인지 알기 위해서 소환
+        CandidateInfo memory candidateInfo = _candidateInfos[msg.sender];
 
-        uint256 amount = getClaimableActivityReward(candidate);
+        // address candidate = ICandidate(msg.sender).candidate();
+        // CandidateInfo storage candidateInfo = _candidateInfos[candidate];
+        // require(
+        //     candidateInfo.candidateContract == msg.sender,
+        //     "DAOCommittee: invalid candidate contract"
+        // );
+
+        uint256 amount = getClaimableActivityReward(msg.sender);
         require(amount > 0, "DAOCommittee: you don't have claimable ton");
 
         daoVault.claimTON(_receiver, amount);
@@ -819,56 +639,8 @@ contract DAOCommittee is
         emit ClaimedActivityReward(candidate, _receiver, amount);
     }
 
-    // function _registerLayer2Candidate(address _operator, address _layer2, string memory _memo)
-    //     internal
-    //     validSeigManagerV2
-    //     validLayer2Manager
-    // {
-    //     require(!isExistCandidate(_layer2), "DAOCommittee: candidate already registerd");
-
-    //     require(
-    //         _layer2 != address(0),
-    //         "DAOCommittee: deployed candidateContract is zero"
-    //     );
-    //     require(
-    //         _candidateInfos[_layer2].candidateContract == address(0),
-    //         "DAOCommittee: The candidate already has contract"
-    //     );
-    //     ILayer2 layer2 = ILayer2(_layer2);
-    //     require(
-    //         layer2.isLayer2(),
-    //         "DAOCommittee: invalid layer2 contract"
-    //     );
-    //     require(
-    //         layer2.operator() == _operator,
-    //         "DAOCommittee: invalid operator"
-    //     );
-
-    //     address candidateContract = candidateFactory.deploy(
-    //         _layer2,
-    //         true,
-    //         _memo,
-    //         address(this),
-    //         address(seigManagerV2)
-    //     );
-
-    //     require(
-    //         candidateContract != address(0),
-    //         "DAOCommittee: deployed candidateContract is zero"
-    //     );
-
-    //     _candidateInfos[_layer2] = CandidateInfo({
-    //         candidateContract: candidateContract,
-    //         memberJoinedTime: 0,
-    //         indexMembers: 0,
-    //         rewardPeriod: 0,
-    //         claimedTimestamp: 0
-    //     });
-
-    //     candidates.push(_layer2);
-       
-    //     emit Layer2Registered(_layer2, candidateContract, _memo);
-    // }
+    //////////////////////////////////////////////////////////////////////
+    // internal
 
     function fillMemberSlot() internal {
         for (uint256 i = members.length; i < maxMember; i++) {
@@ -937,31 +709,15 @@ contract DAOCommittee is
         return result;
     }
 
-    // function isCandidate(address _candidate) external view override returns (bool) {
-    //     CandidateInfo storage info = _candidateInfos[_candidate];
+    //////////////////////////////////////////////////////////////////////
+    // view
 
-    //     if (info.candidateContract == address(0)) {
-    //         return false;
-    //     }
-
-    //     bool supportIsCandidateContract = ERC165Checker.supportsInterface(
-    //         info.candidateContract,
-    //         ICandidate(info.candidateContract).isCandidateContract.selector
-    //     );
-
-    //     if (supportIsCandidateContract == false) {
-    //         return false;
-    //     }
-
-    //     return ICandidate(info.candidateContract).isCandidateContract();
-    // }
-
-    function isCandidate2() external view returns (bool) {
+    function isCandidate(address _candidate) external override view returns (bool) {
         // CandidateInfo memory info = _candidateInfos[msg.sender];
-        return _candidateInfos[msg.sender].sequencerIndex != 0;
+        return _candidateInfos[_candidate].sequencerIndex != 0;
     }
 
-    function totalSupplyOnCandidate2(
+    function totalSupplyOnCandidate(
         uint32 _index
     )
         external
@@ -981,7 +737,7 @@ contract DAOCommittee is
         return sequencer.balanceOfLton(_index);
     }
 
-    function balanceOfOnCandidate2(
+    function balanceOfOnCandidate(
         uint32 _index,
         address _account
     )   
@@ -1002,59 +758,6 @@ contract DAOCommittee is
     {
         return sequencer.balanceOfLton(_index,_account);
     }
-
-    
-    // function totalSupplyOnCandidate(
-    //     address _candidate
-    // )
-    //     external
-    //     override
-    //     view
-    //     returns (uint256 totalsupply)
-    // {
-    //     address candidateContract = candidateContract(_candidate);
-    //     return totalSupplyOnCandidateContract(candidateContract);
-    // }
-
-    // function balanceOfOnCandidate(
-    //     address _candidate,
-    //     address _account
-    // )
-    //     external
-    //     override
-    //     view
-    //     returns (uint256 amount)
-    // {
-    //     address candidateContract = candidateContract(_candidate);
-    //     return balanceOfOnCandidateContract(candidateContract, _account);
-    // }
-    
-    // function totalSupplyOnCandidateContract(
-    //     address _candidateContract
-    // )
-    //     public
-    //     override
-    //     view
-    //     returns (uint256 totalsupply)
-    // {
-    //     require(_candidateContract != address(0), "This account is not a candidate");
-
-    //     return ICandidate(_candidateContract).totalStaked();
-    // }
-
-    // function balanceOfOnCandidateContract(
-    //     address _candidateContract,
-    //     address _account
-    // )
-    //     public
-    //     override
-    //     view
-    //     returns (uint256 amount)
-    // {
-    //     require(_candidateContract != address(0), "This account is not a candidate");
-
-    //     return ICandidate(_candidateContract).stakedOf(_account);
-    // }
 
     function candidatesLength() external view override returns (uint256) {
         return candidates.length;

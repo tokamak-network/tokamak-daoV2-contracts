@@ -5,14 +5,14 @@ pragma abicoder v2;
 import { IStorageStateCommittee } from "../interfaces/IStorageStateCommittee.sol";
 // import { ICandidateFactory } from "../interfaces/ICandidateFactory.sol";
 // import { ISeigManager } from "../interfaces/ISeigManager.sol";
-import { IDAOAgendaManager } from "../interfaces/IDAOAgendaManager.sol";
-import { IDAOVault } from "../interfaces/IDAOVault.sol";
+// import { IDAOAgendaManager } from "../interfaces/IDAOAgendaManager.sol";
+// import { IDAOVault } from "../interfaces/IDAOVault.sol";
 import { ICandidate } from "../interfaces/ICandidate.sol";
 // import { ILayer2Registry } from "../interfaces/ILayer2Registry.sol";
 
 //new add
-import { ILayer2Manager } from "../interfaces/ILayer2Manager.sol";
-import { ISeigManagerV2 } from "../interfaces/ISeigManagerV2.sol";
+// import { ILayer2Manager } from "../interfaces/ILayer2Manager.sol";
+// import { ISeigManagerV2 } from "../interfaces/ISeigManagerV2.sol";
 import { ISequencer } from "../interfaces/ISequencer.sol";
 
 contract StorageStateCommittee is IStorageStateCommittee {
