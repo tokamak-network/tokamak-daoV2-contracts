@@ -7,6 +7,7 @@ import "../common/AccessibleCommon.sol";
 import "../libraries/SafeERC20.sol";
 import "../libraries/Layer2.sol";
 import "../libraries/LibOptimism.sol";
+import "../interfaces/ILayer2Manager.sol";
 
 import "hardhat/console.sol";
 
@@ -39,56 +40,55 @@ interface CandidateI {
     function layerInfo (uint32 _index) external view returns (bytes memory);
 }
 
-contract  Layer2Manager is AccessibleCommon, BaseProxyStorage, Layer2ManagerStorage {
+contract  Layer2Manager is AccessibleCommon, BaseProxyStorage, Layer2ManagerStorage, ILayer2Manager {
     /* ========== DEPENDENCIES ========== */
     using SafeERC20 for IERC20;
-
-    event Claimed(uint32 _index, address _sequencer, uint256 amount);
-    event CreatedOptimismSequencer(uint32 _index, address _sequencer, bytes32 _name, address addressManager, address l1Bridge, address l2ton, uint256 depositAmount);
-    event CreatedCandidate(uint32 _index, address _operator, bytes32 _name, uint32 _sequencerIndex, uint16 _commission, uint256 depositAmount);
-    event Distributed(uint256 _totalSeigs, uint256 _distributedAmount);
-    event IncreasedSecurityDeposit(uint32 _index, address caller, uint256 amount);
-    event DecreasedSecurityDeposit(uint32 _index, address _sequencer, uint256 amount);
 
     /* ========== CONSTRUCTOR ========== */
     constructor() {
     }
 
     /* ========== onlyOwner ========== */
+
+    /// @inheritdoc ILayer2Manager
     function setMaxLayer2Count(uint256 _maxLayer2Count)
-        external nonZero(_maxLayer2Count)
+        external override nonZero(_maxLayer2Count)
         onlyOwner
     {
         require(maxLayer2Count != _maxLayer2Count, "same");
         maxLayer2Count = _maxLayer2Count;
     }
 
+    /// @inheritdoc ILayer2Manager
     function setMinimumDepositForSequencer(uint256 _minimumDepositForSequencer)
-        external
+        external override
         onlyOwner
     {
         require(minimumDepositForSequencer != _minimumDepositForSequencer, "same");
         minimumDepositForSequencer = _minimumDepositForSequencer;
     }
 
+    /// @inheritdoc ILayer2Manager
     function setRatioSecurityDepositOfTvl(uint16 _ratioSecurityDepositOfTvl)
-        external
+        external override
         onlyOwner
     {
         require(ratioSecurityDepositOfTvl != _ratioSecurityDepositOfTvl, "same");
         ratioSecurityDepositOfTvl = _ratioSecurityDepositOfTvl;
     }
 
+    /// @inheritdoc ILayer2Manager
     function setMinimumDepositForCandidate(uint256 _minimumDepositForCandidate)
-        external
+        external override
         onlyOwner
     {
         require(minimumDepositForCandidate != _minimumDepositForCandidate, "same");
         minimumDepositForCandidate = _minimumDepositForCandidate;
     }
 
+    /// @inheritdoc ILayer2Manager
     function setDelayBlocksForWithdraw(uint256 _delayBlocksForWithdraw)
-        external
+        external override
         onlyOwner
     {
         require(delayBlocksForWithdraw != _delayBlocksForWithdraw, "same");
@@ -96,7 +96,9 @@ contract  Layer2Manager is AccessibleCommon, BaseProxyStorage, Layer2ManagerStor
     }
 
     /* ========== only SeigManagerV2 ========== */
-    function addSeigs(uint256 amount) external returns (bool)
+
+    /// @inheritdoc ILayer2Manager
+    function addSeigs(uint256 amount) external override returns (bool)
     {
         require(msg.sender == seigManagerV2, "caller is not SeigManagerV2");
         if (amount > 0) totalSeigs += amount;
@@ -105,13 +107,16 @@ contract  Layer2Manager is AccessibleCommon, BaseProxyStorage, Layer2ManagerStor
 
     /* ========== Sequncer can execute ========== */
 
+    /// @inheritdoc ILayer2Manager
     function createOptimismSequencer(
         bytes32 _name,
         address addressManager,
+        address l1Bridge,
+        address l2Bridge,
         address l2ton,
         uint256 amount
     )
-        external ifFree
+        external override ifFree returns (uint32)
     {
         require(msg.sender == AddressManagerI(addressManager).getAddress('OVM_Sequencer'), 'NOT Sequencer');
 
@@ -122,11 +127,11 @@ contract  Layer2Manager is AccessibleCommon, BaseProxyStorage, Layer2ManagerStor
             l2ton != address(0), "zero address"
         );
 
-        bytes32 _key = LibOptimism.getKey(addressManager, l2ton);
+        bytes32 _key = LibOptimism.getKey(addressManager, l1Bridge, l2Bridge, l2ton);
         require(!layerKeys[_key], 'already created');
 
-        address l1Bridge = SequencerI(optimismSequencer).L1StandardBridge(addressManager);
-        require(l1Bridge != address(0), 'zero l1Bridge');
+        address _l1Bridge = SequencerI(optimismSequencer).L1StandardBridge(addressManager);
+        require(l1Bridge == _l1Bridge, 'different l1Bridge');
 
         require(amount >= minimumSecurityDepositAmount(l1Bridge, l2ton), 'security deposit is insufficent');
 
@@ -140,22 +145,27 @@ contract  Layer2Manager is AccessibleCommon, BaseProxyStorage, Layer2ManagerStor
         optimismSequencerNames[_index] = _name;
 
         require(
-            SequencerI(optimismSequencer).create(_index, abi.encodePacked(addressManager, l2ton)),
+            SequencerI(optimismSequencer).create(
+                _index,
+                abi.encodePacked(addressManager, l1Bridge, l2Bridge, l2ton)),
             "Fail createOptimismSequencer"
         );
 
         if (amount != 0) ton.safeTransferFrom(msg.sender, address(this), amount);
 
         emit CreatedOptimismSequencer(
-            _index, msg.sender, _name, addressManager, l1Bridge, l2ton, amount);
+            _index, msg.sender, _name, addressManager, l1Bridge, l2Bridge, l2ton, amount);
+
+        return _index;
     }
 
+    /// @inheritdoc ILayer2Manager
     function createCandidate(
         uint32 _sequencerIndex,
         bytes32 _name,
         uint16 _commission,
         uint256 amount
-    )   external nonZeroUint32(_sequencerIndex) ifFree
+    )   external override nonZeroUint32(_sequencerIndex) ifFree returns (uint32)
     {
         require(_sequencerIndex <= indexSequencers, "wrong index");
         bytes32 _key = LibOperator.getKey(msg.sender, _sequencerIndex);
@@ -183,10 +193,12 @@ contract  Layer2Manager is AccessibleCommon, BaseProxyStorage, Layer2ManagerStor
         );
 
         emit CreatedCandidate(_index, msg.sender, _name, _sequencerIndex, _commission, amount);
+        return _index;
     }
 
+    /// @inheritdoc ILayer2Manager
     function decreaseSecurityDeposit(uint32 _sequencerIndex, uint256 amount)
-        external ifFree nonZeroUint32(_sequencerIndex) nonZero(amount)
+        external override ifFree nonZeroUint32(_sequencerIndex) nonZero(amount)
     {
         require(_sequencerIndex <= indexSequencers, "wrong index");
 
@@ -210,8 +222,9 @@ contract  Layer2Manager is AccessibleCommon, BaseProxyStorage, Layer2ManagerStor
 
     /* ========== Anyone can execute ========== */
 
+    /// @inheritdoc ILayer2Manager
     function increaseSecurityDeposit(uint32 _sequencerIndex, uint256 amount)
-        external ifFree nonZeroUint32(_sequencerIndex) nonZero(amount)
+        external override ifFree nonZeroUint32(_sequencerIndex) nonZero(amount)
     {
         require(_sequencerIndex <= indexSequencers, "wrong index");
         ton.safeTransferFrom(msg.sender, address(this), amount);
@@ -222,7 +235,8 @@ contract  Layer2Manager is AccessibleCommon, BaseProxyStorage, Layer2ManagerStor
         emit IncreasedSecurityDeposit(_sequencerIndex, msg.sender, amount);
     }
 
-    function distribute() external {
+    /// @inheritdoc ILayer2Manager
+    function distribute() external override {
         require (totalSeigs != 0, 'no distributable amount');
         uint256 len = optimismSequencerIndexes.length;
         uint256 sum = 0;
@@ -255,7 +269,8 @@ contract  Layer2Manager is AccessibleCommon, BaseProxyStorage, Layer2ManagerStor
         emit Distributed(totalSeigs, amount1);
     }
 
-    function claim(uint32 _layerIndex) external {
+    /// @inheritdoc ILayer2Manager
+    function claim(uint32 _layerIndex) external override {
         uint256 amount = holdings[_layerIndex].seigs;
         require(amount != 0, 'no amount to claim');
         address sequencer_ = sequencer(_layerIndex);
@@ -266,7 +281,9 @@ contract  Layer2Manager is AccessibleCommon, BaseProxyStorage, Layer2ManagerStor
     }
 
     /* ========== VIEW ========== */
-    function minimumSecurityDepositAmount(address l1Bridge, address l2ton) public view returns (uint256 amount) {
+
+    /// @inheritdoc ILayer2Manager
+    function minimumSecurityDepositAmount(address l1Bridge, address l2ton) public view override returns (uint256 amount) {
         if (ratioSecurityDepositOfTvl == 0) amount = minimumDepositForSequencer;
         else {
             amount = Math.max(
@@ -275,51 +292,56 @@ contract  Layer2Manager is AccessibleCommon, BaseProxyStorage, Layer2ManagerStor
         }
     }
 
-    function balanceOfLton(address account) public view returns (uint256 amount) {
+    /// @inheritdoc ILayer2Manager
+    function balanceOfLton(address account) public view override returns (uint256 amount) {
         uint256 len = optimismSequencerIndexes.length;
         for(uint256 i = 0; i < len; i++){
             amount += StakingLayer2I(optimismSequencer).balanceOfLton(optimismSequencerIndexes[i], account);
         }
     }
 
-    function curTotalLayer2Deposits() public view returns (uint256 amount) {
+    /// @inheritdoc ILayer2Manager
+    function curTotalLayer2Deposits() public view override returns (uint256 amount) {
         uint256 len = optimismSequencerIndexes.length;
         for(uint256 i = 0; i < len; i++){
             amount += SequencerI(optimismSequencer).getTvl(optimismSequencerIndexes[i]);
         }
     }
 
-    function sequencer(uint32 _layerIndex) public view returns (address sequencer_) {
+    /// @inheritdoc ILayer2Manager
+    function sequencer(uint32 _layerIndex) public view override returns (address sequencer_) {
         if (_layerIndex <= indexSequencers ){
             sequencer_ = SequencerI(optimismSequencer).sequencer(_layerIndex);
         }
     }
 
-    function existedLayer2Index(uint32 _index) external view returns (bool exist_) {
+    /// @inheritdoc ILayer2Manager
+    function existedLayer2Index(uint32 _index) external view override returns (bool exist_) {
         if (_index <= indexSequencers) exist_ = true;
     }
 
-    function existedCandidateIndex(uint32 _index) external view returns (bool exist_) {
+    /// @inheritdoc ILayer2Manager
+    function existedCandidateIndex(uint32 _index) external view override returns (bool exist_) {
         if (_index <= indexCandidates) exist_ = true;
     }
 
-    function curTotalAmountsLayer2() external view returns (uint256 amount) {
+    /// @inheritdoc ILayer2Manager
+    function curTotalAmountsLayer2() external view override returns (uint256 amount) {
         amount = curTotalLayer2Deposits() + totalSecurityDeposit;
     }
 
-    function totalLayers() external view returns (uint256 total) {
+    /// @inheritdoc ILayer2Manager
+    function totalLayers() external view override returns (uint256 total) {
         total = optimismSequencerIndexes.length;
     }
 
-    function totalCandidates() external view returns (uint256 total) {
+    /// @inheritdoc ILayer2Manager
+    function totalCandidates() external view override returns (uint256 total) {
         total = candidatesIndexes.length;
     }
 
-    function curlayer2DepositsOf(uint32 _layerIndex) external view returns (uint256 amount) {
-        amount = depositsOf(_layerIndex);
-    }
-
-    function depositsOf(uint32 _layerIndex) public view returns (uint256 amount) {
+    /// @inheritdoc ILayer2Manager
+    function depositsOf(uint32 _layerIndex) public view override returns (uint256 amount) {
         try
             SequencerI(optimismSequencer).getTvl(_layerIndex) returns (uint256 a) {
                 amount = a;
@@ -328,8 +350,9 @@ contract  Layer2Manager is AccessibleCommon, BaseProxyStorage, Layer2ManagerStor
         }
     }
 
+    /// @inheritdoc ILayer2Manager
     function getAllLayers()
-        external view
+        external view override
         returns (
             bytes32[] memory optimismSequencerNames_,
             uint32[] memory optimismSequencerIndexes_,
@@ -350,8 +373,9 @@ contract  Layer2Manager is AccessibleCommon, BaseProxyStorage, Layer2ManagerStor
         }
     }
 
+    /// @inheritdoc ILayer2Manager
     function getAllCandidates()
-        external view
+        external view override
         returns (
             bytes32[] memory candidateNames_,
             uint32[] memory candidateNamesIndexes_,
@@ -369,8 +393,9 @@ contract  Layer2Manager is AccessibleCommon, BaseProxyStorage, Layer2ManagerStor
         }
     }
 
+    /// @inheritdoc ILayer2Manager
     function layerHoldings(uint32 layerKey_)
-        external view
+        external view override
         returns (Layer2.Layer2Holdings memory)
     {
         return holdings[layerKey_];

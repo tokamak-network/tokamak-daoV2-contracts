@@ -35,7 +35,7 @@ contract DAOv2CommitteeProxy is
             || _seigManagerV2 != address(0)
             || _layer2Manager != address(0)
             || _agendaManager != address(0)
-            || _candidate != address(0),
+            || _candidate != address(0)
             || _sequencer != address(0),
             "DAOv2CommitteeProxy: input is zero"
         );
@@ -44,7 +44,7 @@ contract DAOv2CommitteeProxy is
         layer2Manager = ILayer2Manager(_layer2Manager);
         agendaManager = IDAOAgendaManager(_agendaManager);
         candidate = ICandidate(_candidate);
-        sequencer = ISequencer(_sequencer);
+        sequencer = IOptimismSequencer(_sequencer);
         daoVault = IDAOVault(_daoVault);
         quorum = 2;
         activityRewardPerSecond = 3170979198376458;

@@ -4,29 +4,29 @@ pragma abicoder v2;
 
 import "./StorageStateCommittee.sol";
 import "../common/ProxyAccessCommon.sol";
-import { OnApprove } from "./OnApprove.sol";
+import "../proxy/BaseProxyStorage.sol";
 
+import { OnApprove } from "./OnApprove.sol";
 import { SafeMath } from "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import { IERC20 } from  "../../node_modules/@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import { IDAOV2Committee } from "../interfaces/IDAOV2Committee.sol";
+import { IDAOv2Committee } from "../interfaces/IDAOv2Committee.sol";
 // import { ICandidate } from "../interfaces/ICandidate.sol";
-import { ILayer2 } from "../interfaces/ILayer2.sol";
-import { IDAOAgendaManager } from "../interfaces/IDAOAgendaManager.sol";
+// import { IDAOAgendaManager } from "../interfaces/IDAOAgendaManager.sol";
 import { LibAgenda } from "../lib/Agenda.sol";
 import { ERC165Checker } from "../../node_modules/@openzeppelin/contracts/utils/introspection/ERC165Checker.sol";
 
-interface ICandidate {
-    function balanceOfLton(uint32 _index) external view returns (uint256 amount);
-}
+import "hardhat/console.sol";
 
-// interface ISequencer {
-//     function balanceOfLton(uint32 _index) external view returns (uint256 amount);
-// }
+interface IStaking {
+    function balanceOfLton(uint32 _index) external view returns (uint256 amount) ;
+    function balanceOfLton(uint32 _index, address account) external view returns (uint256 amount);
+}
 
 contract DAOv2Committee is 
     StorageStateCommittee, 
-    ProxyAccessCommon, 
-    IDAOV2Committee 
+    ProxyAccessCommon,
+    BaseProxyStorage,
+    IDAOv2Committee 
 {
     using SafeMath for uint256;
     using LibAgenda for *;
@@ -101,7 +101,7 @@ contract DAOv2Committee is
 
     event ChangedMemo(
         address candidate,
-        string newMemo
+        bytes32 newMemo
     );
 
     event ActivityRewardChanged(
@@ -150,7 +150,7 @@ contract DAOv2Committee is
     }
 
     function setOptimismSequencer(address _sequencer) external onlyOwner nonZero(_sequencer) {
-        sequencer = ISequencer(_sequencer);
+        sequencer = IOptimismSequencer(_sequencer);
     }
 
     /// @notice Set TON contract address
@@ -312,7 +312,7 @@ contract DAOv2Committee is
         returns (bool)
     {   
         require(!isExistCandidate(msg.sender), "DAOCommittee: candidate already registerd");
-        require(_sequencerIndex <= layer2Manager.indexSequencers(), "wrong index");
+        require(layer2Manager.existedLayer2Index(_sequencerIndex) == true, "wrong index");
         
         //msg.sender는 Layer2Manager에게 미리 amount만큼 approve해야한다
         (bool success, bytes memory data) = address(layer2Manager).delegatecall(
@@ -323,7 +323,8 @@ contract DAOv2Committee is
         );
         
         //layer2Manager에서 indexCandidates는 로직에서 더하고 값을 넣으므로 index값은 같다.
-        uint32 candidateIndex = layer2Manager.indexCandidates();
+        uint32 candidateIndex = toUint32(data,0);
+        console.log(candidateIndex);
 
         _candidateInfos[msg.sender] = CandidateInfo({
             sequencerIndex: _sequencerIndex,
@@ -361,7 +362,8 @@ contract DAOv2Committee is
             )
         );
 
-        uint32 sequencerIndex = layer2Manager.indexSequencers();
+        uint32 sequencerIndex = toUint32(data,0);
+        console.log(sequencerIndex);
 
         _candidateInfos[msg.sender] = CandidateInfo({
             sequencerIndex: sequencerIndex,
@@ -424,24 +426,24 @@ contract DAOv2Committee is
         if (candidateInfo.candidateIndex == 0) {
             if(prevCandidateInfo.candidateIndex == 0) {
                 require(
-                    sequencer.balanceOfLton(candidateInfo.sequencerIndex) > sequencer.balanceOfLton(prevCandidateInfo.sequencerIndex),
+                    IStaking(address(sequencer)).balanceOfLton(candidateInfo.sequencerIndex) > IStaking(address(sequencer)).balanceOfLton(prevCandidateInfo.sequencerIndex),
                     "not enough amount"
                 );
             } else {
                 require(
-                    sequencer.balanceOfLton(candidateInfo.sequencerIndex) > candidate.balanceOfLton(prevCandidateInfo.sequencerIndex),
+                    IStaking(address(sequencer)).balanceOfLton(candidateInfo.sequencerIndex) > IStaking(address(candidate)).balanceOfLton(prevCandidateInfo.sequencerIndex),
                     "not enough amount"
                 );
             }
         } else {
             if(prevCandidateInfo.candidateIndex == 0) {
                 require(
-                    candidate.balanceOfLton(candidateInfo.sequencerIndex) > sequencer.balanceOfLton(prevCandidateInfo.sequencerIndex),
+                    IStaking(address(candidate)).balanceOfLton(candidateInfo.sequencerIndex) > IStaking(address(sequencer)).balanceOfLton(prevCandidateInfo.sequencerIndex),
                     "not enough amount"
                 );
             } else {
                 require(
-                    candidate.balanceOfLton(candidateInfo.sequencerIndex) > candidate.balanceOfLton(prevCandidateInfo.sequencerIndex),
+                    IStaking(address(candidate)).balanceOfLton(candidateInfo.sequencerIndex) > IStaking(address(candidate)).balanceOfLton(prevCandidateInfo.sequencerIndex),
                     "not enough amount"
                 );
             }
@@ -485,23 +487,21 @@ contract DAOv2Committee is
     /// @notice Retires member
     /// @return Whether or not the execution succeeded
     function retireMember() onlyMember external override returns (bool) {
+        require(isExistCandidate(msg.sender), "DAOCommittee: not registerd");
         // address candidate = ICandidate(msg.sender).candidate();
         CandidateInfo storage candidateInfo = _candidateInfos[msg.sender];
         require(
             candidateInfo.indexMembers != 0,
             "DAOCommittee: already not member"
         );
-        // require(
-        //     candidateInfo.candidateContract == msg.sender,
-        //     "DAOCommittee: invalid candidate contract"
-        // );
+
         members[candidateInfo.indexMembers] = address(0);
         candidateInfo.rewardPeriod = uint128(uint256(candidateInfo.rewardPeriod).add(block.timestamp.sub(candidateInfo.memberJoinedTime)));
         candidateInfo.memberJoinedTime = 0;
 
         uint256 prevIndex = candidateInfo.indexMembers;
         candidateInfo.indexMembers = 0;
-        emit ChangedMember(prevIndex, candidate, address(0));
+        emit ChangedMember(prevIndex, msg.sender, address(0));
 
         return true;
     }
@@ -636,7 +636,7 @@ contract DAOv2Committee is
         candidateInfo.claimedTimestamp = uint128(block.timestamp);
         candidateInfo.rewardPeriod = 0;
 
-        emit ClaimedActivityReward(candidate, _receiver, amount);
+        emit ClaimedActivityReward(msg.sender, _receiver, amount);
     }
 
     //////////////////////////////////////////////////////////////////////
@@ -724,7 +724,7 @@ contract DAOv2Committee is
         view
         returns (uint256 amount)
     {
-        return candidate.balanceOfLton(_index);
+        return IStaking(address(candidate)).balanceOfLton(_index);
     }
 
     function totalSupplyOnSequencer(
@@ -734,7 +734,7 @@ contract DAOv2Committee is
         view
         returns (uint256 amount)
     {
-        return sequencer.balanceOfLton(_index);
+        return IStaking(address(sequencer)).balanceOfLton(_index);
     }
 
     function balanceOfOnCandidate(
@@ -745,7 +745,7 @@ contract DAOv2Committee is
         view
         returns (uint256 amount)
     {
-        return candidate.balanceOfLton(_index,_account);
+        return IStaking(address(candidate)).balanceOfLton(_index,_account);
     }
     
     function balanceOfOnSequencer(
@@ -756,7 +756,7 @@ contract DAOv2Committee is
         view
         returns (uint256 amount)
     {
-        return sequencer.balanceOfLton(_index,_account);
+        return IStaking(address(sequencer)).balanceOfLton(_index,_account);
     }
 
     function candidatesLength() external view override returns (uint256) {
@@ -781,5 +781,17 @@ contract DAOv2Committee is
         }
 
         return period.mul(activityRewardPerSecond);
+    }
+
+    function toUint32(bytes memory _bytes, uint256 _start) internal pure returns (uint16) {
+        require(_start + 4 >= _start, 'toUint16_overflow');
+        require(_bytes.length >= _start + 4, 'toUint16_outOfBounds');
+        uint16 tempUint;
+
+        assembly {
+            tempUint := mload(add(add(_bytes, 0x4), _start))
+        }
+
+        return tempUint;
     }
 }
