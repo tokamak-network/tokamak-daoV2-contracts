@@ -2,13 +2,8 @@
 pragma solidity ^0.8.17;
 pragma abicoder v2;
 
-// import { ICandidateFactory } from "../interfaces/ICandidateFactory.sol";
-// import { ILayer2Registry } from "../interfaces/ILayer2Registry.sol";
-// import { ISeigManager } from "../interfaces/ISeigManager.sol";
 import { IDAOAgendaManager } from "../interfaces/IDAOAgendaManager.sol";
 import { IDAOVault } from "../interfaces/IDAOVault.sol";
-
-//new add
 import { ILayer2Manager } from "../interfaces/ILayer2Manager.sol";
 import { ISeigManagerV2 } from "../interfaces/ISeigManagerV2.sol";
 
