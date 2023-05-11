@@ -1,9 +1,12 @@
 
 import { ethers } from 'hardhat'
-import { BigNumber } from 'ethers'
+// import { BigNumber } from 'ethers'
 import {  Wallet, Signer } from 'ethers'
 
-
+import { DAOv2CommitteeProxy } from '../../typechain-types/contracts/dao/DAOv2CommitteeProxy' 
+import { DAOv2Committee } from '../../typechain-types/contracts/dao/DAOv2Committee.sol' 
+import { DAOAgendaManager } from '../../typechain-types/contracts/test/DAOAgendaManager' 
+import { DAOVault } from '../../typechain-types/contracts/test/DAOVault' 
 
 import { SeigManagerV2Proxy } from '../../typechain-types/contracts/proxy/SeigManagerV2Proxy'
 import { SeigManagerV2 } from '../../typechain-types/contracts/test/SeigManagerV2.sol'
@@ -23,7 +26,6 @@ import { MockL1Bridge } from '../../typechain-types/contracts/test/MockL1Bridge.
 import { MockL2Bridge } from '../../typechain-types/contracts/test/MockL2Bridge'
 import { TestERC20 } from '../../typechain-types/contracts/test/TestERC20'
 
-
 interface Layer2Fixture  {
     addressManager: string,
     l1Messenger: string,
@@ -33,7 +35,7 @@ interface Layer2Fixture  {
     l2ton: string
 }
 
-interface TonStakingV2Fixture  {
+interface DAOStakingV2Fixture  {
     seigManagerV2Proxy: SeigManagerV2Proxy
     seigManagerV2: SeigManagerV2
     layer2ManagerProxy: Layer2ManagerProxy
@@ -54,6 +56,19 @@ interface TonStakingV2Fixture  {
     l1Bridge: MockL1Bridge,
     l2Bridge: MockL2Bridge,
     l2ton: TestERC20,
-    dao: Signer,
-    stosDistribute: Signer
+    dao: string,
+    stosDistribute: Signer,
+    daov2committeeProxy: DAOv2CommitteeProxy,
+    daov2committee: DAOv2Committee,
+    daoagendaManager: DAOAgendaManager,
+    daovault: DAOVault
 }
+
+// interface DAOV2Fixture {
+//     daov2committeeProxy: DAOv2CommitteeProxy,
+//     daov2committee: DAOv2Committee,
+//     daoagendaManager: DAOAgendaManager,
+//     daovault: DAOVault
+// }
+
+export { Layer2Fixture, DAOStakingV2Fixture }

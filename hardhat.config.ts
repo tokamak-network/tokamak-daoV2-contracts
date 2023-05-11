@@ -24,16 +24,20 @@ const config: HardhatUserConfig = {
     deployer: 0,
   },
   networks: {
-    // hardhat: {
-    //   forking: {
-    //     url: `${process.env.ETH_NODE_URI_MAINNET}`,
-    //     blockNumber: 16823556
-    //   },
-    //   allowUnlimitedContractSize: false,
-    // },
     hardhat: {
-      chainId: 31337,
+      forking: {
+        url: `https://mainnet.infura.io/v3/${process.env.INFURA_API_KEY}`,
+        blockNumber: 16823556
+      },
+      // mining: {
+      //   auto: false,
+      //   interval: 0
+      // },
+      allowUnlimitedContractSize: false,
     },
+    // hardhat: {
+    //   chainId: 31337,
+    // },
     local: {
       chainId: 31337,
       url: `http://127.0.0.1:8545/`,
@@ -52,12 +56,12 @@ const config: HardhatUserConfig = {
     // Obtain one at https://etherscan.io/
     apiKey: process.env.ETHERSCAN_API_KEY,
   },
-  // gasReporter: {
-  //   enabled: true,
-  //   currency: 'USD',
-  //   gasPrice: 21,
-  //   coinmarketcap: `${process.env.COINMARKETCAP_API_KEY}`
-  // },
+  gasReporter: {
+    enabled: true,
+    currency: 'USD',
+    gasPrice: 21,
+    coinmarketcap: `${process.env.COINMARKETCAP_API_KEY}`
+  },
   solidity: {
     version: '0.8.18',
     settings: {
