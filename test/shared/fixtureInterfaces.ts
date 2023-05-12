@@ -58,10 +58,12 @@ interface DAOStakingV2Fixture  {
     l2ton: TestERC20,
     dao: string,
     stosDistribute: Signer,
+    DAOContract: Signer,
     daov2committeeProxy: DAOv2CommitteeProxy,
     daov2committee: DAOv2Committee,
     daoagendaManager: DAOAgendaManager,
-    daovault: DAOVault
+    daovault: DAOVault,
+    daoPrivateOwner: Signer
 }
 
 // interface DAOV2Fixture {

@@ -31,11 +31,16 @@ import { LibOptimism } from '../../typechain-types/contracts/libraries/LibOptimi
 import TON_ABI from '../../artifacts/contracts/test/TON.sol/TON.json'
 import { Layer2Fixture, DAOStakingV2Fixture } from './fixtureInterfaces'
 
+import DAOAgendaManger_ABI from '../../abi/DAOAgendaManager.json'
+import DAOVault_ABI from '../../artifacts/contracts/test/DAOVault.sol/DAOVault.json'
+
 // mainnet
 let tonAddress = "0x2be5e8c109e2197D077D13A82dAead6a9b3433C5";
 let wtonAddress = "0xc4A11aaf6ea915Ed7Ac194161d2fC9384F15bff2";
 let tonAdminAddress = "0xDD9f0cCc044B0781289Ee318e5971b0139602C26";
-let daoOwnerAddress = "0xDD9f0cCc044B0781289Ee318e5971b0139602C26"; //DAOCommitteProxy Address
+let daoCommitteProxyAddress = "0xDD9f0cCc044B0781289Ee318e5971b0139602C26"; //DAOCommitteProxy Address
+let daoAgendaMangerAddress = "0xcD4421d082752f363E1687544a09d5112cD4f484"; //DAOAgendaManager Address
+let daoVaultAddress = "0x2520CD65BAa2cEEe9E6Ad6EBD3F45490C42dd303" ;    //DAOVault Address
 
 // export const daoV2Fixtures = async function (): Promise<DAOV2Fixture> {
 //     const [deployer] = await ethers.getSigners();
@@ -64,9 +69,10 @@ let daoOwnerAddress = "0xDD9f0cCc044B0781289Ee318e5971b0139602C26"; //DAOCommitt
 // }
 
 export const daostakingV2Fixtures = async function (): Promise<DAOStakingV2Fixture> {
-    const [deployer, addr1, addr2, sequencer1, stosDistribute ] = await ethers.getSigners();
+    const [deployer, addr1, addr2, sequencer1, stosDistribute, daoPrivateOwner ] = await ethers.getSigners();
     console.log(deployer.address);
-    await ethers.provider.send("hardhat_impersonateAccount",[tonAdminAddress]);
+    await ethers.provider.send("hardhat_impersonateAccount",[daoCommitteProxyAddress]);
+    const DAOContract = await ethers.getSigner(daoCommitteProxyAddress);
     const tonAdmin = await ethers.getSigner(tonAdminAddress);
     
     const factoryLogic = await ethers.getContractFactory('SeigManagerV2')
@@ -120,10 +126,10 @@ export const daostakingV2Fixtures = async function (): Promise<DAOStakingV2Fixtu
 
     //
     await ethers.provider.send("hardhat_setBalance", [
-        tonAdmin.address,
+        DAOContract.address,
         "0x8ac7230489e80000",
       ]);
-    await ton.connect(tonAdmin).addMinter(seigManagerV2Proxy.address);
+    await ton.connect(DAOContract).addMinter(seigManagerV2Proxy.address);
     //--------
     const Lib_AddressManager = await ethers.getContractFactory('Lib_AddressManager')
     const addressManager = (await Lib_AddressManager.connect(deployer).deploy()) as Lib_AddressManager
@@ -154,14 +160,16 @@ export const daostakingV2Fixtures = async function (): Promise<DAOStakingV2Fixtu
     await daov2committeProxy.connect(deployer).upgradeTo(daov2comLogic.address);
 
     const daov2commitee = daov2comLogic.attach(daov2committeProxy.address) as DAOv2Committee
-
-    const daoagenda_ = await ethers.getContractFactory('DAOAgendaManager');
-    const daoagenda = (await daoagenda_.connect(deployer).deploy()) as DAOAgendaManager
     
-    const daovault_ = await ethers.getContractFactory('DAOVault');
-    const daovault = (await daovault_.connect(deployer).deploy(tonAddress,wtonAddress)) as DAOVault
+    const daoagenda = (await ethers.getContractAt(DAOAgendaManger_ABI.abi, daoAgendaMangerAddress, deployer)) as DAOAgendaManager
+    // const daovault_ = await ethers.getContractFactory('DAOAgendaManager');
+    // const daoagenda = (await daoagenda_.connect(deployer).deploy()) as DAOAgendaManager
+    
+    const daovault = (await ethers.getContractAt(DAOVault_ABI.abi, daoVaultAddress, deployer)) as DAOVault
+    // const daovault_ = await ethers.getContractFactory('DAOVault');
+    // const daovault = (await daovault_.connect(deployer).deploy(tonAddress,wtonAddress)) as DAOVault
 
-    const dao = daov2committeProxy.address;
+    const dao = daovault.address;
 
     return  {
         seigManagerV2Proxy: seigManagerV2Proxy,
@@ -186,10 +194,12 @@ export const daostakingV2Fixtures = async function (): Promise<DAOStakingV2Fixtu
         l2ton: l2ton,
         dao: dao,
         stosDistribute: stosDistribute,
+        DAOContract: DAOContract,
         daov2committeeProxy: daov2committeProxy,
         daov2committee: daov2commitee,
         daoagendaManager: daoagenda,
-        daovault: daovault
+        daovault: daovault,
+        daoPrivateOwner: daoPrivateOwner
     }
 }
 
