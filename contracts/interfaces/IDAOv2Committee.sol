@@ -2,9 +2,7 @@
 pragma solidity ^0.8.17;
 pragma abicoder v2;
 
-import { IStorageStateCommittee } from "../interfaces/IStorageStateCommittee.sol";
-
-interface IDAOv2Committee is IStorageStateCommittee {
+interface IDAOv2Committee {
     //--owner
     function setSeigManagerV2(address _seigManagerV2) external;
     function setDaoVault(address _daoVault) external;
@@ -65,18 +63,9 @@ interface IDAOv2Committee is IStorageStateCommittee {
         external
         returns (bool);
 
-    // function setQuorum(uint256 _quorum) external;
-    // function setCreateAgendaFees(uint256 _fees) external;
-    // function setMinimumNoticePeriodSeconds(uint256 _minimumNoticePeriod) external;
-    // function setMinimumVotingPeriodSeconds(uint256 _minimumVotingPeriod) external;
-    // function setExecutingPeriodSeconds(uint256 _executingPeriodSeconds) external;
     function castVote(uint256 _AgendaID, uint256 _vote, string calldata _comment) external;
     function endAgendaVoting(uint256 _agendaID) external;
     function executeAgenda(uint256 _AgendaID) external;
-    // function setAgendaStatus(uint256 _agendaID, uint256 _status, uint256 _result) external;
-
-    // function updateSeigniorage(address _candidate) external returns (bool);
-    // function updateSeigniorages(address[] calldata _candidates) external returns (bool);
     function claimActivityReward(address _receiver) external;
 
     //--view
@@ -111,10 +100,6 @@ interface IDAOv2Committee is IStorageStateCommittee {
         view
         returns (uint256 amount);
 
-    // function totalSupplyOnCandidate(address _candidate) external view returns (uint256);
-    // function balanceOfOnCandidate(address _candidate, address _account) external view returns (uint256);
-    // function totalSupplyOnCandidateContract(address _candidateContract) external view returns (uint256);
-    // function balanceOfOnCandidateContract(address _candidateContract, address _account) external view returns (uint256);
     function candidatesLength() external view returns (uint256);
     function isExistCandidate(address _candidate) external view returns (bool);
     function getClaimableActivityReward(address _candidate) external view returns (uint256);

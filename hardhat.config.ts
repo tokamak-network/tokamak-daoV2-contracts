@@ -63,7 +63,21 @@ const config: HardhatUserConfig = {
     coinmarketcap: `${process.env.COINMARKETCAP_API_KEY}`
   },
   solidity: {
-    version: '0.8.18',
+    compilers: [
+      {
+        version: '0.8.18',
+        settings: {
+          optimizer: { enabled: true, runs: 10_000 },
+        },
+      },
+      {
+        version: '0.7.6', // Required for DAOCommitteeProxy
+        settings: {
+          optimizer: { enabled: true, runs: 10_000 },
+        },
+      },
+    ],
+    // version: '0.8.18',
     settings: {
       optimizer: {
         enabled: true,

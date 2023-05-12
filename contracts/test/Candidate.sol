@@ -4,7 +4,7 @@ pragma solidity ^0.8.4;
 import "../storages/CandidateStorage.sol";
 import "./Staking.sol";
 import "../libraries/LibOperator.sol";
-import "../interfaces/ICandidate.sol";
+import "./ICandidate.sol";
 
 contract Candidate is Staking, CandidateStorage, ICandidate {
     using BytesParserLib for bytes;
