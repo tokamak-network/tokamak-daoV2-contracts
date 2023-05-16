@@ -2,7 +2,7 @@
 import { ethers } from 'hardhat'
 import {  Wallet, Signer } from 'ethers'
 
-import { DAOv2CommitteeProxy } from '../../typechain-types/contracts/dao/DAOv2CommitteeProxy' 
+// import { DAOv2CommitteeProxy } from '../../typechain-types/contracts/dao/DAOv2CommitteeProxy' 
 import { DAOv2Committee } from '../../typechain-types/contracts/dao/DAOv2Committee.sol' 
 import { DAOAgendaManager } from '../../typechain-types/contracts/test/DAOAgendaManager' 
 import { DAOVault } from '../../typechain-types/contracts/test/DAOVault' 
@@ -155,11 +155,11 @@ export const daostakingV2Fixtures = async function (): Promise<DAOStakingV2Fixtu
     const daov2comLogic_ = await ethers.getContractFactory('DAOv2Committee');
     const daov2comLogic = (await daov2comLogic_.connect(deployer).deploy()) as DAOv2Committee
 
-    const daov2committeProxy_ = await ethers.getContractFactory('DAOv2CommitteeProxy');
-    const daov2committeProxy = (await daov2committeProxy_.connect(deployer).deploy()) as DAOv2CommitteeProxy
-    await daov2committeProxy.connect(deployer).upgradeTo(daov2comLogic.address);
+    // const daov2committeProxy_ = await ethers.getContractFactory('DAOv2CommitteeProxy');
+    // const daov2committeProxy = (await daov2committeProxy_.connect(deployer).deploy()) as DAOv2CommitteeProxy
+    // await daov2committeProxy.connect(deployer).upgradeTo(daov2comLogic.address);
 
-    const daov2commitee = daov2comLogic.attach(daov2committeProxy.address) as DAOv2Committee
+    // const daov2commitee = daov2comLogic.attach(daov2committeProxy.address) as DAOv2Committee
     
     const daoagenda = (await ethers.getContractAt(DAOAgendaManger_ABI.abi, daoAgendaMangerAddress, deployer)) as DAOAgendaManager
     // const daovault_ = await ethers.getContractFactory('DAOAgendaManager');
@@ -195,8 +195,8 @@ export const daostakingV2Fixtures = async function (): Promise<DAOStakingV2Fixtu
         dao: dao,
         stosDistribute: stosDistribute,
         DAOContract: DAOContract,
-        daov2committeeProxy: daov2committeProxy,
-        daov2committee: daov2commitee,
+        // daov2committeeProxy: daov2committeProxy,
+        // daov2committee: daov2commitee,
         daoagendaManager: daoagenda,
         daovault: daovault,
         daoPrivateOwner: daoPrivateOwner,

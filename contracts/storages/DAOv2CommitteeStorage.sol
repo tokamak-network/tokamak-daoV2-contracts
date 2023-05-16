@@ -17,7 +17,7 @@ contract DAOv2CommitteeStorage {
     }
 
     ILayer2Manager public layer2Manager;
-    ISeigManagerV2 public seigManagerV2;
+    ISeigManagerV2 public seigMaV2;
     // address public seigManagerV2;
     ICandidate public candidate;
     IOptimismSequencer public sequencer;
@@ -32,7 +32,7 @@ contract DAOv2CommitteeStorage {
     }
 
     modifier validSeigManagerV2() {
-        require(address(seigManagerV2) != address(0), "StorageStateCommittee: invalid SeigManagerV2");
+        require(address(seigMaV2) != address(0), "StorageStateCommittee: invalid SeigManagerV2");
         _;
     }
 }

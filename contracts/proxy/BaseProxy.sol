@@ -156,7 +156,7 @@ contract BaseProxy is ProxyAccessCommon, BaseProxyStorage, IProxyAction
 
         require(
             _impl != address(0) && !pauseProxy,
-            "Proxy: impl OR proxy is false2"
+            "Proxy: impl OR proxy is false2&&2"
         );
 
         assembly {

@@ -486,7 +486,7 @@ contract DAOv2Committee is
     /// @notice Call updateSeigniorage on SeigManager
     /// @return Whether or not the execution succeeded
     function updateSeigniorage() public override returns (bool) {
-        return ISeigManagerV2(seigManagerV2).updateSeigniorage();
+        return seigManagerV2.updateSeigniorage();
     }
 
     //////////////////////////////////////////////////////////////////////

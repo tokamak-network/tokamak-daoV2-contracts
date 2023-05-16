@@ -177,13 +177,13 @@ describe('DAOv2Committee', () => {
             it('setAddress can be executed by only owner ', async () => {
 
                 await deployed.seigManagerV2.connect(deployer).setAddress(
-                    deployed.daov2committeeProxy.address,
+                    DAOProxy.address,
                     deployed.stosDistribute.address
                 )
             
                 // console.log(await deployed.seigManagerV2.dao());
                 // console.log(deployed.daov2committeeProxy.address);
-                expect(await deployed.seigManagerV2.dao()).to.eq(deployed.daov2committeeProxy.address)
+                expect(await deployed.seigManagerV2.dao()).to.eq(DAOProxy.address)
                 expect(await deployed.seigManagerV2.stosDistribute()).to.eq(deployed.stosDistribute.address)
     
             })
@@ -330,13 +330,13 @@ describe('DAOv2Committee', () => {
 
             it("set committee can not by not DAOContract", async () => {
                 await expect(
-                    deployed.daoagendaManager.connect(addr1).setCommittee(deployed.daov2committeeProxy.address)
+                    deployed.daoagendaManager.connect(addr1).setCommittee(DAOProxy.address)
                 ).to.be.revertedWith("Ownable: caller is not the owner") 
             })
 
             it("set committee by only DAOContract", async () => {
-                await deployed.daoagendaManager.connect(deployed.DAOContract).setCommittee(deployed.daov2committeeProxy.address);
-                expect(await deployed.daoagendaManager.committee()).to.be.eq(deployed.daov2committeeProxy.address);
+                await deployed.daoagendaManager.connect(deployed.DAOContract).setCommittee(DAOProxy.address);
+                expect(await deployed.daoagendaManager.committee()).to.be.eq(DAOProxy.address);
             })
 
             /*
@@ -366,6 +366,17 @@ describe('DAOv2Committee', () => {
 
     describe("#7. DAOv2Committee set", () => {
         describe("#7-1. initialize setting", () => {
+            it("grantRole", async () => {
+                await DAOProxyLogicV2.connect(DAOOwner).grantRole(
+                    "0x0000000000000000000000000000000000000000000000000000000000000000",
+                    deployer.address
+                )
+
+                expect(await DAOProxyLogicV2.connect(DAOOwner).hasRole(
+                    "0x0000000000000000000000000000000000000000000000000000000000000000",
+                    deployer.address
+                )).to.be.equal(true)
+            })
             it("setSeigManagerV2 can not by not owner", async () => {
                 // console.log(DAOProxyLogicV2)
                 await expect(
@@ -380,9 +391,8 @@ describe('DAOv2Committee', () => {
                     deployed.seigManagerV2Proxy.address,
                 );
                 expect(await DAOProxyLogicV2.ton()).to.be.eq(deployed.ton.address);
-                console.log("1");
                 // console.log(await DAOProxyLogicV2.seigManagerV2());
-                // expect(await DAOProxyLogicV2.seigManagerV2()).to.be.eq(deployed.seigManagerV2Proxy.address);
+                expect(await DAOProxyLogicV2.connect(DAOOwner).seigMaV2()).to.be.eq(deployed.seigManagerV2Proxy.address);
                 // expect(await DAOProxyLogicV2.agendaManager()).to.be.eq(deployed.daoagendaManager.address);
                 // expect(await DAOProxyLogicV2.daoVault()).to.be.eq(deployed.daovault.address);
                 // expect(await deployed.daov2committeeProxy.layer2Manager()).to.be.eq(deployed.layer2ManagerProxy.address);
