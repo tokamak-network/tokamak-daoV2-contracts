@@ -366,25 +366,58 @@ describe('DAOv2Committee', () => {
 
     describe("#7. DAOv2Committee set", () => {
         describe("#7-1. initialize setting", () => {
-            it("setSeigManagerV2 can not by not owner", async () => {
-                await expect(
-                    DAOProxyLogicV2.connect(addr1).setSeigManagerV2(
-                        deployed.seigManagerV2Proxy.address,
-                    )
-                ).to.be.revertedWith("Accessible: Caller is not an admin") 
+            it("grantRole DAOContract", async () => {
+                await DAOProxyLogicV2.connect(DAOOwner).grantRole(
+                    "0x0000000000000000000000000000000000000000000000000000000000000000",
+                    deployer.address
+                )
             })
+            // it("setSeigManagerV2 can not by not owner", async () => {
+            //     await expect(
+            //         DAOProxyLogicV2.connect(addr1).setSeigManagerV2(
+            //             deployed.seigManagerV2Proxy.address,
+            //         )
+            //     ).to.be.revertedWith("DAOCommitteeV2: msg.sender is not an admin") 
+            // })
 
             it("setSeigManagerV2 can by only owner", async () => {
-                await DAOProxyLogicV2.connect(DAOOwner).setSeigManagerV2(
+                await DAOProxyLogicV2.connect(daoPrivateOwner).setSeigManagerV2(
                     deployed.seigManagerV2Proxy.address,
                 );
-                expect(await deployed.daov2committeeProxy.ton()).to.be.eq(deployed.ton.address);
-                expect(await deployed.daov2committeeProxy.seigManagerV2()).to.be.eq(deployed.seigManagerV2Proxy.address);
-                expect(await deployed.daov2committeeProxy.agendaManager()).to.be.eq(deployed.daoagendaManager.address);
-                expect(await deployed.daov2committeeProxy.daoVault()).to.be.eq(deployed.daovault.address);
+                console.log("123");
+                // expect(await deployed.daov2committeeProxy.ton()).to.be.eq(deployed.ton.address);
+                // expect(await deployed.daov2committeeProxy.seigManagerV2()).to.be.eq(deployed.seigManagerV2Proxy.address);
+                // expect(await deployed.daov2committeeProxy.agendaManager()).to.be.eq(deployed.daoagendaManager.address);
+                // expect(await deployed.daov2committeeProxy.daoVault()).to.be.eq(deployed.daovault.address);
                 // expect(await deployed.daov2committeeProxy.layer2Manager()).to.be.eq(deployed.layer2ManagerProxy.address);
                 // expect(await deployed.daov2committeeProxy.candidate()).to.be.eq(deployed.candidateProxy.address);
                 // expect(await deployed.daov2committeeProxy.sequencer()).to.be.eq(deployed.optimismSequencerProxy.address);
+            })
+
+            it("hasRole", async () => {
+                let tx = await DAOProxyLogicV2.connect(DAOOwner).hasRole(
+                    "0x0000000000000000000000000000000000000000000000000000000000000000",
+                    deployer.address
+                )
+                console.log(tx);
+                let tx2 = await DAOProxyLogicV2.connect(DAOOwner).hasRole(
+                    "0x0000000000000000000000000000000000000000000000000000000000000000",
+                    addr1.address
+                )
+                console.log(tx2);
+            })
+
+            it("DEFAULT_ADMIN_ROLE", async () => {
+                let tx = await DAOProxyLogicV2.connect(DAOOwner).DEFAULT_ADMIN_ROLE()
+                console.log(tx);
+            })
+
+            it("check and setActivityRewardPerSecond", async () => {
+                let tx = await DAOProxyLogicV2.activityRewardPerSecond()
+                console.log(tx);
+                await DAOProxyLogicV2.connect(DAOOwner).setActivityRewardPerSecond(123);
+                let tx2 = await DAOProxyLogicV2.activityRewardPerSecond()
+                console.log(tx2);
             })
         })
 

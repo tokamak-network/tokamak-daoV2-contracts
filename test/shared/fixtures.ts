@@ -159,7 +159,8 @@ export const daostakingV2Fixtures = async function (): Promise<DAOStakingV2Fixtu
     const daov2committeProxy = (await daov2committeProxy_.connect(deployer).deploy()) as DAOv2CommitteeProxy
     await daov2committeProxy.connect(deployer).upgradeTo(daov2comLogic.address);
 
-    const daov2commitee = daov2comLogic.attach(daov2committeProxy.address) as DAOv2Committee
+    const daov2commitee = (await daov2comLogic_.connect(deployer).deploy()) as DAOv2Committee
+    // const daov2commitee = daov2comLogic.attach(daov2committeProxy.address) as DAOv2Committee
     
     const daoagenda = (await ethers.getContractAt(DAOAgendaManger_ABI.abi, daoAgendaMangerAddress, deployer)) as DAOAgendaManager
     // const daovault_ = await ethers.getContractFactory('DAOAgendaManager');
