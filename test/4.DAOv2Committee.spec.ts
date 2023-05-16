@@ -76,6 +76,8 @@ describe('DAOv2Committee', () => {
 
         it("connect DAOProxyLogicV2", async () => {
             DAOProxyLogicV2 = await ethers.getContractAt(DAOv2Committee_ABI.abi, daoCommitteProxyAddress, daoPrivateOwner); 
+            console.log("ton",await DAOProxyLogicV2.ton())
+            console.log("ton",await DAOProxy.ton())
         })
     })
 
@@ -392,7 +394,7 @@ describe('DAOv2Committee', () => {
                 );
                 expect(await DAOProxyLogicV2.ton()).to.be.eq(deployed.ton.address);
                 // console.log(await DAOProxyLogicV2.seigManagerV2());
-                expect(await DAOProxyLogicV2.connect(DAOOwner).seigMaV2()).to.be.eq(deployed.seigManagerV2Proxy.address);
+                expect(await DAOProxyLogicV2.connect(DAOOwner).seigManagerV2()).to.be.eq(deployed.seigManagerV2Proxy.address);
                 // expect(await DAOProxyLogicV2.agendaManager()).to.be.eq(deployed.daoagendaManager.address);
                 // expect(await DAOProxyLogicV2.daoVault()).to.be.eq(deployed.daovault.address);
                 // expect(await deployed.daov2committeeProxy.layer2Manager()).to.be.eq(deployed.layer2ManagerProxy.address);
