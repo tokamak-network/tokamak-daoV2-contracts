@@ -8,18 +8,18 @@ import snapshotGasCost from './shared/snapshotGasCost'
 
 import DAOv1Committee_ABI from '../abi/DAOCommittee.json'
 import DAOv1CommitteProxy_ABI from '../abi/DAOCommitteeProxy.json'
-import DAOv2Committee_ABI from '../artifacts/contracts/dao/DAOv2Committee.sol/DAOv2Committee.json'
+import DAOv2Committee_ABI from '../artifacts/contracts/dao/DAOv2CommitteeV2.sol/DAOv2CommitteeV2.json'
 
 // DAOProxy(기존 것)
-// DAOv2Committe(새로배포) 
+// DAOv2Committe(새로배포)
 // DAOVault(메인넷에 있는 것 사용)
 // DAOAgendaManager(메인넷에 있는 것 사용)는 메인넷 Contract에서 Owner를 변경하는 방식으로 사용
 // 기존 Proxy에 새로운 V2로직을 연동하여서 V2에 대한 새로운 DAO를 테스트
-describe('DAOv2Committee', () => {
+describe('DAOv2CommitteeV2', () => {
     let deployer: Signer, addr1: Signer, sequencer1: Signer, daoPrivateOwner: Signer
 
     // let deployed: DAOStakingV2Fixture
-    
+    let daoAdminAddress = "0xb4983da083a5118c903910db4f5a480b1d9f3687"
     //mainnet
     let daoCommitteProxyAddress = "0xDD9f0cCc044B0781289Ee318e5971b0139602C26"; //DAOCommitteProxy Address
     let daoCommitteV1Address = "0xd1A3fDDCCD09ceBcFCc7845dDba666B7B8e6D1fb";
@@ -32,11 +32,12 @@ describe('DAOv2Committee', () => {
     let DAOProxyLogicV1: any
     let DAOProxyLogicV2: any
     let DAOOwner: any
-    
+
     let DAOContract: any
     let DAOCommitteLogicV2: any
 
-    let accounts, admin1: Signer, admin2: Signer, user1: Signer, user2: Signer, candidate: Signer, sequencer: Signer, layer2Manager: Signer, seigManagerV2: Signer
+    let accounts, admin1: Signer, admin2: Signer, user1: Signer, user2: Signer, candidate: Signer, sequencer: Signer, layer2Manager: Signer, seigManagerV2: Signer;
+    let daoAdmin: Signer;
 
     //mainnet
     let seigManagerInfo = {
@@ -67,23 +68,32 @@ describe('DAOv2Committee', () => {
 
     before('test account setting', async () => {
         accounts = await ethers.getSigners();
-        [admin1, admin2, user1, user2, candidate, sequencer, layer2Manager, seigManagerV2 ] = accounts;
+        [deployer, admin1, admin2, user1, user2, candidate, sequencer, layer2Manager, seigManagerV2 ] = accounts;
+
         console.log(admin1.address);
 
-        await ethers.provider.send("hardhat_impersonateAccount",[daoCommitteProxyAddress]);
+        // await ethers.provider.send("hardhat_impersonateAccount",[daoCommitteProxyAddress]);
 
 
-        DAOContract = await ethers.getSigner(daoCommitteProxyAddress); 
+        // DAOContract = await ethers.getSigner(daoCommitteProxyAddress);
 
+        // await ethers.provider.send("hardhat_setBalance", [
+        //     DAOContract.address,
+        //     "0x8ac7230489e80000",
+        // ]);
+
+        daoAdmin = await ethers.getSigner(daoAdminAddress)
+        await ethers.provider.send("hardhat_impersonateAccount",[daoAdminAddress]);
         await ethers.provider.send("hardhat_setBalance", [
-            DAOContract.address,
+            daoAdminAddress,
             "0x8ac7230489e80000",
         ]);
+
     })
 
     describe("#0. setting DAOProxy and daov2Committe", () => {
         it("deploy DAOCommitteV2", async () => {
-            let contract = await ethers.getContractFactory("DAOv2Committee");
+            let contract = await ethers.getContractFactory("DAOv2CommitteeV2");
             DAOCommitteLogicV2 = await contract.connect(admin1).deploy();
 
             let code = await ethers.provider.getCode(DAOCommitteLogicV2.address);
@@ -93,15 +103,15 @@ describe('DAOv2Committee', () => {
         it("get DAOProxyContract", async () => {
             DAOProxy = await ethers.getContractAt(DAOv1CommitteProxy_ABI.abi, daoCommitteProxyAddress, deployer)
 
-            let address = await DAOProxy.connect(DAOContract).ton();
+            let address = await DAOProxy.connect(admin1).ton();
             expect(address).to.be.eq(tonAddress);
-            
+
             let address2 = await DAOProxy.implementation();
             expect(address2).to.be.eq(daoCommitteV1Address);
         })
 
         it("get DAOProxyLogicV1 Contract", async () => {
-            DAOProxyLogicV1 = await ethers.getContractAt(DAOv1Committee_ABI.abi, daoCommitteProxyAddress, deployer); 
+            DAOProxyLogicV1 = await ethers.getContractAt(DAOv1Committee_ABI.abi, daoCommitteProxyAddress, deployer);
             expect((await DAOProxyLogicV1.ton())).to.be.eq(await DAOProxy.ton());
             expect((await DAOProxyLogicV1.seigManager())).to.be.eq(seigMangerAddress);
             expect((await DAOProxyLogicV1.daoVault())).to.be.eq(daoValutAddress);
@@ -109,48 +119,49 @@ describe('DAOv2Committee', () => {
         })
 
         it("set DAOProxy upgradeTo DAOCommitteLogicV2", async () => {
-            await DAOProxy.connect(DAOContract).upgradeTo(DAOCommitteLogicV2.address);
+            await DAOProxy.connect(daoAdmin).upgradeTo(DAOCommitteLogicV2.address);
             expect((await DAOProxy.implementation())).to.be.eq(DAOCommitteLogicV2.address);
         })
 
 
         it("get DAOProxyLogicV2 Contract", async () => {
-            DAOProxyLogicV2 = await ethers.getContractAt(DAOv2Committee_ABI.abi, daoCommitteProxyAddress, deployer); 
+            DAOProxyLogicV2 = await ethers.getContractAt(DAOv2Committee_ABI.abi, daoCommitteProxyAddress, deployer);
             expect((await DAOProxyLogicV2.ton())).to.be.eq(await DAOProxy.ton());
             expect((await DAOProxyLogicV2.seigManager())).to.be.eq(seigMangerAddress);
             expect((await DAOProxyLogicV2.daoVault())).to.be.eq(daoValutAddress);
         })
     })
 
-    describe("#1. DAOv2Committee set", () => {
+    describe("#1. DAOv2CommitteeV2 set", () => {
         describe("#7-1. initialize setting", () => {
             it("grantRole", async () => {
-                await DAOProxyLogicV2.connect(DAOContract).grantRole(
+                await DAOProxyLogicV2.connect(daoAdmin).grantRole(
                     "0x0000000000000000000000000000000000000000000000000000000000000000",
                     admin1.address
                 )
 
-                expect(await DAOProxyLogicV2.connect(DAOContract).hasRole(
+                expect(await DAOProxyLogicV2.connect(daoAdmin).hasRole(
                     "0x0000000000000000000000000000000000000000000000000000000000000000",
                     admin1.address
                 )).to.be.equal(true)
             })
+
             it("setSeigManagerV2 can not by not owner", async () => {
                 // console.log(DAOProxyLogicV2)
                 await expect(
                     DAOProxyLogicV2.connect(user1).setSeigManagerV2(
                         seigManagerV2.address,
                     )
-                ).to.be.revertedWith("DAOCommitteeV2: msg.sender is not an admin") 
+                ).to.be.revertedWith("DAOCommitteeV2: msg.sender is not an admin")
             })
 
             it("setSeigManagerV2 can by only owner", async () => {
-                await DAOProxyLogicV2.connect(DAOContract).setSeigManagerV2(
+                await DAOProxyLogicV2.connect(admin1).setSeigManagerV2(
                     seigManagerV2.address,
                 );
                 expect(await DAOProxyLogicV2.seigManagerV2()).to.be.eq(seigManagerV2.address);
-                // expect(await DAOProxyLogicV2.ton()).to.be.eq(tonAddress);
-                // console.log(await DAOProxyLogicV2.seigManagerV2());
+                expect(await DAOProxyLogicV2.ton()).to.be.eq(tonAddress);
+                console.log(await DAOProxyLogicV2.seigManagerV2());
                 // expect(await DAOProxyLogicV2.agendaManager()).to.be.eq(deployed.daoagendaManager.address);
                 // expect(await DAOProxyLogicV2.daoVault()).to.be.eq(deployed.daovault.address);
             })
@@ -161,11 +172,11 @@ describe('DAOv2Committee', () => {
                     DAOProxyLogicV2.connect(user1).setDaoVault(
                         user2.address,
                     )
-                ).to.be.revertedWith("DAOCommitteeV2: msg.sender is not an admin") 
+                ).to.be.revertedWith("DAOCommitteeV2: msg.sender is not an admin")
             })
 
             it("setDaoVault can by only owner", async () => {
-                await DAOProxyLogicV2.connect(DAOContract).setDaoVault(
+                await DAOProxyLogicV2.connect(daoAdmin).setDaoVault(
                     user2.address,
                 );
                 console.log(user2.address)
@@ -182,6 +193,7 @@ describe('DAOv2Committee', () => {
                 // expect(await deployed.daov2committeeProxy.candidate()).to.be.eq(deployed.candidateProxy.address);
                 // expect(await deployed.daov2committeeProxy.sequencer()).to.be.eq(deployed.optimismSequencerProxy.address);
             })
+
         })
 
         // describe("#7-2. transferOwnership", () => {
@@ -190,7 +202,7 @@ describe('DAOv2Committee', () => {
         //             deployed.daov2committeeProxy.connect(addr1).transferAdmin(
         //                 daoPrivateOwner.address
         //             )
-        //         ).to.be.revertedWith("Accessible: Caller is not an admin") 
+        //         ).to.be.revertedWith("Accessible: Caller is not an admin")
         //     })
 
         //     it("transferOwnership by only owner", async () => {
