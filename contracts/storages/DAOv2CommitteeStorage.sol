@@ -3,7 +3,7 @@ pragma solidity ^0.7.6;
 
 import { ILayer2Manager } from "../interfaces/ILayer2Manager.sol";
 import { ISeigManagerV2 } from "../interfaces/ISeigManagerV2.sol";
-import { ICandidate } from "../interfaces/ICandidate.sol";
+import { ICandidateV2 } from "../interfaces/ICandidateV2.sol";
 import { IOptimismSequencer } from "../interfaces/IOptimismSequencer.sol";
 
 contract DAOv2CommitteeStorage {
@@ -19,7 +19,7 @@ contract DAOv2CommitteeStorage {
     ILayer2Manager public layer2Manager;
     ISeigManagerV2 public seigManagerV2;
     // address public seigManagerV2;
-    ICandidate public candidate;
+    ICandidateV2 public candidate;
     IOptimismSequencer public sequencer;
 
     address[] public candidatesV2;

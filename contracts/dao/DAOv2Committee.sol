@@ -2,22 +2,24 @@
 pragma solidity ^0.7.6;
 pragma abicoder v2;
 
-import "./StorageStateCommittee.sol";
 import "../AccessControl/AccessControl.sol";
-import "../storages/DAOv2CommitteeStorage.sol";
-// import "@openzeppelin/contracts/access/AccessControl.sol";
-// import "../common/AccessibleCommon.sol";
-// import "../proxy/BaseProxyStorage.sol";
-// import { IDAOCommittee } from "../interfaces/IDAOCommittee.sol";
-// import { ICandidate } from "../interfaces/ICandidate.sol";
-// import { IDAOAgendaManager } from "../interfaces/IDAOAgendaManager.sol";
+import "./StorageStateCommittee.sol";
 
-// import { OnApprove } from "./OnApprove.sol";
 import { SafeMath } from "../AccessControl/SafeMath.sol";
 import { IERC20 } from  "../AccessControl/IERC20.sol";
-import { IDAOv2Committee } from "../interfaces/IDAOv2Committee.sol";
+import { IDAOCommittee } from "../interfaces/IDAOCommittee.sol";
+import { ICandidate } from "../interfaces/ICandidate.sol";
+import { ILayer2 } from "../interfaces/ILayer2.sol";
+import { IDAOAgendaManager } from "../interfaces/IDAOAgendaManager.sol";
 import { LibAgenda } from "../lib/Agenda.sol";
 import { ERC165Checker } from "../AccessControl/ERC165Checker.sol";
+
+import { ILayer2Manager } from "../interfaces/ILayer2Manager.sol";
+import { ISeigManagerV2 } from "../interfaces/ISeigManagerV2.sol";
+import { ICandidateV2 } from "../interfaces/ICandidateV2.sol";
+import { IOptimismSequencer } from "../interfaces/IOptimismSequencer.sol";
+// import { IDAOv2Committee } from "../interfaces/IDAOv2Committee.sol";
+// import "../storages/DAOv2CommitteeStorage.sol";
 
 interface IStaking {
     function balanceOfLton(uint32 _index) external view returns (uint256 amount) ;
@@ -26,9 +28,7 @@ interface IStaking {
 
 contract DAOv2Committee is 
     StorageStateCommittee, 
-    AccessControl,
-    DAOv2CommitteeStorage, 
-    IDAOv2Committee
+    AccessControl
 {
     using SafeMath for uint256;
     using LibAgenda for *;
@@ -41,6 +41,35 @@ contract DAOv2Committee is
         uint128 votingPeriodSeconds;
         bool atomicExecute;
         bytes[] functionBytecode;
+    }
+
+    struct CandidateInfoV2 {
+        uint32 sequencerIndex;
+        uint32 candidateIndex;
+        uint256 indexMembers;
+        uint128 memberJoinedTime;
+        uint128 rewardPeriod;
+        uint128 claimedTimestamp;
+    }
+
+    ILayer2Manager public layer2Manager;
+    ISeigManagerV2 public seigManagerV2;
+    // address public seigManagerV2;
+    ICandidateV2 public candidate;
+    IOptimismSequencer public sequencer;
+
+    address[] public candidatesV2;
+
+    mapping(address => CandidateInfoV2) internal _candidateInfosV2;
+
+    modifier validLayer2Manager() {
+        require(address(layer2Manager) != address(0), "StorageStateCommittee: invalid Layer2Manager");
+        _;
+    }
+
+    modifier validSeigManagerV2() {
+        require(address(seigManagerV2) != address(0), "StorageStateCommittee: invalid SeigManagerV2");
+        _;
     }
 
     //////////////////////////////
@@ -130,45 +159,45 @@ contract DAOv2Committee is
 
     /// @notice Set SeigManagerV2 contract address
     /// @param _seigManagerV2 New SeigManagerV2 contract address
-    function setSeigManagerV2(address _seigManagerV2) external override onlyOwner nonZero(_seigManagerV2) {
+    function setSeigManagerV2(address _seigManagerV2) external onlyOwner nonZero(_seigManagerV2) {
         seigManagerV2 = ISeigManagerV2(_seigManagerV2);
     }
      
     /// @notice Set DAOVault contract address
     /// @param _daoVault New DAOVault contract address
-    function setDaoVault(address _daoVault) external override onlyOwner nonZero(_daoVault) {
+    function setDaoVault(address _daoVault) external onlyOwner nonZero(_daoVault) {
         daoVault = IDAOVault(_daoVault);
     }
 
     /// @notice Set Layer2Manager contract address
     /// @param _layer2Manager New Layer2Manager contract address
-    function setLayer2Manager(address _layer2Manager) external override onlyOwner nonZero(_layer2Manager) {
+    function setLayer2Manager(address _layer2Manager) external onlyOwner nonZero(_layer2Manager) {
         layer2Manager = ILayer2Manager(_layer2Manager);
     }
 
     /// @notice Set DAOAgendaManager contract address
     /// @param _agendaManager New DAOAgendaManager contract address
-    function setAgendaManager(address _agendaManager) external override onlyOwner nonZero(_agendaManager) {
+    function setAgendaManager(address _agendaManager) external onlyOwner nonZero(_agendaManager) {
         agendaManager = IDAOAgendaManager(_agendaManager);
     }
 
-    function setCandidates(address _candidate) external override onlyOwner nonZero(_candidate) {
-        candidate = ICandidate(_candidate);
+    function setCandidates(address _candidate) external onlyOwner nonZero(_candidate) {
+        candidate = ICandidateV2(_candidate);
     }
 
-    function setOptimismSequencer(address _sequencer) external override onlyOwner nonZero(_sequencer) {
+    function setOptimismSequencer(address _sequencer) external onlyOwner nonZero(_sequencer) {
         sequencer = IOptimismSequencer(_sequencer);
     }
 
     /// @notice Set TON contract address
     /// @param _ton New TON contract address
-    function setTon(address _ton) external override onlyOwner nonZero(_ton) {
+    function setTon(address _ton) external onlyOwner nonZero(_ton) {
         ton = _ton;
     }
 
     /// @notice Set activity reward amount
     /// @param _value New activity reward per second
-    function setActivityRewardPerSecond(uint256 _value) external override onlyOwner {
+    function setActivityRewardPerSecond(uint256 _value) external onlyOwner {
         activityRewardPerSecond = _value;
         emit ActivityRewardChanged(_value);
     }
@@ -181,7 +210,6 @@ contract DAOv2Committee is
         uint256 _quorum
     )
         external
-        override
         onlyOwner
     {
         require(maxMember < _newMaxMember, "DAOCommittee: You have to call decreaseMaxMember to decrease");
@@ -200,7 +228,6 @@ contract DAOv2Committee is
         uint256 _quorum
     )
         external
-        override
         onlyOwner
         validMemberIndex(_reducingMemberIndex)
     {
@@ -232,7 +259,6 @@ contract DAOv2Committee is
         uint256 _quorum
     )
         public
-        override
         onlyOwner
         validAgendaManager
     {
@@ -248,7 +274,6 @@ contract DAOv2Committee is
         uint256 _fees
     )
         external
-        override
         onlyOwner
         validAgendaManager
     {
@@ -261,7 +286,6 @@ contract DAOv2Committee is
         uint256 _minimumNoticePeriod
     )
         external
-        override
         onlyOwner
         validAgendaManager
     {
@@ -274,7 +298,6 @@ contract DAOv2Committee is
         uint256 _minimumVotingPeriod
     )
         external
-        override
         onlyOwner
         validAgendaManager
     {
@@ -287,7 +310,6 @@ contract DAOv2Committee is
         uint256 _executingPeriodSeconds
     )
         external
-        override
         onlyOwner
         validAgendaManager
     {
@@ -298,7 +320,7 @@ contract DAOv2Committee is
     /// @param _agendaID Agenda ID
     /// @param _status New status
     /// @param _result New result
-    function setAgendaStatus(uint256 _agendaID, uint256 _status, uint256 _result) external override onlyOwner {
+    function setAgendaStatus(uint256 _agendaID, uint256 _status, uint256 _result) external onlyOwner {
         agendaManager.setResult(_agendaID, LibAgenda.AgendaResult(_result));
         agendaManager.setStatus(_agendaID, LibAgenda.AgendaStatus(_status));
     }
@@ -313,7 +335,6 @@ contract DAOv2Committee is
         uint256 amount
     )
         external
-        override
         validSeigManagerV2
         validLayer2Manager
         returns (bool)
@@ -354,7 +375,6 @@ contract DAOv2Committee is
         uint256 amount 
     )
         external
-        override
         validSeigManagerV2
         validLayer2Manager
         returns (bool)
@@ -393,7 +413,6 @@ contract DAOv2Committee is
         uint256 _memberIndex
     )
         external
-        override
         validMemberIndex(_memberIndex)
         returns (bool)
     {   
@@ -469,7 +488,6 @@ contract DAOv2Committee is
         bytes32 _name
     )
         external
-        override
     {
         require(isExistCandidate(msg.sender), "DAOCommittee: not registerd");
         //msg.sender가 sequencer인지 candidate인지 알기 위해서 소환
@@ -485,7 +503,7 @@ contract DAOv2Committee is
 
     /// @notice Call updateSeigniorage on SeigManager
     /// @return Whether or not the execution succeeded
-    function updateSeigniorage() public override returns (bool) {
+    function updateSeigniorage() public returns (bool) {
         return seigManagerV2.updateSeigniorage();
     }
 
@@ -494,7 +512,7 @@ contract DAOv2Committee is
 
     /// @notice Retires member
     /// @return Whether or not the execution succeeded
-    function retireMember() onlyMember external override returns (bool) {
+    function retireMember() onlyMember external returns (bool) {
         require(isExistCandidate(msg.sender), "DAOCommittee: not registerd");
         // address candidate = ICandidate(msg.sender).candidate();
         CandidateInfoV2 storage candidateInfo = _candidateInfosV2[msg.sender];
@@ -522,7 +540,7 @@ contract DAOv2Committee is
         address,
         uint256,
         bytes calldata data
-    ) external override returns (bool) {
+    ) external returns (bool) {
         AgendaCreatingData memory agendaData = _decodeAgendaData(data);
 
         _createAgenda(
@@ -547,7 +565,6 @@ contract DAOv2Committee is
         string calldata _comment
     )
         external 
-        override
         validAgendaManager
     {
         require(isExistCandidate(msg.sender), "DAOCommittee: not registerd");
@@ -580,13 +597,13 @@ contract DAOv2Committee is
 
     /// @notice Set the agenda status as ended(denied or dismissed)
     /// @param _agendaID Agenda ID
-    function endAgendaVoting(uint256 _agendaID) external override {
+    function endAgendaVoting(uint256 _agendaID) external {
         agendaManager.endAgendaVoting(_agendaID);
     }
 
     /// @notice Execute the accepted agenda
     /// @param _agendaID Agenda ID
-    function executeAgenda(uint256 _agendaID) external override validAgendaManager {
+    function executeAgenda(uint256 _agendaID) external validAgendaManager {
         require(
             agendaManager.canExecuteAgenda(_agendaID),
             "DAOCommittee: can not execute the agenda"
@@ -625,7 +642,7 @@ contract DAOv2Committee is
     }
      
     /// @notice Claims the activity reward for member
-    function claimActivityReward(address _receiver) external override {
+    function claimActivityReward(address _receiver) external {
         require(isExistCandidate(msg.sender), "DAOCommittee: not registerd");
         //msg.sender가 sequencer인지 candidate인지 알기 위해서 소환
         CandidateInfoV2 memory candidateInfo = _candidateInfosV2[msg.sender];
@@ -720,7 +737,7 @@ contract DAOv2Committee is
     //////////////////////////////////////////////////////////////////////
     // view
 
-    function isCandidate(address _candidate) external override view returns (bool) {
+    function isCandidate(address _candidate) external view returns (bool) {
         // CandidateInfo memory info = _candidateInfos[msg.sender];
         return _candidateInfosV2[_candidate].sequencerIndex != 0;
     }
@@ -729,7 +746,6 @@ contract DAOv2Committee is
         uint32 _index
     )
         external
-        override
         view
         returns (uint256 amount)
     {
@@ -740,7 +756,6 @@ contract DAOv2Committee is
         uint32 _index
     )  
         external
-        override
         view
         returns (uint256 amount)
     {
@@ -752,7 +767,6 @@ contract DAOv2Committee is
         address _account
     )   
         external
-        override
         view
         returns (uint256 amount)
     {
@@ -764,23 +778,22 @@ contract DAOv2Committee is
         address _account
     )   
         external
-        override
         view
         returns (uint256 amount)
     {
         return IStaking(address(sequencer)).balanceOfLton(_index,_account);
     }
 
-    function candidatesLength() external view override returns (uint256) {
+    function candidatesLength() external view returns (uint256) {
         return candidates.length;
     }
 
-    function isExistCandidate(address _candidate) public view override returns (bool isExist) {
+    function isExistCandidate(address _candidate) public view returns (bool isExist) {
         //sequencerIndex가 0이 아니면 candidate로 등록을 하였다는 의미
         return _candidateInfosV2[_candidate].sequencerIndex != 0;
     }
 
-    function getClaimableActivityReward(address _candidate) public view override returns (uint256) {
+    function getClaimableActivityReward(address _candidate) public view returns (uint256) {
         CandidateInfoV2 storage info = _candidateInfosV2[_candidate];
         uint256 period = info.rewardPeriod;
 

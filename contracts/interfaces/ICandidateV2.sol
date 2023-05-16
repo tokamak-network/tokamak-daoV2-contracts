@@ -8,7 +8,7 @@ import "../libraries/LibOperator.sol";
  * @title   Candidate
  * @dev     create candidate, stake , unstake
  */
-interface ICandidate {
+interface ICandidateV2 {
 
 
     /* ========== only TON ========== */
