@@ -1,21 +1,16 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.17;
+pragma solidity ^0.7.6;
 pragma abicoder v2;
 
 import "./StorageStateCommittee.sol";
-import "../common/ProxyAccessCommon.sol";
-import "../proxy/BaseProxyStorage.sol";
+import "../AccessControl/AccessControl.sol";
+import "../storages/DAOv2CommitteeStorage.sol";
 
-import { OnApprove } from "./OnApprove.sol";
-import { SafeMath } from "@openzeppelin/contracts/utils/math/SafeMath.sol";
-import { IERC20 } from  "../../node_modules/@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { SafeMath } from "../AccessControl/SafeMath.sol";
+import { IERC20 } from  "../AccessControl/IERC20.sol";
 import { IDAOv2Committee } from "../interfaces/IDAOv2Committee.sol";
-// import { ICandidate } from "../interfaces/ICandidate.sol";
-// import { IDAOAgendaManager } from "../interfaces/IDAOAgendaManager.sol";
 import { LibAgenda } from "../lib/Agenda.sol";
-import { ERC165Checker } from "../../node_modules/@openzeppelin/contracts/utils/introspection/ERC165Checker.sol";
-
-import "hardhat/console.sol";
+import { ERC165Checker } from "../AccessControl/ERC165Checker.sol";
 
 interface IStaking {
     function balanceOfLton(uint32 _index) external view returns (uint256 amount) ;
@@ -24,9 +19,9 @@ interface IStaking {
 
 contract DAOv2Committee is 
     StorageStateCommittee, 
-    ProxyAccessCommon,
-    BaseProxyStorage,
-    IDAOv2Committee 
+    AccessControl,
+    DAOv2CommitteeStorage, 
+    IDAOv2Committee
 {
     using SafeMath for uint256;
     using LibAgenda for *;
@@ -107,14 +102,19 @@ contract DAOv2Committee is
     event ActivityRewardChanged(
         uint256 newReward
     );
+
+    modifier onlyOwner() {
+        require(hasRole(DEFAULT_ADMIN_ROLE, msg.sender), "DAOCommitteeV2: msg.sender is not an admin");
+        _;
+    }
     
     modifier validMemberIndex(uint256 _index) {
-        require(_index < maxMember, "DAOCommittee: invalid member index");
+        require(_index < maxMember, "DAOCommitteeV2: invalid member index");
         _;
     }
 
     modifier nonZero(address _addr) {
-        require(_addr != address(0), "DAOCommittee: zero address");
+        require(_addr != address(0), "DAOCommitteeV2: zero address");
         _;
     }
 
@@ -123,13 +123,13 @@ contract DAOv2Committee is
 
     /// @notice Set SeigManagerV2 contract address
     /// @param _seigManagerV2 New SeigManagerV2 contract address
-    function setSeigManagerV2(address _seigManagerV2) external override onlyProxyOwner nonZero(_seigManagerV2) {
+    function setSeigManagerV2(address _seigManagerV2) external override onlyOwner nonZero(_seigManagerV2) {
         seigManagerV2 = ISeigManagerV2(_seigManagerV2);
     }
      
     /// @notice Set DAOVault contract address
     /// @param _daoVault New DAOVault contract address
-    function setDaoVault(address _daoVault) external override onlyProxyOwner nonZero(_daoVault) {
+    function setDaoVault(address _daoVault) external override onlyOwner nonZero(_daoVault) {
         daoVault = IDAOVault(_daoVault);
     }
 
@@ -145,11 +145,11 @@ contract DAOv2Committee is
         agendaManager = IDAOAgendaManager(_agendaManager);
     }
 
-    function setCandidates(address _candidate) external onlyOwner nonZero(_candidate) {
-        candidate = ICandidate(_candidate);
+    function setCandidates(address _candidate) external override onlyOwner nonZero(_candidate) {
+        candidate = ICandidateV2(_candidate);
     }
 
-    function setOptimismSequencer(address _sequencer) external onlyOwner nonZero(_sequencer) {
+    function setOptimismSequencer(address _sequencer) external override onlyOwner nonZero(_sequencer) {
         sequencer = IOptimismSequencer(_sequencer);
     }
 
@@ -324,9 +324,9 @@ contract DAOv2Committee is
         
         //layer2Manager에서 indexCandidates는 로직에서 더하고 값을 넣으므로 index값은 같다.
         uint32 candidateIndex = toUint32(data,0);
-        console.log(candidateIndex);
+        // console.log(candidateIndex);
 
-        _candidateInfos[msg.sender] = CandidateInfo({
+        _candidateInfosV2[msg.sender] = CandidateInfoV2({
             sequencerIndex: _sequencerIndex,
             candidateIndex: candidateIndex,
             memberJoinedTime: 0,
@@ -335,7 +335,7 @@ contract DAOv2Committee is
             claimedTimestamp: 0
         });
 
-        candidates.push(msg.sender);
+        candidatesV2.push(msg.sender);
 
         return success;
     }
@@ -363,9 +363,9 @@ contract DAOv2Committee is
         );
 
         uint32 sequencerIndex = toUint32(data,0);
-        console.log(sequencerIndex);
+        // console.log(sequencerIndex);
 
-        _candidateInfos[msg.sender] = CandidateInfo({
+        _candidateInfosV2[msg.sender] = CandidateInfoV2({
             sequencerIndex: sequencerIndex,
             candidateIndex: 0,
             memberJoinedTime: 0,
@@ -374,7 +374,7 @@ contract DAOv2Committee is
             claimedTimestamp: 0
         });
 
-        candidates.push(msg.sender);
+        candidatesV2.push(msg.sender);
 
         return success;
     }
@@ -393,7 +393,7 @@ contract DAOv2Committee is
         require(isExistCandidate(msg.sender), "DAOCommittee: not registerd");
         address newMember = msg.sender;
     
-        CandidateInfo storage candidateInfo = _candidateInfos[newMember];
+        CandidateInfoV2 storage candidateInfo = _candidateInfosV2[newMember];
         require(
             candidateInfo.memberJoinedTime == 0,
             "DAOCommittee: already member"
@@ -412,7 +412,7 @@ contract DAOv2Committee is
             return true;
         }
 
-        CandidateInfo storage prevCandidateInfo = _candidateInfos[prevMember];
+        CandidateInfoV2 storage prevCandidateInfo = _candidateInfosV2[prevMember];
 
         //candidateIndex가 0이면 시퀀서로 등록된 것이다.
         /* 
@@ -462,10 +462,11 @@ contract DAOv2Committee is
         bytes32 _name
     )
         external
+        override
     {
         require(isExistCandidate(msg.sender), "DAOCommittee: not registerd");
         //msg.sender가 sequencer인지 candidate인지 알기 위해서 소환
-        CandidateInfo memory candidateInfo = _candidateInfos[msg.sender];
+        CandidateInfoV2 memory candidateInfo = _candidateInfosV2[msg.sender];
         if(candidateInfo.candidateIndex == 0) {
             //msg.sender가 sqeuencer일때 name 변경
         } else {
@@ -477,7 +478,7 @@ contract DAOv2Committee is
 
     /// @notice Call updateSeigniorage on SeigManager
     /// @return Whether or not the execution succeeded
-    function updateSeigniorage() public returns (bool) {
+    function updateSeigniorage() public override returns (bool) {
         return seigManagerV2.updateSeigniorage();
     }
 
@@ -489,7 +490,7 @@ contract DAOv2Committee is
     function retireMember() onlyMember external override returns (bool) {
         require(isExistCandidate(msg.sender), "DAOCommittee: not registerd");
         // address candidate = ICandidate(msg.sender).candidate();
-        CandidateInfo storage candidateInfo = _candidateInfos[msg.sender];
+        CandidateInfoV2 storage candidateInfo = _candidateInfosV2[msg.sender];
         require(
             candidateInfo.indexMembers != 0,
             "DAOCommittee: already not member"
@@ -511,8 +512,8 @@ contract DAOv2Committee is
 
     function onApprove(
         address owner,
-        address spender,
-        uint256 tonAmount,
+        address,
+        uint256,
         bytes calldata data
     ) external override returns (bool) {
         AgendaCreatingData memory agendaData = _decodeAgendaData(data);
@@ -543,7 +544,7 @@ contract DAOv2Committee is
         validAgendaManager
     {
         require(isExistCandidate(msg.sender), "DAOCommittee: not registerd");
-        CandidateInfo storage candidateInfo = _candidateInfos[msg.sender];
+        // CandidateInfo storage candidateInfo = _candidateInfos[msg.sender];
         
         agendaManager.castVote(
             _agendaID,
@@ -620,7 +621,7 @@ contract DAOv2Committee is
     function claimActivityReward(address _receiver) external override {
         require(isExistCandidate(msg.sender), "DAOCommittee: not registerd");
         //msg.sender가 sequencer인지 candidate인지 알기 위해서 소환
-        CandidateInfo memory candidateInfo = _candidateInfos[msg.sender];
+        CandidateInfoV2 memory candidateInfo = _candidateInfosV2[msg.sender];
 
         // address candidate = ICandidate(msg.sender).candidate();
         // CandidateInfo storage candidateInfo = _candidateInfos[candidate];
@@ -714,13 +715,14 @@ contract DAOv2Committee is
 
     function isCandidate(address _candidate) external override view returns (bool) {
         // CandidateInfo memory info = _candidateInfos[msg.sender];
-        return _candidateInfos[_candidate].sequencerIndex != 0;
+        return _candidateInfosV2[_candidate].sequencerIndex != 0;
     }
 
     function totalSupplyOnCandidate(
         uint32 _index
     )
         external
+        override
         view
         returns (uint256 amount)
     {
@@ -731,6 +733,7 @@ contract DAOv2Committee is
         uint32 _index
     )  
         external
+        override
         view
         returns (uint256 amount)
     {
@@ -742,6 +745,7 @@ contract DAOv2Committee is
         address _account
     )   
         external
+        override
         view
         returns (uint256 amount)
     {
@@ -753,6 +757,7 @@ contract DAOv2Committee is
         address _account
     )   
         external
+        override
         view
         returns (uint256 amount)
     {
@@ -765,11 +770,11 @@ contract DAOv2Committee is
 
     function isExistCandidate(address _candidate) public view override returns (bool isExist) {
         //sequencerIndex가 0이 아니면 candidate로 등록을 하였다는 의미
-        return _candidateInfos[_candidate].sequencerIndex != 0;
+        return _candidateInfosV2[_candidate].sequencerIndex != 0;
     }
 
     function getClaimableActivityReward(address _candidate) public view override returns (uint256) {
-        CandidateInfo storage info = _candidateInfos[_candidate];
+        CandidateInfoV2 storage info = _candidateInfosV2[_candidate];
         uint256 period = info.rewardPeriod;
 
         if (info.memberJoinedTime > 0) {

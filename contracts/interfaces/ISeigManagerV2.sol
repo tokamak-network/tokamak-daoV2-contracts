@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-pragma solidity ^0.8.4;
+pragma solidity ^0.7.6;
 
 /**
  * @title   SeigManagerV2
@@ -127,13 +127,13 @@ interface ISeigManagerV2 {
      */
     function getTonToLton(uint256 _tonAmount) external view returns (uint256 ltonAmount);
 
-    /**
-     * @dev                 Calculate the amount converted from TON to LTON at specific snapshotId
-     * @param   _tonAmount  amount of TON
-     * @param   _snapshotId snapshotId
-     * @return  ltonAmount  amount of LTON
-     */
-    function getTonToLtonAt(uint256 _tonAmount, uint256 _snapshotId) external view returns (uint256 ltonAmount);
+    // /**
+    //  * @dev                 Calculate the amount converted from TON to LTON at specific snapshotId
+    //  * @param   _tonAmount  amount of TON
+    //  * @param   _snapshotId snapshotId
+    //  * @return  ltonAmount  amount of LTON
+    //  */
+    // function getTonToLtonAt(uint256 _tonAmount, uint256 _snapshotId) external view returns (uint256 ltonAmount);
 
     /**
      * @dev                 Calculate the amount converted from LTON to TON
@@ -142,13 +142,13 @@ interface ISeigManagerV2 {
      */
     function getLtonToTon(uint256 ltonAmount) external view returns (uint256 tonAmount) ;
 
-    /**
-     * @dev                 Calculate the amount converted from LTON to TON at specific snapshotId
-     * @param   ltonAmount  amount of LTON
-     * @param   _snapshotId snapshotId
-     * @return  tonAmount  amount of TON
-     */
-    function getLtonToTonAt(uint256 ltonAmount, uint256 _snapshotId) external view returns (uint256 tonAmount) ;
+    // /**
+    //  * @dev                 Calculate the amount converted from LTON to TON at specific snapshotId
+    //  * @param   ltonAmount  amount of LTON
+    //  * @param   _snapshotId snapshotId
+    //  * @return  tonAmount  amount of TON
+    //  */
+    // function getLtonToTonAt(uint256 ltonAmount, uint256 _snapshotId) external view returns (uint256 tonAmount) ;
 
     /**
      * @dev                         get currentBlockNumber
@@ -177,12 +177,12 @@ interface ISeigManagerV2 {
      */
     function getTotalLton() external view returns (uint256 amount);
 
-    /**
-     * @dev                     get total LTON amount  at specific snapshotId
-     * @param   _snapshotId     snapshotId
-     * @return  amount          totalLton
-     */
-    function getTotalLtonAt(uint256 _snapshotId) external view returns (uint256 amount);
+    // /**
+    //  * @dev                     get total LTON amount  at specific snapshotId
+    //  * @param   _snapshotId     snapshotId
+    //  * @return  amount          totalLton
+    //  */
+    // function getTotalLtonAt(uint256 _snapshotId) external view returns (uint256 amount);
 
     /**
      * @dev                     get current snapshotId
@@ -202,18 +202,18 @@ interface ISeigManagerV2 {
      */
     function indexLton() external view returns (uint256);
 
-    /**
-     * @dev                 get indexLton at specific snapshotId
-     * @return  _indexLton  indexLton
-     */
-    function indexLtonAt(uint256 snapshotId) external view returns (uint256);
+    // /**
+    //  * @dev                 get indexLton at specific snapshotId
+    //  * @return  _indexLton  indexLton
+    //  */
+    // function indexLtonAt(uint256 snapshotId) external view returns (uint256);
 
-    /**
-     * @dev                     get snapshotted and value of indexLton at specific snapshotId
-     * @return  snapshotted     Whether or not snapshots were taken
-     * @return  value           snapshotted value of indexLton
-     */
-    function indexLtonAtSnapshot(uint256 snapshotId) external view returns (bool snapshotted, uint256 value);
+    // /**
+    //  * @dev                     get snapshotted and value of indexLton at specific snapshotId
+    //  * @return  snapshotted     Whether or not snapshots were taken
+    //  * @return  value           snapshotted value of indexLton
+    //  */
+    // function indexLtonAtSnapshot(uint256 snapshotId) external view returns (bool snapshotted, uint256 value);
 
 
 }

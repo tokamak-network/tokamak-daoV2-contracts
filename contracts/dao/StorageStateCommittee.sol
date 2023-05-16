@@ -1,19 +1,14 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.17;
+pragma solidity ^0.7.6;
 pragma abicoder v2;
 
 import { IStorageStateCommittee } from "../interfaces/IStorageStateCommittee.sol";
-// import { ICandidateFactory } from "../interfaces/ICandidateFactory.sol";
-// import { ISeigManager } from "../interfaces/ISeigManager.sol";
-// import { IDAOAgendaManager } from "../interfaces/IDAOAgendaManager.sol";
-// import { IDAOVault } from "../interfaces/IDAOVault.sol";
+import { ICandidateFactory } from "../interfaces/ICandidateFactory.sol";
+import { ILayer2Registry } from "../interfaces/ILayer2Registry.sol";
+import { ISeigManager } from "../interfaces/ISeigManager.sol";
+import { IDAOAgendaManager } from "../interfaces/IDAOAgendaManager.sol";
+import { IDAOVault } from "../interfaces/IDAOVault.sol";
 import { ICandidate } from "../interfaces/ICandidate.sol";
-// import { ILayer2Registry } from "../interfaces/ILayer2Registry.sol";
-
-//new add
-// import { ILayer2Manager } from "../interfaces/ILayer2Manager.sol";
-// import { ISeigManagerV2 } from "../interfaces/ISeigManagerV2.sol";
-import { ISequencer } from "../interfaces/ISequencer.sol";
 
 contract StorageStateCommittee is IStorageStateCommittee {
     enum AgendaStatus { NONE, NOTICE, VOTING, EXEC, ENDED, PENDING, RISK }
@@ -22,12 +17,9 @@ contract StorageStateCommittee is IStorageStateCommittee {
     address public override ton;
     IDAOVault public override daoVault;
     IDAOAgendaManager public override agendaManager;
-    // ICandidateFactory public override candidateFactory;
-    ILayer2Manager public override layer2Manager;
-    ISeigManagerV2 public override seigManagerV2;
-
-    ICandidate public candidate;
-    ISequencer public sequencer;
+    ICandidateFactory public override candidateFactory;
+    ILayer2Registry public override layer2Registry;
+    ISeigManager public override seigManager;
 
     address[] public override candidates;
     address[] public override members;
@@ -44,18 +36,18 @@ contract StorageStateCommittee is IStorageStateCommittee {
         _;
     }
     
-    // modifier validCommitteeL2Factory() {
-    //     require(address(candidateFactory) != address(0), "StorageStateCommittee: invalid CommitteeL2Factory");
-    //     _;
-    // }
-
-    modifier validLayer2Manager() {
-        require(address(layer2Manager) != address(0), "StorageStateCommittee: invalid Layer2Manager");
+    modifier validCommitteeL2Factory() {
+        require(address(candidateFactory) != address(0), "StorageStateCommittee: invalid CommitteeL2Factory");
         _;
     }
 
-    modifier validSeigManagerV2() {
-        require(address(seigManagerV2) != address(0), "StorageStateCommittee: invalid SeigManagerV2");
+    modifier validLayer2Registry() {
+        require(address(layer2Registry) != address(0), "StorageStateCommittee: invalid Layer2Registry");
+        _;
+    }
+
+    modifier validSeigManager() {
+        require(address(seigManager) != address(0), "StorageStateCommittee: invalid SeigManagere");
         _;
     }
 
@@ -65,8 +57,8 @@ contract StorageStateCommittee is IStorageStateCommittee {
     }
 
     modifier onlyMemberContract() {
-        address candidate1 = ICandidate(msg.sender).candidate();
-        require(isMember(candidate1), "StorageStateCommittee: not a member");
+        address candidate = ICandidate(msg.sender).candidate();
+        require(isMember(candidate), "StorageStateCommittee: not a member");
         _;
     }
     
@@ -74,11 +66,11 @@ contract StorageStateCommittee is IStorageStateCommittee {
         return _candidateInfos[_candidate].memberJoinedTime > 0;
     }
 
-    // function candidateContract(address _candidate) public view override returns (address) {
-    //     return _candidateInfos[_candidate].candidateContract;
-    // }
+    function candidateContract(address _candidate) public view override returns (address) {
+        return _candidateInfos[_candidate].candidateContract;
+    }
 
-    function candidateInfos(address _candidate) external view override returns (CandidateInfo memory) {
+    function candidateInfos(address _candidate) external override returns (CandidateInfo memory) {
         return _candidateInfos[_candidate];
     }
 
