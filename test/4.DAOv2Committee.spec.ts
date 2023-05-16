@@ -70,6 +70,8 @@ describe('DAOv2Committee', () => {
             await ethers.provider.send("hardhat_impersonateAccount",[daoCommitteProxyAddress]);
             DAOOwner = await ethers.getSigner(daoCommitteProxyAddress);
             await DAOProxy.connect(DAOOwner).upgradeTo(deployed.daov2committee.address);
+            console.log("DAO logicV2 Address :",deployed.daov2committee.address);
+            console.log("logic upgradeTo : ",await DAOProxy.implementation());
         })
 
         it("connect DAOProxyLogicV2", async () => {
@@ -337,81 +339,72 @@ describe('DAOv2Committee', () => {
                 expect(await deployed.daoagendaManager.committee()).to.be.eq(deployed.daov2committeeProxy.address);
             })
 
-            it("set transferOwnership can not by not DAOContract", async () => {
-                await expect(
-                    deployed.daoagendaManager.connect(addr1).setMinimumVotingPeriodSeconds(deployed.daov2committeeProxy.address)
-                ).to.be.revertedWith("Ownable: caller is not the owner") 
-            })
+            /*
+              V1Proxy 그대로 사용하면서 필요없어짐
+            // it("set transferOwnership can not by not DAOContract", async () => {
+            //     await expect(
+            //         deployed.daoagendaManager.connect(addr1).setMinimumVotingPeriodSeconds(deployed.daov2committeeProxy.address)
+            //     ).to.be.revertedWith("Ownable: caller is not the owner") 
+            // })
 
-            it("set transferOwnership to committee by only DAOContract", async () => {
-                await deployed.daoagendaManager.connect(deployed.DAOContract).transferOwnership(deployed.daov2committeeProxy.address);
-                expect(await deployed.daoagendaManager.owner()).to.be.eq(deployed.daov2committeeProxy.address);
-            })
+            // it("set transferOwnership to committee by only DAOContract", async () => {
+            //     await deployed.daoagendaManager.connect(deployed.DAOContract).transferOwnership(deployed.daov2committeeProxy.address);
+            //     expect(await deployed.daoagendaManager.owner()).to.be.eq(deployed.daov2committeeProxy.address);
+            // })
+            */
         })
     })
 
     describe("#6. DAOVault set", () => {
-        describe("#6-1. transferOwnership", async () => {
-            it("set transferOwnership to committee by only DAOContract", async () => {
-                await deployed.daovault.connect(deployed.DAOContract).transferOwnership(deployed.daov2committeeProxy.address);
-                expect(await deployed.daovault.owner()).to.be.eq(deployed.daov2committeeProxy.address);
-            })
-        })
+        // describe("#6-1. transferOwnership", async () => {
+        //     it("set transferOwnership to committee by only DAOContract", async () => {
+        //         await deployed.daovault.connect(deployed.DAOContract).transferOwnership(deployed.daov2committeeProxy.address);
+        //         expect(await deployed.daovault.owner()).to.be.eq(deployed.daov2committeeProxy.address);
+        //     })
+        // })
     })
 
     describe("#7. DAOv2Committee set", () => {
-        describe("#7-1. initialize", () => {
-            it("initialize can not by not owner", async () => {
+        describe("#7-1. initialize setting", () => {
+            it("setSeigManagerV2 can not by not owner", async () => {
                 await expect(
-                    deployed.daov2committeeProxy.connect(addr1).initialize(
-                        deployed.ton.address,
+                    DAOProxyLogicV2.connect(addr1).setSeigManagerV2(
                         deployed.seigManagerV2Proxy.address,
-                        deployed.layer2ManagerProxy.address,
-                        deployed.daoagendaManager.address,
-                        deployed.candidateProxy.address,
-                        deployed.optimismSequencerProxy.address,
-                        deployed.daovault.address
                     )
                 ).to.be.revertedWith("Accessible: Caller is not an admin") 
             })
 
-            it("initialize can by only owner", async () => {
-                await deployed.daov2committeeProxy.connect(deployer).initialize(
-                    deployed.ton.address,
+            it("setSeigManagerV2 can by only owner", async () => {
+                await DAOProxyLogicV2.connect(DAOOwner).setSeigManagerV2(
                     deployed.seigManagerV2Proxy.address,
-                    deployed.layer2ManagerProxy.address,
-                    deployed.daoagendaManager.address,
-                    deployed.candidateProxy.address,
-                    deployed.optimismSequencerProxy.address,
-                    deployed.daovault.address
                 );
                 expect(await deployed.daov2committeeProxy.ton()).to.be.eq(deployed.ton.address);
                 expect(await deployed.daov2committeeProxy.seigManagerV2()).to.be.eq(deployed.seigManagerV2Proxy.address);
-                expect(await deployed.daov2committeeProxy.layer2Manager()).to.be.eq(deployed.layer2ManagerProxy.address);
                 expect(await deployed.daov2committeeProxy.agendaManager()).to.be.eq(deployed.daoagendaManager.address);
-                expect(await deployed.daov2committeeProxy.candidate()).to.be.eq(deployed.candidateProxy.address);
-                expect(await deployed.daov2committeeProxy.sequencer()).to.be.eq(deployed.optimismSequencerProxy.address);
                 expect(await deployed.daov2committeeProxy.daoVault()).to.be.eq(deployed.daovault.address);
+                // expect(await deployed.daov2committeeProxy.layer2Manager()).to.be.eq(deployed.layer2ManagerProxy.address);
+                // expect(await deployed.daov2committeeProxy.candidate()).to.be.eq(deployed.candidateProxy.address);
+                // expect(await deployed.daov2committeeProxy.sequencer()).to.be.eq(deployed.optimismSequencerProxy.address);
             })
         })
 
-        describe("#7-2. transferOwnership", () => {
-            it("transferOwnership can not by not owner", async () => {
-                await expect(
-                    deployed.daov2committeeProxy.connect(addr1).transferAdmin(
-                        daoPrivateOwner.address
-                    )
-                ).to.be.revertedWith("Accessible: Caller is not an admin") 
-            })
+        // describe("#7-2. transferOwnership", () => {
+        //     it("transferOwnership can not by not owner", async () => {
+        //         await expect(
+        //             deployed.daov2committeeProxy.connect(addr1).transferAdmin(
+        //                 daoPrivateOwner.address
+        //             )
+        //         ).to.be.revertedWith("Accessible: Caller is not an admin") 
+        //     })
 
-            it("transferOwnership by only owner", async () => {
-                await deployed.daov2committeeProxy.connect(deployer).transferAdmin(
-                    daoPrivateOwner.address
-                );
-                expect(await deployed.daov2committeeProxy.isAdmin(daoPrivateOwner.address)).to.be.eq(true);
-                expect(await deployed.daov2committeeProxy.isAdmin(deployed.daov2committeeProxy.address)).to.be.eq(true);
-            })
-        })
+        //     it("transferOwnership by only owner", async () => {
+        //         await deployed.daov2committeeProxy.connect(deployer).transferAdmin(
+        //             daoPrivateOwner.address
+        //         );
+        //         expect(await deployed.daov2committeeProxy.isAdmin(daoPrivateOwner.address)).to.be.eq(true);
+        //         expect(await deployed.daov2committeeProxy.isAdmin(deployed.daov2committeeProxy.address)).to.be.eq(true);
+        //     })
+        // })
 
         describe("#7-3. createCandidate", () => {
 
