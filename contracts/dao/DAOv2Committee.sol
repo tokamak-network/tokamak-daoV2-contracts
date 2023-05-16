@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.17;
+pragma solidity ^0.7.6;
 pragma abicoder v2;
 
 import "./StorageStateCommittee.sol";
-import "../storages/DAOv2CommitteeStorage.sol";
 import "../AccessControl/AccessControl.sol";
+import "../storages/DAOv2CommitteeStorage.sol";
 // import "@openzeppelin/contracts/access/AccessControl.sol";
 // import "../common/AccessibleCommon.sol";
 // import "../proxy/BaseProxyStorage.sol";
@@ -13,13 +13,11 @@ import "../AccessControl/AccessControl.sol";
 // import { IDAOAgendaManager } from "../interfaces/IDAOAgendaManager.sol";
 
 // import { OnApprove } from "./OnApprove.sol";
-import { SafeMath } from "@openzeppelin/contracts/utils/math/SafeMath.sol";
-import { IERC20 } from  "../../node_modules/@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { SafeMath } from "../AccessControl/SafeMath.sol";
+import { IERC20 } from  "../AccessControl/IERC20.sol";
 import { IDAOv2Committee } from "../interfaces/IDAOv2Committee.sol";
 import { LibAgenda } from "../lib/Agenda.sol";
-import { ERC165Checker } from "../../node_modules/@openzeppelin/contracts/utils/introspection/ERC165Checker.sol";
-
-import "hardhat/console.sol";
+import { ERC165Checker } from "../AccessControl/ERC165Checker.sol";
 
 interface IStaking {
     function balanceOfLton(uint32 _index) external view returns (uint256 amount) ;
@@ -113,17 +111,17 @@ contract DAOv2Committee is
     );
 
     modifier onlyOwner() {
-        require(hasRole(DEFAULT_ADMIN_ROLE, msg.sender), "DAOCommittee: msg.sender is not an admin");
+        require(hasRole(DEFAULT_ADMIN_ROLE, msg.sender), "DAOCommitteeV2: msg.sender is not an admin");
         _;
     }
     
     modifier validMemberIndex(uint256 _index) {
-        require(_index < maxMember, "DAOCommittee: invalid member index");
+        require(_index < maxMember, "DAOCommitteeV2: invalid member index");
         _;
     }
 
     modifier nonZero(address _addr) {
-        require(_addr != address(0), "DAOCommittee: zero address");
+        require(_addr != address(0), "DAOCommitteeV2: zero address");
         _;
     }
 
@@ -154,11 +152,11 @@ contract DAOv2Committee is
         agendaManager = IDAOAgendaManager(_agendaManager);
     }
 
-    function setCandidates(address _candidate) external onlyOwner nonZero(_candidate) {
+    function setCandidates(address _candidate) external override onlyOwner nonZero(_candidate) {
         candidate = ICandidate(_candidate);
     }
 
-    function setOptimismSequencer(address _sequencer) external onlyOwner nonZero(_sequencer) {
+    function setOptimismSequencer(address _sequencer) external override onlyOwner nonZero(_sequencer) {
         sequencer = IOptimismSequencer(_sequencer);
     }
 
@@ -333,7 +331,7 @@ contract DAOv2Committee is
         
         //layer2Manager에서 indexCandidates는 로직에서 더하고 값을 넣으므로 index값은 같다.
         uint32 candidateIndex = toUint32(data,0);
-        console.log(candidateIndex);
+        // console.log(candidateIndex);
 
         _candidateInfosV2[msg.sender] = CandidateInfoV2({
             sequencerIndex: _sequencerIndex,
@@ -372,7 +370,7 @@ contract DAOv2Committee is
         );
 
         uint32 sequencerIndex = toUint32(data,0);
-        console.log(sequencerIndex);
+        // console.log(sequencerIndex);
 
         _candidateInfosV2[msg.sender] = CandidateInfoV2({
             sequencerIndex: sequencerIndex,
@@ -471,6 +469,7 @@ contract DAOv2Committee is
         bytes32 _name
     )
         external
+        override
     {
         require(isExistCandidate(msg.sender), "DAOCommittee: not registerd");
         //msg.sender가 sequencer인지 candidate인지 알기 위해서 소환
@@ -486,8 +485,8 @@ contract DAOv2Committee is
 
     /// @notice Call updateSeigniorage on SeigManager
     /// @return Whether or not the execution succeeded
-    function updateSeigniorage() public returns (bool) {
-        return seigManagerV2.updateSeigniorage();
+    function updateSeigniorage() public override returns (bool) {
+        return ISeigManagerV2(seigManagerV2).updateSeigniorage();
     }
 
     //////////////////////////////////////////////////////////////////////
@@ -730,6 +729,7 @@ contract DAOv2Committee is
         uint32 _index
     )
         external
+        override
         view
         returns (uint256 amount)
     {
@@ -740,6 +740,7 @@ contract DAOv2Committee is
         uint32 _index
     )  
         external
+        override
         view
         returns (uint256 amount)
     {
@@ -751,6 +752,7 @@ contract DAOv2Committee is
         address _account
     )   
         external
+        override
         view
         returns (uint256 amount)
     {
@@ -762,6 +764,7 @@ contract DAOv2Committee is
         address _account
     )   
         external
+        override
         view
         returns (uint256 amount)
     {

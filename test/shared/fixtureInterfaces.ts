@@ -63,7 +63,8 @@ interface DAOStakingV2Fixture  {
     daov2committee: DAOv2Committee,
     daoagendaManager: DAOAgendaManager,
     daovault: DAOVault,
-    daoPrivateOwner: Signer
+    daoPrivateOwner: Signer,
+    daoV2Logic: DAOv2Committee
 }
 
 // interface DAOV2Fixture {

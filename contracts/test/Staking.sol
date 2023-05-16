@@ -1,13 +1,15 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-pragma solidity ^0.8.4;
+pragma solidity ^0.7.6;
+pragma abicoder v2;
 
 import "../storages/StakingStorage.sol";
 import "../proxy/BaseProxyStorage.sol";
 import "../common/AccessibleCommon.sol";
 import "../libraries/BytesParserLib.sol";
 import "../libraries/SafeERC20.sol";
-import "../libraries/LibArrays.sol";
+// import "../libraries/LibArrays.sol";
 import "../interfaces/IStaking.sol";
+
 // import "hardhat/console.sol";
 
 interface L1BridgeI {
@@ -53,7 +55,7 @@ contract Staking is AccessibleCommon, BaseProxyStorage, StakingStorage, IStaking
     /* ========== DEPENDENCIES ========== */
     using SafeERC20 for IERC20;
     using BytesParserLib for bytes;
-    using LibArrays for uint256[];
+    // using LibArrays for uint256[];
 
     /* ========== CONSTRUCTOR ========== */
     constructor() {
@@ -204,33 +206,33 @@ contract Staking is AccessibleCommon, BaseProxyStorage, StakingStorage, IStaking
         return _totalStakedLton;
     }
 
-    /// @inheritdoc IStaking
-    function totalStakedLtonAt(uint256 snapshotId) public view override returns (uint256 amount) {
-        (bool snapshotted, uint256 value) = _valueAt(snapshotId, _totalStakedLtonSnapshot);
-        return snapshotted ? value : totalStakedLton();
-    }
+    // /// @inheritdoc IStaking
+    // function totalStakedLtonAt(uint256 snapshotId) public view override returns (uint256 amount) {
+    //     (bool snapshotted, uint256 value) = _valueAt(snapshotId, _totalStakedLtonSnapshot);
+    //     return snapshotted ? value : totalStakedLton();
+    // }
 
-    /// @inheritdoc IStaking
-    function totalStakedLtonAtSnapshot(uint256 snapshotId) public view override returns (bool snapshotted, uint256 amount) {
-        return _valueAt(snapshotId, _totalStakedLtonSnapshot);
-    }
+    // /// @inheritdoc IStaking
+    // function totalStakedLtonAtSnapshot(uint256 snapshotId) public view override returns (bool snapshotted, uint256 amount) {
+    //     return _valueAt(snapshotId, _totalStakedLtonSnapshot);
+    // }
 
     /// @inheritdoc IStaking
     function balanceOfLton(uint32 _index) public view override returns (uint256 amount) {
         amount = layerStakedLton[_index];
     }
 
-    /// @inheritdoc IStaking
-    function balanceOfLtonAt(uint32 _index, uint256 snapshotId) public view override returns (uint256 amount) {
-        (bool snapshotted, uint256 value) = _valueAt(snapshotId, _layerStakedLtonSnapshot[_index]);
+    // /// @inheritdoc IStaking
+    // function balanceOfLtonAt(uint32 _index, uint256 snapshotId) public view override returns (uint256 amount) {
+    //     (bool snapshotted, uint256 value) = _valueAt(snapshotId, _layerStakedLtonSnapshot[_index]);
 
-        return snapshotted ? value : balanceOfLton(_index);
-    }
+    //     return snapshotted ? value : balanceOfLton(_index);
+    // }
 
-    /// @inheritdoc IStaking
-    function balanceOfLtonAtSnapshot(uint32 _index, uint256 snapshotId) public view override returns (bool snapshotted, uint256 amount) {
-        return _valueAt(snapshotId, _layerStakedLtonSnapshot[_index]);
-    }
+    // /// @inheritdoc IStaking
+    // function balanceOfLtonAtSnapshot(uint32 _index, uint256 snapshotId) public view override returns (bool snapshotted, uint256 amount) {
+    //     return _valueAt(snapshotId, _layerStakedLtonSnapshot[_index]);
+    // }
 
     /// @inheritdoc IStaking
     function balanceOfLton(uint32 _index, address account) public view override returns (uint256 amount) {
@@ -238,16 +240,16 @@ contract Staking is AccessibleCommon, BaseProxyStorage, StakingStorage, IStaking
         amount = info.stakelton;
     }
 
-    /// @inheritdoc IStaking
-    function balanceOfLtonAt(uint32 _index, address account, uint256 snapshotId) public view override returns (uint256 amount) {
-        (bool snapshotted, uint256 value) = _valueAt(snapshotId, _layerStakesSnapshot[_index][account]);
-        return snapshotted ? value :  balanceOfLton(_index, account);
-    }
+    // /// @inheritdoc IStaking
+    // function balanceOfLtonAt(uint32 _index, address account, uint256 snapshotId) public view override returns (uint256 amount) {
+    //     (bool snapshotted, uint256 value) = _valueAt(snapshotId, _layerStakesSnapshot[_index][account]);
+    //     return snapshotted ? value :  balanceOfLton(_index, account);
+    // }
 
-    /// @inheritdoc IStaking
-    function balanceOfLtonAtSnapshot(uint32 _index, address account, uint256 snapshotId) public view override returns (bool snapshotted, uint256 amount) {
-        return _valueAt(snapshotId, _layerStakesSnapshot[_index][account]);
-    }
+    // /// @inheritdoc IStaking
+    // function balanceOfLtonAtSnapshot(uint32 _index, address account, uint256 snapshotId) public view override returns (bool snapshotted, uint256 amount) {
+    //     return _valueAt(snapshotId, _layerStakesSnapshot[_index][account]);
+    // }
 
     /// @inheritdoc IStaking
     function getLayerStakes(uint32 _index, address account) public view override returns (LibStake.StakeInfo memory info) {
@@ -259,10 +261,10 @@ contract Staking is AccessibleCommon, BaseProxyStorage, StakingStorage, IStaking
         amount = SeigManagerV2I(seigManagerV2).getLtonToTon(balanceOfLton(_index, account));
     }
 
-    /// @inheritdoc IStaking
-    function balanceOfAt(uint32 _index, address account, uint256 snapshotId) public view override returns (uint256 amount) {
-        amount = SeigManagerV2I(seigManagerV2).getLtonToTonAt(balanceOfLtonAt(_index, account, snapshotId), snapshotId);
-    }
+    // /// @inheritdoc IStaking
+    // function balanceOfAt(uint32 _index, address account, uint256 snapshotId) public view override returns (uint256 amount) {
+    //     amount = SeigManagerV2I(seigManagerV2).getLtonToTonAt(balanceOfLtonAt(_index, account, snapshotId), snapshotId);
+    // }
 
     /// @inheritdoc IStaking
     function totalLayer2Deposits() public view override returns (uint256 amount) {
@@ -285,17 +287,17 @@ contract Staking is AccessibleCommon, BaseProxyStorage, StakingStorage, IStaking
     }
 
     /// @inheritdoc IStaking
-    function getStakeAccountList() public view returns (address[] memory) {
+    function getStakeAccountList() public view override returns (address[] memory) {
         return stakeAccountList;
     }
 
     /// @inheritdoc IStaking
-    function getPendingUnstakedAmount(uint32 _index, address account) public view returns (uint256) {
+    function getPendingUnstakedAmount(uint32 _index, address account) public view override returns (uint256) {
         return pendingUnstaked[_index][account];
     }
 
     /// @inheritdoc IStaking
-    function getCurrentSnapshotId() public view virtual returns (uint256) {
+    function getCurrentSnapshotId() public view virtual override returns (uint256) {
         return SeigManagerV2I(seigManagerV2).getCurrentSnapshotId();
     }
 
@@ -427,19 +429,19 @@ contract Staking is AccessibleCommon, BaseProxyStorage, StakingStorage, IStaking
         _updateSnapshot(_layerStakesSnapshot[_layerIndex][account], balanceOfLton(_layerIndex, account));
     }
 
-    function _valueAt(uint256 snapshotId, Snapshots storage snapshots) private view returns (bool, uint256) {
-        // require(snapshotId > 0, "Snapshot: id is 0");
-        require(snapshotId <= getCurrentSnapshotId(), "Snapshot: nonexistent id");
+    // function _valueAt(uint256 snapshotId, Snapshots storage snapshots) private view returns (bool, uint256) {
+    //     // require(snapshotId > 0, "Snapshot: id is 0");
+    //     require(snapshotId <= getCurrentSnapshotId(), "Snapshot: nonexistent id");
 
-        if (snapshots.ids.length > 0 && snapshotId > snapshots.ids[snapshots.ids.length-1])
-            return (false, snapshots.values[snapshots.ids.length-1]);
+    //     if (snapshots.ids.length > 0 && snapshotId > snapshots.ids[snapshots.ids.length-1])
+    //         return (false, snapshots.values[snapshots.ids.length-1]);
 
-        uint256 index = snapshots.ids.findIndex(snapshotId);
+    //     uint256 index = snapshots.ids.findIndex(snapshotId);
 
-        if (index >= snapshots.ids.length) return (false, 0);
-        return (true, snapshots.values[index]);
+    //     if (index >= snapshots.ids.length) return (false, 0);
+    //     return (true, snapshots.values[index]);
 
-    }
+    // }
 
     function _updateSnapshot(Snapshots storage snapshots, uint256 currentValue) private {
         uint256 currentId = getCurrentSnapshotId();

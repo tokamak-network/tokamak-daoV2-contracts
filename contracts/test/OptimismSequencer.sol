@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-pragma solidity ^0.8.4;
+pragma solidity ^0.7.6;
+pragma abicoder v2;
 
 import "../storages/OptimismSequencerStorage.sol";
 import "./Staking.sol";
@@ -131,7 +132,7 @@ contract OptimismSequencer is Staking, Sequencer, OptimismSequencerStorage, IOpt
     }
 
     /// @inheritdoc IOptimismSequencer
-    function L1CrossDomainMessenger(address addressManager) public view returns (address account_) {
+    function L1CrossDomainMessenger(address addressManager) public view override returns (address account_) {
         try
             AddressManagerI(addressManager).getAddress('OVM_L1CrossDomainMessenger') returns (address a) {
                 account_ = a;

@@ -1,10 +1,13 @@
 //SPDX-License-Identifier: Unlicense
-pragma solidity ^0.8.17;
+pragma solidity ^0.7.6;
 
 
 /// @title IProxyAction
 interface IProxyAction {
+    event Upgraded(address indexed implementation);
 
+    event SetAliveImplementation(address indexed impl, bool alive);
+    event SetSelectorImplementation(bytes4 indexed selector, address indexed impl);
     /// onlyProxyOwner
 
     /// @dev set the implementation address and status of the proxy[index]

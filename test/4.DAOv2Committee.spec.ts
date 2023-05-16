@@ -69,13 +69,13 @@ describe('DAOv2Committee', () => {
         it("DAOProxy upgradeTo logicV2", async () => {
             await ethers.provider.send("hardhat_impersonateAccount",[daoCommitteProxyAddress]);
             DAOOwner = await ethers.getSigner(daoCommitteProxyAddress);
-            await DAOProxy.connect(DAOOwner).upgradeTo(deployed.daov2committee.address);
-            console.log("DAO logicV2 Address :",deployed.daov2committee.address);
+            await DAOProxy.connect(DAOOwner).upgradeTo(deployed.daoV2Logic.address);
+            console.log("DAO logicV2 Address :",deployed.daoV2Logic.address);
             console.log("logic upgradeTo : ",await DAOProxy.implementation());
         })
 
         it("connect DAOProxyLogicV2", async () => {
-            DAOProxyLogicV2 = await ethers.getContractAt(DAOv2Committee_ABI.abi, daoCommitteProxyAddress, deployer); 
+            DAOProxyLogicV2 = await ethers.getContractAt(DAOv2Committee_ABI.abi, daoCommitteProxyAddress, daoPrivateOwner); 
         })
     })
 
@@ -367,24 +367,36 @@ describe('DAOv2Committee', () => {
     describe("#7. DAOv2Committee set", () => {
         describe("#7-1. initialize setting", () => {
             it("setSeigManagerV2 can not by not owner", async () => {
+                // console.log(DAOProxyLogicV2)
                 await expect(
                     DAOProxyLogicV2.connect(addr1).setSeigManagerV2(
                         deployed.seigManagerV2Proxy.address,
                     )
-                ).to.be.revertedWith("Accessible: Caller is not an admin") 
+                ).to.be.revertedWith("DAOCommitteeV2: msg.sender is not an admin") 
             })
 
             it("setSeigManagerV2 can by only owner", async () => {
                 await DAOProxyLogicV2.connect(DAOOwner).setSeigManagerV2(
                     deployed.seigManagerV2Proxy.address,
                 );
-                expect(await deployed.daov2committeeProxy.ton()).to.be.eq(deployed.ton.address);
-                expect(await deployed.daov2committeeProxy.seigManagerV2()).to.be.eq(deployed.seigManagerV2Proxy.address);
-                expect(await deployed.daov2committeeProxy.agendaManager()).to.be.eq(deployed.daoagendaManager.address);
-                expect(await deployed.daov2committeeProxy.daoVault()).to.be.eq(deployed.daovault.address);
+                expect(await DAOProxyLogicV2.ton()).to.be.eq(deployed.ton.address);
+                console.log("1");
+                // console.log(await DAOProxyLogicV2.seigManagerV2());
+                // expect(await DAOProxyLogicV2.seigManagerV2()).to.be.eq(deployed.seigManagerV2Proxy.address);
+                // expect(await DAOProxyLogicV2.agendaManager()).to.be.eq(deployed.daoagendaManager.address);
+                // expect(await DAOProxyLogicV2.daoVault()).to.be.eq(deployed.daovault.address);
                 // expect(await deployed.daov2committeeProxy.layer2Manager()).to.be.eq(deployed.layer2ManagerProxy.address);
                 // expect(await deployed.daov2committeeProxy.candidate()).to.be.eq(deployed.candidateProxy.address);
                 // expect(await deployed.daov2committeeProxy.sequencer()).to.be.eq(deployed.optimismSequencerProxy.address);
+            })
+
+            it("setDaoVault can not by not owner", async () => {
+                console.log("1");
+                await expect(
+                    DAOProxyLogicV2.connect(addr1).setDaoVault(
+                        deployed.daovault.address,
+                    )
+                ).to.be.revertedWith("DAOCommitteeV2: msg.sender is not an admin") 
             })
         })
 

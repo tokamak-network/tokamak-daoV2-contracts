@@ -199,7 +199,8 @@ export const daostakingV2Fixtures = async function (): Promise<DAOStakingV2Fixtu
         daov2committee: daov2commitee,
         daoagendaManager: daoagenda,
         daovault: daovault,
-        daoPrivateOwner: daoPrivateOwner
+        daoPrivateOwner: daoPrivateOwner,
+        daoV2Logic: daov2comLogic
     }
 }
 

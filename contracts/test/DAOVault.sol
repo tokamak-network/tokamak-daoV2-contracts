@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.17;
+pragma solidity ^0.7.6;
 
-import "../../node_modules/@openzeppelin/contracts/access/Ownable.sol";
-import { IERC20 } from  "../../node_modules/@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import { SafeMath } from "../../node_modules/@openzeppelin/contracts/utils/math/SafeMath.sol";
-import { SafeERC20 } from "../../node_modules/@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "../AccessControl/Ownable.sol";
+import { IERC20 } from  "../AccessControl/IERC20.sol";
+import { SafeMath } from "../AccessControl/SafeMath.sol";
+import { SafeERC20 } from "../AccessControl/SafeERC20.sol";
 import { IWTON } from "../interfaces/IWTON.sol";
 import { IDAOVault } from "../interfaces/IDAOVault.sol";
 

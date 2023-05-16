@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-pragma solidity ^0.8.17;
+pragma solidity ^0.7.6;
 
 import { ILayer2Manager } from "../interfaces/ILayer2Manager.sol";
 import { ISeigManagerV2 } from "../interfaces/ISeigManagerV2.sol";
@@ -18,6 +18,7 @@ contract DAOv2CommitteeStorage {
 
     ILayer2Manager public layer2Manager;
     ISeigManagerV2 public seigManagerV2;
+    // address public seigManagerV2;
     ICandidate public candidate;
     IOptimismSequencer public sequencer;
 

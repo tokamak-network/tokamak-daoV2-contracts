@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.17;
+pragma solidity ^0.7.6;
 pragma abicoder v2;
 
-import { SafeMath } from "../../node_modules/@openzeppelin/contracts/utils/math/SafeMath.sol";
-import { IERC20 } from  "../../node_modules/@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { SafeMath } from "../AccessControl/SafeMath.sol";
+import { IERC20 } from  "../AccessControl/IERC20.sol";
 import { IDAOAgendaManager } from "../interfaces/IDAOAgendaManager.sol";
 import { IDAOCommittee } from "../interfaces/IDAOCommittee.sol";
 import { ICandidate } from "../interfaces/ICandidate.sol";
 import { LibAgenda } from "../lib/Agenda.sol";
-import "../../node_modules/@openzeppelin/contracts/access/Ownable.sol";
+import "../AccessControl/Ownable.sol";
 
 contract DAOAgendaManager is Ownable, IDAOAgendaManager {
     using SafeMath for uint256;

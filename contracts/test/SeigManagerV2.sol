@@ -1,15 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-pragma solidity ^0.8.4;
+pragma solidity ^0.7.6;
+pragma abicoder v2;
 
 import "../storages/SeigManagerV2Storage.sol";
 import "../proxy/BaseProxyStorage.sol";
 import "../common/AccessibleCommon.sol";
 import "../libraries/SafeERC20.sol";
 import "../libraries/Layer2.sol";
-import "../libraries/LibArrays.sol";
+// import "../libraries/LibArrays.sol";
 import "../interfaces/ISeigManagerV2.sol";
-
-import "hardhat/console.sol";
 
 interface AutoRefactorCoinageI {
     function totalSupply() external view returns (uint256);
@@ -28,7 +27,7 @@ interface StakingI {
 contract SeigManagerV2 is AccessibleCommon, BaseProxyStorage, SeigManagerV2Storage, ISeigManagerV2 {
     /* ========== DEPENDENCIES ========== */
     using SafeERC20 for IERC20;
-    using LibArrays for uint256[];
+    // using LibArrays for uint256[];
 
     /* ========== CONSTRUCTOR ========== */
     constructor() {
@@ -184,23 +183,23 @@ contract SeigManagerV2 is AccessibleCommon, BaseProxyStorage, SeigManagerV2Stora
         if (_amount > 0) amount = (_amount * 1e18) / indexLton();
     }
 
-    /// @inheritdoc ISeigManagerV2
-    function getTonToLtonAt(uint256 _amount, uint256 _snapshotId) public view override returns (uint256 amount) {
-        if (_amount > 0) amount = (_amount * 1e18) / indexLtonAt(_snapshotId);
-    }
+    // /// @inheritdoc ISeigManagerV2
+    // function getTonToLtonAt(uint256 _amount, uint256 _snapshotId) public view override returns (uint256 amount) {
+    //     if (_amount > 0) amount = (_amount * 1e18) / indexLtonAt(_snapshotId);
+    // }
 
     /// @inheritdoc ISeigManagerV2
     function getLtonToTon(uint256 lton) public view override returns (uint256 amount) {
         if (lton > 0) amount = (lton * indexLton()) / 1e18;
     }
 
-    /// @inheritdoc ISeigManagerV2
-    function getLtonToTonAt(uint256 lton, uint256 _snapshotId) public view override returns (uint256 amount) {
-        if (lton > 0) amount = (lton * indexLtonAt(_snapshotId)) / 1e18;
-    }
+    // /// @inheritdoc ISeigManagerV2
+    // function getLtonToTonAt(uint256 lton, uint256 _snapshotId) public view override returns (uint256 amount) {
+    //     if (lton > 0) amount = (lton * indexLtonAt(_snapshotId)) / 1e18;
+    // }
 
     /// @inheritdoc ISeigManagerV2
-    function getCurrentBlockNumber() public view returns (uint256) {
+    function getCurrentBlockNumber() public view override returns (uint256) {
         return block.number;
     }
 
@@ -225,10 +224,10 @@ contract SeigManagerV2 is AccessibleCommon, BaseProxyStorage, SeigManagerV2Stora
         amount = StakingI(optimismSequencer).getTotalLton() + StakingI(candidate).getTotalLton();
     }
 
-    /// @inheritdoc ISeigManagerV2
-    function getTotalLtonAt(uint256 _snapshotId) public view override returns (uint256 amount) {
-        amount = StakingI(optimismSequencer).getTotalLtonAt(_snapshotId) + StakingI(candidate).getTotalLtonAt(_snapshotId);
-    }
+    // /// @inheritdoc ISeigManagerV2
+    // function getTotalLtonAt(uint256 _snapshotId) public view override returns (uint256 amount) {
+    //     amount = StakingI(optimismSequencer).getTotalLtonAt(_snapshotId) + StakingI(candidate).getTotalLtonAt(_snapshotId);
+    // }
 
     /// @inheritdoc ISeigManagerV2
     function getCurrentSnapshotId() public view virtual override returns (uint256) {
@@ -245,17 +244,17 @@ contract SeigManagerV2 is AccessibleCommon, BaseProxyStorage, SeigManagerV2Stora
         return _indexLton;
     }
 
-    /// @inheritdoc ISeigManagerV2
-    function indexLtonAt(uint256 snapshotId) public view override returns (uint256) {
-        (bool snapshotted, uint256 value) = _valueAt(snapshotId, _indexLtonSnapshots);
+    // /// @inheritdoc ISeigManagerV2
+    // function indexLtonAt(uint256 snapshotId) public view override returns (uint256) {
+    //     (bool snapshotted, uint256 value) = _valueAt(snapshotId, _indexLtonSnapshots);
 
-        return snapshotted ? value : indexLton();
-    }
+    //     return snapshotted ? value : indexLton();
+    // }
 
-    /// @inheritdoc ISeigManagerV2
-    function indexLtonAtSnapshot(uint256 snapshotId) public view override returns (bool snapshotted, uint256 value) {
-        return _valueAt(snapshotId, _indexLtonSnapshots);
-    }
+    // /// @inheritdoc ISeigManagerV2
+    // function indexLtonAtSnapshot(uint256 snapshotId) public view override returns (bool snapshotted, uint256 value) {
+    //     return _valueAt(snapshotId, _indexLtonSnapshots);
+    // }
 
     /* ========== internal ========== */
 
@@ -317,17 +316,17 @@ contract SeigManagerV2 is AccessibleCommon, BaseProxyStorage, SeigManagerV2Stora
         return _currentSnapshotId;
     }
 
-    function _valueAt(uint256 snapshotId, Snapshots storage snapshots) private view returns (bool, uint256) {
-        // require(snapshotId > 0, "Snapshot: id is 0");
-        require(snapshotId <= getCurrentSnapshotId(), "Snapshot: nonexistent id");
+    // function _valueAt(uint256 snapshotId, Snapshots storage snapshots) private view returns (bool, uint256) {
+    //     // require(snapshotId > 0, "Snapshot: id is 0");
+    //     require(snapshotId <= getCurrentSnapshotId(), "Snapshot: nonexistent id");
 
-        if (snapshots.ids.length > 0 && snapshotId > snapshots.ids[snapshots.ids.length-1])
-            return (false, snapshots.values[snapshots.ids.length-1]);
+    //     if (snapshots.ids.length > 0 && snapshotId > snapshots.ids[snapshots.ids.length-1])
+    //         return (false, snapshots.values[snapshots.ids.length-1]);
 
-        uint256 index = snapshots.ids.findIndex(snapshotId);
-        if (index == snapshots.ids.length) return (false, 0);
-        return (true, snapshots.values[index]);
-    }
+    //     uint256 index = snapshots.ids.findIndex(snapshotId);
+    //     if (index == snapshots.ids.length) return (false, 0);
+    //     return (true, snapshots.values[index]);
+    // }
 
     function _updateSnapshot(Snapshots storage snapshots, uint256 currentValue) private {
         uint256 currentId = getCurrentSnapshotId();

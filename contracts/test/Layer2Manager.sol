@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-pragma solidity ^0.8.4;
+pragma solidity ^0.7.6;
+pragma abicoder v2;
 
 import "../storages/Layer2ManagerStorage.sol";
 import "../proxy/BaseProxyStorage.sol";
@@ -9,7 +10,7 @@ import "../libraries/Layer2.sol";
 import "../libraries/LibOptimism.sol";
 import "../interfaces/ILayer2Manager.sol";
 
-import "hardhat/console.sol";
+// import "hardhat/console.sol";
 
 interface AddressManagerI {
     function getAddress(string memory _name) external view returns (address);
@@ -286,10 +287,14 @@ contract  Layer2Manager is AccessibleCommon, BaseProxyStorage, Layer2ManagerStor
     function minimumSecurityDepositAmount(address l1Bridge, address l2ton) public view override returns (uint256 amount) {
         if (ratioSecurityDepositOfTvl == 0) amount = minimumDepositForSequencer;
         else {
-            amount = Math.max(
+            amount = max(
                 SequencerI(optimismSequencer).getTvl(l1Bridge, l2ton) * ratioSecurityDepositOfTvl / 10000,
                 minimumDepositForSequencer);
         }
+    }
+
+    function max(uint256 a, uint256 b) internal pure returns (uint256) {
+        return a > b ? a : b;
     }
 
     /// @inheritdoc ILayer2Manager

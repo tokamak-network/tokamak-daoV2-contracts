@@ -1,9 +1,9 @@
 //SPDX-License-Identifier: Unlicense
-pragma solidity ^0.8.17;
+pragma solidity ^0.7.6;
 
-import {Address} from "@openzeppelin/contracts/utils/Address.sol";
+import {Address} from "../AccessControl/Address.sol";
 
-import "../interfaces/IProxyEvent.sol";
+// import "../interfaces/IProxyEvent.sol";
 import "../interfaces/IProxyAction.sol";
 
 import "./BaseProxyStorage.sol";
@@ -11,7 +11,7 @@ import "../common/ProxyAccessCommon.sol";
 
 // import "hardhat/console.sol";
 
-contract BaseProxy is ProxyAccessCommon, BaseProxyStorage, IProxyEvent, IProxyAction
+contract BaseProxy is ProxyAccessCommon, BaseProxyStorage, IProxyAction
 {
 
     /**
@@ -156,7 +156,7 @@ contract BaseProxy is ProxyAccessCommon, BaseProxyStorage, IProxyEvent, IProxyAc
 
         require(
             _impl != address(0) && !pauseProxy,
-            "Proxy: impl OR proxy is false"
+            "Proxy: impl OR proxy is false2"
         );
 
         assembly {

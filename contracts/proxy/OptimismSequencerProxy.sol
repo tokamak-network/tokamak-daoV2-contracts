@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-pragma solidity ^0.8.4;
+pragma solidity ^0.7.6;
 
 import "../proxy/BaseProxy.sol";
 import "../storages/StakingStorage.sol";
@@ -41,8 +41,8 @@ contract OptimismSequencerProxy is BaseProxy, StakingStorage, OptimismSequencerS
         _supportedInterfaces[interfaceId] = true;
     }
 
-    function supportsInterface(bytes4 interfaceId) public view   override returns (bool) {
-        return _supportedInterfaces[interfaceId] || super.supportsInterface(interfaceId);
+    function supportsInterface(bytes4 interfaceId) public view returns (bool) {
+        return _supportedInterfaces[interfaceId];
     }
 
     /* ========== only TON ========== */

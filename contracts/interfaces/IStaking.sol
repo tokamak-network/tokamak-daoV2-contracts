@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-pragma solidity ^0.8.4;
+pragma solidity ^0.7.6;
+pragma abicoder v2;
+
 import "../libraries/LibStake.sol";
 
 /**
@@ -153,20 +155,20 @@ interface IStaking {
      */
     function totalStakedLton() external view returns (uint256 amount);
 
-    /**
-     * @dev                     the total amount of lton staked of all sequencer or all candidate at special snapshot id
-     * @param snapshotId        snapshot id
-     * @return amount           the total amount of lton
-     */
-    function totalStakedLtonAt(uint256 snapshotId) external view returns (uint256 amount) ;
+    // /**
+    //  * @dev                     the total amount of lton staked of all sequencer or all candidate at special snapshot id
+    //  * @param snapshotId        snapshot id
+    //  * @return amount           the total amount of lton
+    //  */
+    // function totalStakedLtonAt(uint256 snapshotId) external view returns (uint256 amount) ;
 
-    /**
-     * @dev                     whether it was snapshotted and the total amount of lton staked of all sequencer or all candidate at special snapshot id
-     * @param snapshotId        snapshot id
-     * @return snapshotted      whether it was snapshotted
-     * @return amount           the total amount of lton
-     */
-    function totalStakedLtonAtSnapshot(uint256 snapshotId) external view returns (bool snapshotted, uint256 amount) ;
+    // /**
+    //  * @dev                     whether it was snapshotted and the total amount of lton staked of all sequencer or all candidate at special snapshot id
+    //  * @param snapshotId        snapshot id
+    //  * @return snapshotted      whether it was snapshotted
+    //  * @return amount           the total amount of lton
+    //  */
+    // function totalStakedLtonAtSnapshot(uint256 snapshotId) external view returns (bool snapshotted, uint256 amount) ;
 
     /**
      * @dev                     the amount of lton staked of special sequencer or candidate
@@ -175,22 +177,22 @@ interface IStaking {
      */
     function balanceOfLton(uint32 _index) external view returns (uint256 amount) ;
 
-    /**
-     * @dev                     the amount of lton staked of special sequencer or candidate  at special snapshot id
-     * @param _index            the sequencer index or candidate index
-     * @param snapshotId        snapshot id
-     * @return amount           the amount of lton
-     */
-    function balanceOfLtonAt(uint32 _index, uint256 snapshotId) external view returns (uint256 amount) ;
+    // /**
+    //  * @dev                     the amount of lton staked of special sequencer or candidate  at special snapshot id
+    //  * @param _index            the sequencer index or candidate index
+    //  * @param snapshotId        snapshot id
+    //  * @return amount           the amount of lton
+    //  */
+    // function balanceOfLtonAt(uint32 _index, uint256 snapshotId) external view returns (uint256 amount) ;
 
-    /**
-     * @dev                     whether it was snapshotted and the amount of lton staked of special sequencer or candidate  at special snapshot id
-     * @param _index            the sequencer index or candidate index
-     * @param snapshotId        snapshot id
-     * @return snapshotted      whether it was snapshotted
-     * @return amount           the amount of lton
-     */
-    function balanceOfLtonAtSnapshot(uint32 _index, uint256 snapshotId) external view returns (bool snapshotted, uint256 amount) ;
+    // /**
+    //  * @dev                     whether it was snapshotted and the amount of lton staked of special sequencer or candidate  at special snapshot id
+    //  * @param _index            the sequencer index or candidate index
+    //  * @param snapshotId        snapshot id
+    //  * @return snapshotted      whether it was snapshotted
+    //  * @return amount           the amount of lton
+    //  */
+    // function balanceOfLtonAtSnapshot(uint32 _index, uint256 snapshotId) external view returns (bool snapshotted, uint256 amount) ;
 
     /**
      * @dev                     the amount of lton staked of special sequencer's account or candidate's account
@@ -200,24 +202,24 @@ interface IStaking {
      */
     function balanceOfLton(uint32 _index, address account) external view returns (uint256 amount);
 
-    /**
-     * @dev                     the amount of lton staked of special sequencer's account or candidate's account at special snapshot id
-     * @param _index            the sequencer index or candidate index
-     * @param account           the account address
-     * @param snapshotId        snapshot id
-     * @return amount           the amount of lton
-     */
-    function balanceOfLtonAt(uint32 _index, address account, uint256 snapshotId) external view returns (uint256 amount);
+    // /**
+    //  * @dev                     the amount of lton staked of special sequencer's account or candidate's account at special snapshot id
+    //  * @param _index            the sequencer index or candidate index
+    //  * @param account           the account address
+    //  * @param snapshotId        snapshot id
+    //  * @return amount           the amount of lton
+    //  */
+    // function balanceOfLtonAt(uint32 _index, address account, uint256 snapshotId) external view returns (uint256 amount);
 
-    /**
-     * @dev                     whether it was snapshotted and the amount of lton staked of special sequencer's account or candidate's account at special snapshot id
-     * @param _index            the sequencer index or candidate index
-     * @param account           the account address
-     * @param snapshotId        snapshot id
-     * @return snapshotted      whether it was snapshotted
-     * @return amount           the amount of lton
-     */
-    function balanceOfLtonAtSnapshot(uint32 _index, address account, uint256 snapshotId) external view returns (bool snapshotted, uint256 amount) ;
+    // /**
+    //  * @dev                     whether it was snapshotted and the amount of lton staked of special sequencer's account or candidate's account at special snapshot id
+    //  * @param _index            the sequencer index or candidate index
+    //  * @param account           the account address
+    //  * @param snapshotId        snapshot id
+    //  * @return snapshotted      whether it was snapshotted
+    //  * @return amount           the amount of lton
+    //  */
+    // function balanceOfLtonAtSnapshot(uint32 _index, address account, uint256 snapshotId) external view returns (bool snapshotted, uint256 amount) ;
 
     /**
      * @dev                     view the stake infomation of sequencer or canddiate
@@ -237,14 +239,14 @@ interface IStaking {
      */
     function balanceOf(uint32 _index, address account) external view returns (uint256 amount);
 
-    /**
-     * @dev                     view the amount staked in TON at special snapshot id
-     * @param _index            the sequencer index or candidate index
-     * @param account           the account address
-     * @param snapshotId        snapshot id
-     * @return amount           the amount staked in TON
-     */
-    function balanceOfAt(uint32 _index, address account, uint256 snapshotId) external view returns (uint256 amount);
+    // /**
+    //  * @dev                     view the amount staked in TON at special snapshot id
+    //  * @param _index            the sequencer index or candidate index
+    //  * @param account           the account address
+    //  * @param snapshotId        snapshot id
+    //  * @return amount           the amount staked in TON
+    //  */
+    // function balanceOfAt(uint32 _index, address account, uint256 snapshotId) external view returns (uint256 amount);
 
     /**
      * @dev                     view the current total layer2's deposit amount

@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-pragma solidity ^0.8.4;
+pragma solidity ^0.7.6;
+pragma abicoder v2;
 
 import "../storages/CandidateStorage.sol";
 import "./Staking.sol";
@@ -26,7 +27,7 @@ contract Candidate is Staking, CandidateStorage, ICandidate {
         address spender,
         uint256 amount,
         bytes calldata data
-    ) external returns (bool) {
+    ) external override returns (bool) {
         require(ton == msg.sender, "EA");
         require(existedIndex(data.toUint32(0)), 'non-registered candidate');
 
@@ -49,7 +50,7 @@ contract Candidate is Staking, CandidateStorage, ICandidate {
 
     /// @inheritdoc ICandidate
     function create(uint32 _candidateIndex, bytes memory _info)
-        external onlyLayer2Manager returns (bool)
+        external override onlyLayer2Manager returns (bool)
     {
         require(layerInfo[_candidateIndex].length == 0, "already created");
         require(_info.length > 57, "wrong _info");
@@ -73,7 +74,7 @@ contract Candidate is Staking, CandidateStorage, ICandidate {
     /* ========== Anyone can execute ========== */
 
     /// @inheritdoc ICandidate
-    function stake(uint32 _index, uint256 amount) external
+    function stake(uint32 _index, uint256 amount) external override
     {
         require(existedIndex(_index), 'non-registered candidate');
         LibOperator.Info memory _layerInfo = getCandidateInfo(_index);
@@ -86,7 +87,7 @@ contract Candidate is Staking, CandidateStorage, ICandidate {
     }
 
     /// @inheritdoc ICandidate
-    function unstake(uint32 _index, uint256 lton_) external
+    function unstake(uint32 _index, uint256 lton_) external override
     {
         uint256 debt_ = FwReceiptI(fwReceipt).debtInStaked(true, _index, msg.sender);
         if(msg.sender == operator(_index)) {
@@ -99,26 +100,26 @@ contract Candidate is Staking, CandidateStorage, ICandidate {
     /* ========== VIEW ========== */
 
     /// @inheritdoc ICandidate
-    function existedIndex(uint32 _index) public view returns (bool) {
+    function existedIndex(uint32 _index) public view override returns (bool) {
         require(Layer2ManagerI(layer2Manager).existedCandidateIndex(_index), 'non-registered layer');
         return true;
     }
 
     /// @inheritdoc ICandidate
     function getCandidateInfo(uint32 _index)
-        public view returns (LibOperator.Info memory info)
+        public view override returns (LibOperator.Info memory info)
     {
         info = LibOperator.parseKey(layerInfo[_index]);
     }
 
     /// @inheritdoc ICandidate
-    function getCandidateKey(uint32 _index) public view virtual  returns (bytes32 layerKey_) {
+    function getCandidateKey(uint32 _index) public view virtual override returns (bytes32 layerKey_) {
         bytes memory data = layerInfo[_index];
         layerKey_ = bytes32(keccak256(abi.encodePacked(data.slice(0,24), uint16(0))));
     }
 
     /// @inheritdoc ICandidate
-    function operator(uint32 _index) public view returns (address operator_) {
+    function operator(uint32 _index) public view override returns (address operator_) {
         bytes memory data = layerInfo[_index];
 
         if(data.length > 23){

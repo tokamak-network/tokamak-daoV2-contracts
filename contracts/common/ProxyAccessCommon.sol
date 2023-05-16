@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.16;
+pragma solidity ^0.7.6;
 
-import "@openzeppelin/contracts/access/AccessControl.sol";
+import "../AccessControl/AccessControl.sol";
 import "./AccessRoleCommon.sol";
 
 contract ProxyAccessCommon is AccessRoleCommon, AccessControl {
