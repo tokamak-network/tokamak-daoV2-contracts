@@ -3,8 +3,9 @@ import { ethers } from 'hardhat'
 // import { BigNumber } from 'ethers'
 import {  Wallet, Signer } from 'ethers'
 
-import { DAOv2CommitteeProxy } from '../../typechain-types/contracts/dao/DAOv2CommitteeProxy' 
+// import { DAOv2CommitteeProxy } from '../../typechain-types/contracts/dao/DAOv2CommitteeProxy' 
 import { DAOv2Committee } from '../../typechain-types/contracts/dao/DAOv2Committee.sol' 
+import { DAOv2CommitteeV2 } from '../../typechain-types/contracts/dao/DAOv2CommitteeV2.sol' 
 import { DAOAgendaManager } from '../../typechain-types/contracts/test/DAOAgendaManager' 
 import { DAOVault } from '../../typechain-types/contracts/test/DAOVault' 
 
@@ -59,8 +60,9 @@ interface DAOStakingV2Fixture  {
     dao: string,
     stosDistribute: Signer,
     DAOContract: Signer,
-    daov2committeeProxy: DAOv2CommitteeProxy,
+    // daov2committeeProxy: DAOv2CommitteeProxy,
     daov2committee: DAOv2Committee,
+    daov2committeeV2: DAOv2CommitteeV2,
     daoagendaManager: DAOAgendaManager,
     daovault: DAOVault,
     daoPrivateOwner: Signer

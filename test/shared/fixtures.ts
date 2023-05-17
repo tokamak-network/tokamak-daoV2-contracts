@@ -2,8 +2,9 @@
 import { ethers } from 'hardhat'
 import {  Wallet, Signer } from 'ethers'
 
-import { DAOv2CommitteeProxy } from '../../typechain-types/contracts/dao/DAOv2CommitteeProxy' 
+// import { DAOv2CommitteeProxy } from '../../typechain-types/contracts/dao/DAOv2CommitteeProxy.' 
 import { DAOv2Committee } from '../../typechain-types/contracts/dao/DAOv2Committee.sol' 
+import { DAOv2CommitteeV2 } from '../../typechain-types/contracts/dao/DAOv2CommitteeV2.sol' 
 import { DAOAgendaManager } from '../../typechain-types/contracts/test/DAOAgendaManager' 
 import { DAOVault } from '../../typechain-types/contracts/test/DAOVault' 
 
@@ -155,11 +156,15 @@ export const daostakingV2Fixtures = async function (): Promise<DAOStakingV2Fixtu
     const daov2comLogic_ = await ethers.getContractFactory('DAOv2Committee');
     const daov2comLogic = (await daov2comLogic_.connect(deployer).deploy()) as DAOv2Committee
 
-    const daov2committeProxy_ = await ethers.getContractFactory('DAOv2CommitteeProxy');
-    const daov2committeProxy = (await daov2committeProxy_.connect(deployer).deploy()) as DAOv2CommitteeProxy
-    await daov2committeProxy.connect(deployer).upgradeTo(daov2comLogic.address);
+    const daov2comLogicV2_ = await ethers.getContractFactory('DAOv2CommitteeV2');
+    const daov2comLogicV2 = (await daov2comLogicV2_.connect(deployer).deploy()) as DAOv2CommitteeV2
+
+    // const daov2committeProxy_ = await ethers.getContractFactory('DAOv2CommitteeProxy');
+    // const daov2committeProxy = (await daov2committeProxy_.connect(deployer).deploy()) as DAOv2CommitteeProxy
+    // await daov2committeProxy.connect(deployer).upgradeTo(daov2comLogic.address);
 
     const daov2commitee = (await daov2comLogic_.connect(deployer).deploy()) as DAOv2Committee
+    const daov2commiteeV2 = (await daov2comLogicV2_.connect(deployer).deploy()) as DAOv2CommitteeV2
     // const daov2commitee = daov2comLogic.attach(daov2committeProxy.address) as DAOv2Committee
     
     const daoagenda = (await ethers.getContractAt(DAOAgendaManger_ABI.abi, daoAgendaMangerAddress, deployer)) as DAOAgendaManager
@@ -196,8 +201,9 @@ export const daostakingV2Fixtures = async function (): Promise<DAOStakingV2Fixtu
         dao: dao,
         stosDistribute: stosDistribute,
         DAOContract: DAOContract,
-        daov2committeeProxy: daov2committeProxy,
+        // daov2committeeProxy: daov2committeProxy,
         daov2committee: daov2commitee,
+        daov2committeeV2: daov2commiteeV2,
         daoagendaManager: daoagenda,
         daovault: daovault,
         daoPrivateOwner: daoPrivateOwner

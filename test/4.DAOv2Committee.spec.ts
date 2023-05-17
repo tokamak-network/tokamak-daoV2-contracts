@@ -8,6 +8,7 @@ import snapshotGasCost from './shared/snapshotGasCost'
 
 import DAOv1CommitteProxy_ABI from '../abi/DAOCommitteeProxy.json'
 import DAOv2Committee_ABI from '../artifacts/contracts/dao/DAOv2Committee.sol/DAOv2Committee.json'
+import DAOv2CommitteeV2_ABI from '../artifacts/contracts/dao/DAOv2CommitteeV2.sol/DAOv2CommitteeV2.json'
 
 // DAOProxy(기존 것)
 // DAOv2Committe(새로배포) 
@@ -69,13 +70,13 @@ describe('DAOv2Committee', () => {
         it("DAOProxy upgradeTo logicV2", async () => {
             await ethers.provider.send("hardhat_impersonateAccount",[daoCommitteProxyAddress]);
             DAOOwner = await ethers.getSigner(daoCommitteProxyAddress);
-            await DAOProxy.connect(DAOOwner).upgradeTo(deployed.daov2committee.address);
-            console.log("DAO logicV2 Address :",deployed.daov2committee.address);
+            await DAOProxy.connect(DAOOwner).upgradeTo(deployed.daov2committeeV2.address);
+            console.log("DAO logicV2 Address :",deployed.daov2committeeV2.address);
             console.log("logic upgradeTo : ",await DAOProxy.implementation());
         })
 
         it("connect DAOProxyLogicV2", async () => {
-            DAOProxyLogicV2 = await ethers.getContractAt(DAOv2Committee_ABI.abi, daoCommitteProxyAddress, deployer); 
+            DAOProxyLogicV2 = await ethers.getContractAt(DAOv2CommitteeV2_ABI.abi, daoCommitteProxyAddress, deployer); 
         })
     })
 
@@ -177,13 +178,13 @@ describe('DAOv2Committee', () => {
             it('setAddress can be executed by only owner ', async () => {
 
                 await deployed.seigManagerV2.connect(deployer).setAddress(
-                    deployed.daov2committeeProxy.address,
+                    DAOProxyLogicV2.address,
                     deployed.stosDistribute.address
                 )
             
                 // console.log(await deployed.seigManagerV2.dao());
                 // console.log(deployed.daov2committeeProxy.address);
-                expect(await deployed.seigManagerV2.dao()).to.eq(deployed.daov2committeeProxy.address)
+                expect(await deployed.seigManagerV2.dao()).to.eq(DAOProxyLogicV2.address)
                 expect(await deployed.seigManagerV2.stosDistribute()).to.eq(deployed.stosDistribute.address)
     
             })
@@ -327,20 +328,20 @@ describe('DAOv2Committee', () => {
                 await deployed.daoagendaManager.connect(deployed.DAOContract).setMinimumVotingPeriodSeconds(daoAgendaInfo.minimumVotingPeriodSeconds);
                 expect(await deployed.daoagendaManager.minimumVotingPeriodSeconds()).to.be.eq(daoAgendaInfo.minimumVotingPeriodSeconds)
             })
-
-            it("set committee can not by not DAOContract", async () => {
-                await expect(
-                    deployed.daoagendaManager.connect(addr1).setCommittee(deployed.daov2committeeProxy.address)
-                ).to.be.revertedWith("Ownable: caller is not the owner") 
-            })
-
-            it("set committee by only DAOContract", async () => {
-                await deployed.daoagendaManager.connect(deployed.DAOContract).setCommittee(deployed.daov2committeeProxy.address);
-                expect(await deployed.daoagendaManager.committee()).to.be.eq(deployed.daov2committeeProxy.address);
-            })
-
+            
             /*
               V1Proxy 그대로 사용하면서 필요없어짐
+            // it("set committee can not by not DAOContract", async () => {
+            //     await expect(
+            //         deployed.daoagendaManager.connect(addr1).setCommittee(deployed.daov2committeeProxy.address)
+            //     ).to.be.revertedWith("Ownable: caller is not the owner") 
+            // })
+
+            // it("set committee by only DAOContract", async () => {
+            //     await deployed.daoagendaManager.connect(deployed.DAOContract).setCommittee(deployed.daov2committeeProxy.address);
+            //     expect(await deployed.daoagendaManager.committee()).to.be.eq(deployed.daov2committeeProxy.address);
+            // })
+
             // it("set transferOwnership can not by not DAOContract", async () => {
             //     await expect(
             //         deployed.daoagendaManager.connect(addr1).setMinimumVotingPeriodSeconds(deployed.daov2committeeProxy.address)
@@ -381,7 +382,7 @@ describe('DAOv2Committee', () => {
             // })
 
             it("setSeigManagerV2 can by only owner", async () => {
-                await DAOProxyLogicV2.connect(daoPrivateOwner).setSeigManagerV2(
+                await DAOProxyLogicV2.connect(DAOOwner).setSeigManagerV2(
                     deployed.seigManagerV2Proxy.address,
                 );
                 console.log("123");
