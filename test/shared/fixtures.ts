@@ -70,7 +70,7 @@ let daoVaultAddress = "0x2520CD65BAa2cEEe9E6Ad6EBD3F45490C42dd303" ;    //DAOVau
 // }
 
 export const daostakingV2Fixtures = async function (): Promise<DAOStakingV2Fixture> {
-    const [deployer, addr1, addr2, sequencer1, stosDistribute, daoPrivateOwner ] = await ethers.getSigners();
+    const [deployer, addr1, addr2, sequencer1, stosDistribute, daoPrivateOwner, candidate1, candidate2, candidate3 ] = await ethers.getSigners();
     console.log(deployer.address);
     await ethers.provider.send("hardhat_impersonateAccount",[daoCommitteProxyAddress]);
     const DAOContract = await ethers.getSigner(daoCommitteProxyAddress);
@@ -191,6 +191,9 @@ export const daostakingV2Fixtures = async function (): Promise<DAOStakingV2Fixtu
         addr1: addr1,
         addr2: addr2,
         sequencer1: sequencer1,
+        candidate1: candidate1,
+        candidate2: candidate2,
+        candidate3: candidate3,
         tonAdmin: tonAdmin,
         addressManager: addressManager,
         l1Messenger: l1Messenger,

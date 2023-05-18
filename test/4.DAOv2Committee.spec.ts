@@ -18,7 +18,7 @@ import DAOv2CommitteeV2_ABI from '../artifacts/contracts/dao/DAOv2CommitteeV2.so
 describe('DAOv2Committee', () => {
     let deployer: Signer, addr1: Signer, sequencer1: Signer, daoPrivateOwner: Signer
 
-    let accounts, candidate1: Signer, candidate2: Signer, candidate3: Signer
+    let candidate1: Signer, candidate2: Signer, candidate3: Signer
 
     let deployed: DAOStakingV2Fixture
     
@@ -68,9 +68,9 @@ describe('DAOv2Committee', () => {
     }
 
     let candidateInfo = {
-        tonAmount1: ethers.utils.parseEther("100"),
-        tonAmount2: ethers.utils.parseEther("200"),
-        tonAmount3: ethers.utils.parseEther("300"),
+        tonAmount1: ethers.utils.parseEther("200"),
+        tonAmount2: ethers.utils.parseEther("300"),
+        tonAmount3: ethers.utils.parseEther("400"),
     }
 
     let sequencerInfo = {
@@ -83,6 +83,10 @@ describe('DAOv2Committee', () => {
         addr1 = deployed.addr1;
         sequencer1 = deployed.sequencer1;
         daoPrivateOwner = deployed.daoPrivateOwner;
+        
+        candidate1 = deployed.candidate1;
+        candidate2 = deployed.candidate2;
+        candidate3 = deployed.candidate3;
 
         daoAdmin = await ethers.getSigner(daoAdminAddress)
         await ethers.provider.send("hardhat_impersonateAccount",[daoAdminAddress]);
@@ -90,9 +94,6 @@ describe('DAOv2Committee', () => {
             daoAdminAddress,
             "0x8ac7230489e80000",
         ]);
-
-        accounts = await ethers.getSigners();
-        [candidate1, candidate2, candidate3] = accounts;
 
     })
 
@@ -344,66 +345,6 @@ describe('DAOv2Committee', () => {
             })
         })
     })
-
-    // describe("#5. DAOagendaManager set", () => {
-    //     describe("#5-1. Values to be set initialize & Values to change for testing", async () => {
-    //         it("set minimumNoticePeriodSeconds can not by not DAOContract", async () => {
-    //             await expect(
-    //                 deployed.daoagendaManager.connect(addr1).setMinimumNoticePeriodSeconds(daoAgendaInfo.minimumNoticePeriodSeconds)
-    //             ).to.be.revertedWith("Ownable: caller is not the owner")
-    //         })
-
-    //         it("set minimumNoticePeriodSeconds by only DAOContract", async () => {
-    //             await deployed.daoagendaManager.connect(deployed.DAOContract).setMinimumNoticePeriodSeconds(daoAgendaInfo.minimumNoticePeriodSeconds);
-    //             expect(await deployed.daoagendaManager.minimumNoticePeriodSeconds()).to.be.eq(daoAgendaInfo.minimumNoticePeriodSeconds)
-    //         })
-
-    //         it("set minimumVotingPeriodSeconds can not by not DAOContract", async () => {
-    //             await expect(
-    //                 deployed.daoagendaManager.connect(addr1).setMinimumVotingPeriodSeconds(daoAgendaInfo.minimumVotingPeriodSeconds)
-    //             ).to.be.revertedWith("Ownable: caller is not the owner") 
-    //         })
-
-    //         it("set minimumVotingPeriodSeconds by only DAOContract", async () => {
-    //             await deployed.daoagendaManager.connect(deployed.DAOContract).setMinimumVotingPeriodSeconds(daoAgendaInfo.minimumVotingPeriodSeconds);
-    //             expect(await deployed.daoagendaManager.minimumVotingPeriodSeconds()).to.be.eq(daoAgendaInfo.minimumVotingPeriodSeconds)
-    //         })
-            
-    //         /*
-    //           V1Proxy 그대로 사용하면서 필요없어짐
-    //         // it("set committee can not by not DAOContract", async () => {
-    //         //     await expect(
-    //         //         deployed.daoagendaManager.connect(addr1).setCommittee(deployed.daov2committeeProxy.address)
-    //         //     ).to.be.revertedWith("Ownable: caller is not the owner") 
-    //         // })
-
-    //         // it("set committee by only DAOContract", async () => {
-    //         //     await deployed.daoagendaManager.connect(deployed.DAOContract).setCommittee(deployed.daov2committeeProxy.address);
-    //         //     expect(await deployed.daoagendaManager.committee()).to.be.eq(deployed.daov2committeeProxy.address);
-    //         // })
-
-    //         // it("set transferOwnership can not by not DAOContract", async () => {
-    //         //     await expect(
-    //         //         deployed.daoagendaManager.connect(addr1).setMinimumVotingPeriodSeconds(deployed.daov2committeeProxy.address)
-    //         //     ).to.be.revertedWith("Ownable: caller is not the owner") 
-    //         // })
-
-    //         // it("set transferOwnership to committee by only DAOContract", async () => {
-    //         //     await deployed.daoagendaManager.connect(deployed.DAOContract).transferOwnership(deployed.daov2committeeProxy.address);
-    //         //     expect(await deployed.daoagendaManager.owner()).to.be.eq(deployed.daov2committeeProxy.address);
-    //         // })
-    //         */
-    //     })
-    // })
-
-    // describe("#6. DAOVault set", () => {
-    //     // describe("#6-1. transferOwnership", async () => {
-    //     //     it("set transferOwnership to committee by only DAOContract", async () => {
-    //     //         await deployed.daovault.connect(deployed.DAOContract).transferOwnership(deployed.daov2committeeProxy.address);
-    //     //         expect(await deployed.daovault.owner()).to.be.eq(deployed.daov2committeeProxy.address);
-    //     //     })
-    //     // })
-    // })
 
     describe("#7. DAOv2Committee set", () => {
         describe("#7-0. Role Test", () => {
@@ -738,12 +679,16 @@ describe('DAOv2Committee', () => {
                 expect(await deployed.addressManager.getAddress("OVM_Sequencer")).to.eq(sequencer1.address)
                 let totalSecurityDeposit = await deployed.layer2Manager.totalSecurityDeposit();
                 let amount = await deployed.layer2Manager.minimumDepositForSequencer();
+
+                if(sequencerInfo.tonAmount1 < amount) {
+                    sequencerInfo.tonAmount1 = amount;
+                }
     
-                if (amount.gt(await deployed.ton.balanceOf(sequencer1.address)))
-                    await (await deployed.ton.connect(deployed.tonAdmin).mint(sequencer1.address, amount)).wait();
+                if (sequencerInfo.tonAmount1.gt(await deployed.ton.balanceOf(sequencer1.address)))
+                    await (await deployed.ton.connect(deployed.tonAdmin).mint(sequencer1.address, sequencerInfo.tonAmount1)).wait();
     
-                if (amount.gte(await deployed.ton.allowance(sequencer1.address, deployed.layer2Manager.address)))
-                    await (await deployed.ton.connect(sequencer1).approve(deployed.layer2Manager.address, amount)).wait();
+                if (sequencerInfo.tonAmount1.gte(await deployed.ton.allowance(sequencer1.address, deployed.layer2Manager.address)))
+                    await (await deployed.ton.connect(sequencer1).approve(deployed.layer2Manager.address, sequencerInfo.tonAmount1)).wait();
     
                 const topic = deployed.layer2Manager.interface.getEventTopic('CreatedOptimismSequencer');
     
@@ -753,7 +698,7 @@ describe('DAOv2Committee', () => {
                         deployed.l1Bridge.address,
                         deployed.l2Bridge.address,
                         deployed.l2ton.address,
-                        amount
+                        sequencerInfo.tonAmount1
                     ))).wait();
     
                 const log = receipt.logs.find(x => x.topics.indexOf(topic) >= 0);
@@ -770,7 +715,7 @@ describe('DAOv2Committee', () => {
                 expect(deployedEvent.args.l2ton).to.eq(deployed.l2ton.address);
     
                 expect(await deployed.layer2Manager.totalLayers()).to.eq(totalLayers.add(1))
-                expect(await deployed.layer2Manager.totalSecurityDeposit()).to.eq(totalSecurityDeposit.add(amount))
+                expect(await deployed.layer2Manager.totalSecurityDeposit()).to.eq(totalSecurityDeposit.add(sequencerInfo.tonAmount1))
     
                 let layerKey = await getLayerKey({
                         addressManager: deployed.addressManager.address,
@@ -809,8 +754,7 @@ describe('DAOv2Committee', () => {
         })
 
         describe("#7-4. createCandidate", () => {
-            it('Approve the minimum deposit and create.', async () => {
-                console.log(candidate1.address)
+            it('Approve the minimum deposit and create candidate1.', async () => {
                 let name = "Tokamak Candidate #1";
                 let getAllCandidatesBefore = await deployed.layer2Manager.getAllCandidates();
     
@@ -820,19 +764,23 @@ describe('DAOv2Committee', () => {
                 let sequencerIndex = await deployed.layer2Manager.optimismSequencerIndexes(totalLayers.sub(ethers.constants.One))
     
                 let amount = await deployed.layer2Manager.minimumDepositForCandidate();
+
+                if(candidateInfo.tonAmount1 < amount) {
+                    candidateInfo.tonAmount1 = amount;
+                }
     
-                if (amount.gt(await deployed.ton.balanceOf(candidate1.address)))
-                    await (await deployed.ton.connect(deployed.tonAdmin).mint(candidate1.address, amount)).wait();
+                if (candidateInfo.tonAmount1.gt(await deployed.ton.balanceOf(candidate1.address)))
+                    await (await deployed.ton.connect(deployed.tonAdmin).mint(candidate1.address, candidateInfo.tonAmount1)).wait();
     
-                if (amount.gte(await deployed.ton.allowance(candidate1.address, deployed.layer2Manager.address)))
-                    await (await deployed.ton.connect(candidate1).approve(deployed.layer2Manager.address, amount)).wait();
+                if (candidateInfo.tonAmount1.gte(await deployed.ton.allowance(candidate1.address, deployed.layer2Manager.address)))
+                    await (await deployed.ton.connect(candidate1).approve(deployed.layer2Manager.address, candidateInfo.tonAmount1)).wait();
     
                 const commission = 500;
                 await snapshotGasCost(deployed.layer2Manager.connect(candidate1).createCandidate(
                     sequencerIndex,
                     ethers.utils.formatBytes32String(name),
                     commission,
-                    amount
+                    candidateInfo.tonAmount1
                 ))
 
                 expect(await deployed.layer2Manager.totalCandidates()).to.eq(totalCandidates.add(1))
@@ -842,10 +790,93 @@ describe('DAOv2Committee', () => {
                 )
             })
             
-            it("DAOContract check candidate", async () => {
+            it("DAOContract check candidate1", async () => {
                 expect(await DAOProxyLogicV2.candidatesLength()).to.be.eq(2)
                 expect(await DAOProxyLogicV2.candidatesV2(1)).to.be.eq(candidate1.address)
                 expect(await DAOProxyLogicV2.isExistCandidate(candidate1.address)).to.be.eq(true);
+            })
+
+            it('Approve the minimum deposit and create candidate2.', async () => {
+                let name = "Tokamak Candidate #2";
+                let getAllCandidatesBefore = await deployed.layer2Manager.getAllCandidates();
+    
+                let totalLayers = await deployed.layer2Manager.totalLayers()
+                let totalCandidates = await deployed.layer2Manager.totalCandidates()
+    
+                let sequencerIndex = await deployed.layer2Manager.optimismSequencerIndexes(totalLayers.sub(ethers.constants.One))
+    
+                let amount = await deployed.layer2Manager.minimumDepositForCandidate();
+
+                if(candidateInfo.tonAmount2 < amount) {
+                    candidateInfo.tonAmount2 = amount;
+                }
+    
+                if (amount.gt(await deployed.ton.balanceOf(candidate2.address)))
+                    await (await deployed.ton.connect(deployed.tonAdmin).mint(candidate2.address, candidateInfo.tonAmount2)).wait();
+    
+                if (amount.gte(await deployed.ton.allowance(candidate2.address, deployed.layer2Manager.address)))
+                    await (await deployed.ton.connect(candidate2).approve(deployed.layer2Manager.address, candidateInfo.tonAmount2)).wait();
+    
+                const commission = 500;
+                await snapshotGasCost(deployed.layer2Manager.connect(candidate2).createCandidate(
+                    sequencerIndex,
+                    ethers.utils.formatBytes32String(name),
+                    commission,
+                    candidateInfo.tonAmount2
+                ))
+
+                expect(await deployed.layer2Manager.totalCandidates()).to.eq(totalCandidates.add(1))
+                let getAllCandidatesAfter = await deployed.layer2Manager.getAllCandidates();
+                expect(getAllCandidatesBefore.candidateNamesIndexes_.length).to.eq(
+                    getAllCandidatesAfter.candidateNamesIndexes_.length-1
+                )
+            })
+            
+            it("DAOContract check candidate2", async () => {
+                expect(await DAOProxyLogicV2.candidatesLength()).to.be.eq(3)
+                expect(await DAOProxyLogicV2.candidatesV2(2)).to.be.eq(candidate2.address)
+                expect(await DAOProxyLogicV2.isExistCandidate(candidate2.address)).to.be.eq(true);
+            })
+            it('Approve the minimum deposit and create candidate3.', async () => {
+                let name = "Tokamak Candidate #3";
+                let getAllCandidatesBefore = await deployed.layer2Manager.getAllCandidates();
+    
+                let totalLayers = await deployed.layer2Manager.totalLayers()
+                let totalCandidates = await deployed.layer2Manager.totalCandidates()
+    
+                let sequencerIndex = await deployed.layer2Manager.optimismSequencerIndexes(totalLayers.sub(ethers.constants.One))
+    
+                let amount = await deployed.layer2Manager.minimumDepositForCandidate();
+
+                if(candidateInfo.tonAmount3 < amount) {
+                    candidateInfo.tonAmount3 = amount;
+                }
+    
+                if (amount.gt(await deployed.ton.balanceOf(candidate3.address)))
+                    await (await deployed.ton.connect(deployed.tonAdmin).mint(candidate3.address, candidateInfo.tonAmount3)).wait();
+    
+                if (amount.gte(await deployed.ton.allowance(candidate3.address, deployed.layer2Manager.address)))
+                    await (await deployed.ton.connect(candidate3).approve(deployed.layer2Manager.address, candidateInfo.tonAmount3)).wait();
+    
+                const commission = 500;
+                await snapshotGasCost(deployed.layer2Manager.connect(candidate3).createCandidate(
+                    sequencerIndex,
+                    ethers.utils.formatBytes32String(name),
+                    commission,
+                    candidateInfo.tonAmount3
+                ))
+
+                expect(await deployed.layer2Manager.totalCandidates()).to.eq(totalCandidates.add(1))
+                let getAllCandidatesAfter = await deployed.layer2Manager.getAllCandidates();
+                expect(getAllCandidatesBefore.candidateNamesIndexes_.length).to.eq(
+                    getAllCandidatesAfter.candidateNamesIndexes_.length-1
+                )
+            })
+            
+            it("DAOContract check candidate3", async () => {
+                expect(await DAOProxyLogicV2.candidatesLength()).to.be.eq(4)
+                expect(await DAOProxyLogicV2.candidatesV2(3)).to.be.eq(candidate3.address)
+                expect(await DAOProxyLogicV2.isExistCandidate(candidate3.address)).to.be.eq(true);
             })
         })
 
