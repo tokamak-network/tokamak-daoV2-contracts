@@ -11,6 +11,8 @@ contract Layer2ManagerStorage {
     address public seigManagerV2;
     address public optimismSequencer;
     address public candidate;
+    
+    address public DAOCommittee;
 
     uint256 public minimumDepositForSequencer;  // 초기 시퀀서의 최소 디파짓 금액,
     uint256 public minimumDepositForCandidate;  // candidate의 최소 스테이킹 금액,

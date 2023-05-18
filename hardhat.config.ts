@@ -42,9 +42,9 @@ const config: HardhatUserConfig = {
       chainId: 31337,
       url: `http://127.0.0.1:8545/`,
     },
-    // mainnet: {
-    //   url: `${process.env.ETH_NODE_URI_MAINNET}`,
-    // },
+    mainnet: {
+      url: `https://mainnet.infura.io/v3/${process.env.INFURA_API_KEY}`,
+    },
     goerli: {
       url: `https://goerli.infura.io/v3/${process.env.INFURA_API_KEY}`,
       // accounts: [`${process.env.PRIVATE_KEY}`],

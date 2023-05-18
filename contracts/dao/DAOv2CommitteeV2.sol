@@ -11,10 +11,10 @@ import "./StorageStateCommitteeV2.sol";
 // import { IERC20 } from  "../AccessControl/IERC20.sol";
 import { SafeMath } from "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import { IERC20 } from  "../../node_modules/@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import { IDAOCommittee } from "../interfaces/IDAOCommittee.sol";
-import { ICandidate } from "../interfaces/ICandidate.sol";
-import { ILayer2 } from "../interfaces/ILayer2.sol";
-import { IDAOAgendaManager } from "../interfaces/IDAOAgendaManager.sol";
+// import { IDAOCommittee } from "../interfaces/IDAOCommittee.sol";
+// import { ICandidate } from "../interfaces/ICandidate.sol";
+// import { ILayer2 } from "../interfaces/ILayer2.sol";
+// import { IDAOAgendaManager } from "../interfaces/IDAOAgendaManager.sol";
 import { LibAgenda } from "../lib/Agenda.sol";
 import { ERC165Checker } from "../../node_modules/@openzeppelin/contracts/utils/introspection/ERC165Checker.sol";
 // import { ERC165Checker } from "../AccessControl/ERC165Checker.sol";
@@ -25,6 +25,8 @@ import { ICandidateV2 } from "../interfaces/ICandidateV2.sol";
 import { IOptimismSequencer } from "../interfaces/IOptimismSequencer.sol";
 // import { IDAOv2Committee } from "../interfaces/IDAOv2Committee.sol";
 // import "../storages/DAOv2CommitteeStorage.sol";
+
+import "hardhat/console.sol";
 
 interface IStaking {
     function balanceOfLton(uint32 _index) external view returns (uint256 amount) ;
@@ -139,7 +141,8 @@ contract DAOv2CommitteeV2 is
     /// @notice Set Layer2Manager contract address
     /// @param _layer2Manager New Layer2Manager contract address
     function setLayer2Manager(address _layer2Manager) external onlyOwner nonZero(_layer2Manager) {
-        layer2Manager = ILayer2Manager(_layer2Manager);
+        layer2Manager = _layer2Manager;
+        // layer2Manager = ILayer2Manager(_layer2Manager);
     }
 
     /// @notice Set DAOAgendaManager contract address
@@ -295,72 +298,126 @@ contract DAOv2CommitteeV2 is
     //////////////////////////////////////////////////////////////////////
     // Managing members
 
+    // function createCandidate(
+    //     uint32 _sequencerIndex,
+    //     bytes32 _name,
+    //     uint16 _commission,
+    //     uint256 amount
+    // )
+    //     external
+    //     validSeigManagerV2
+    //     validLayer2Manager
+    //     returns (bool)
+    // {
+    //     require(!isExistCandidate(msg.sender), "DAOCommittee: candidate already registerd");
+    //     // require(layer2Manager.existedLayer2Index(_sequencerIndex) == true, "wrong index");
+
+    //     //msg.sender는 Layer2Manager에게 미리 amount만큼 approve해야한다
+    //     (bool success, bytes memory data) = address(layer2Manager).delegatecall(
+    //         abi.encodeWithSignature(
+    //             "createCandidate(uint32,bytes32,uint16,uint256)",
+    //             _sequencerIndex,_name,_commission,amount
+    //         )
+    //     );
+
+    //     //layer2Manager에서 indexCandidates는 로직에서 더하고 값을 넣으므로 index값은 같다.
+    //     uint32 candidateIndex = toUint32(data,0);
+    //     console.log(candidateIndex);
+
+    //     _candidateInfosV2[msg.sender] = LibDaoV2.CandidateInfoV2({
+    //         sequencerIndex: _sequencerIndex,
+    //         candidateIndex: candidateIndex,
+    //         memberJoinedTime: 0,
+    //         indexMembers: 0,
+    //         rewardPeriod: 0,
+    //         claimedTimestamp: 0
+    //     });
+
+    //     candidatesV2.push(msg.sender);
+
+    //     return success;
+    // }
+
     function createCandidate(
+        address senderAddress,
         uint32 _sequencerIndex,
-        bytes32 _name,
-        uint16 _commission,
-        uint256 amount
+        uint32 _candidateIndex
     )
         external
         validSeigManagerV2
         validLayer2Manager
-        returns (bool)
+        returns (uint256)
     {
-        require(!isExistCandidate(msg.sender), "DAOCommittee: candidate already registerd");
-        require(layer2Manager.existedLayer2Index(_sequencerIndex) == true, "wrong index");
+        require(!isExistCandidate(senderAddress), "DAOCommittee: candidate already registerd");
 
-        //msg.sender는 Layer2Manager에게 미리 amount만큼 approve해야한다
-        (bool success, bytes memory data) = address(layer2Manager).delegatecall(
-            abi.encodeWithSignature(
-                "createCandidate(uint32,bytes32,uint16,uint256)",
-                _sequencerIndex,_name,_commission,amount
-            )
-        );
-
-        //layer2Manager에서 indexCandidates는 로직에서 더하고 값을 넣으므로 index값은 같다.
-        uint32 candidateIndex = toUint32(data,0);
-        // console.log(candidateIndex);
-
-        _candidateInfosV2[msg.sender] = LibDaoV2.CandidateInfoV2({
+        _candidateInfosV2[senderAddress] = LibDaoV2.CandidateInfoV2({
             sequencerIndex: _sequencerIndex,
-            candidateIndex: candidateIndex,
+            candidateIndex: _candidateIndex,
             memberJoinedTime: 0,
             indexMembers: 0,
             rewardPeriod: 0,
             claimedTimestamp: 0
         });
 
-        candidatesV2.push(msg.sender);
+        candidatesV2.push(senderAddress);
 
-        return success;
+        return candidatesV2.length;
     }
 
+    // function createOptimismSequencer(
+    //     bytes32 _name,
+    //     address addressManager,
+    //     address l1Bridge,
+    //     address l2Bridge,
+    //     address l2ton,
+    //     uint256 amount
+    // )
+    //     external
+    //     validSeigManagerV2
+    //     validLayer2Manager
+    //     returns (bool)
+    // {
+    //     require(!isExistCandidate(msg.sender), "DAOCommitteeV2: candidate already registerd");
+
+    //     //msg.sender는 Layer2Manager에게 미리 amount만큼 approve해야한다
+    //     (bool success, bytes memory data) = layer2Manager.delegatecall(
+    //         abi.encodeWithSignature(
+    //             "createOptimismSequencer(bytes32,address,address,address,address,uint256)",
+    //             _name,addressManager,l1Bridge,l2Bridge,l2ton,amount
+    //         )
+    //     );
+    //     console.log(success);
+    //     require(success,"DAOCommitteeV2: sequencer fail");
+    //     uint32 sequencerIndex = toUint32(data,0);
+    //     console.log(sequencerIndex);
+
+    //     _candidateInfosV2[msg.sender] = LibDaoV2.CandidateInfoV2({
+    //         sequencerIndex: sequencerIndex,
+    //         candidateIndex: 0,
+    //         memberJoinedTime: 0,
+    //         indexMembers: 0,
+    //         rewardPeriod: 0,
+    //         claimedTimestamp: 0
+    //     });
+
+    //     candidatesV2.push(msg.sender);
+
+    //     return success;
+    // }
+
     function createOptimismSequencer(
-        bytes32 _name,
-        address addressManager,
-        address l2ton,
-        uint256 amount
+        address senderAddress,
+        uint32 _sequencerIndex
     )
         external
         validSeigManagerV2
         validLayer2Manager
-        returns (bool)
+        returns (uint256)
     {
-        require(!isExistCandidate(msg.sender), "DAOCommittee: candidate already registerd");
+        require(!isExistCandidate(senderAddress), "DAOCommitteeV2: candidate already registerd");
 
-        //msg.sender는 Layer2Manager에게 미리 amount만큼 approve해야한다
-        (bool success, bytes memory data) = address(layer2Manager).delegatecall(
-            abi.encodeWithSignature(
-                "createOptimismSequencer(bytes32,address,address,uint256)",
-                _name,addressManager,l2ton,amount
-            )
-        );
-
-        uint32 sequencerIndex = toUint32(data,0);
-        // console.log(sequencerIndex);
-
-        _candidateInfosV2[msg.sender] = LibDaoV2.CandidateInfoV2({
-            sequencerIndex: sequencerIndex,
+        _candidateInfosV2[senderAddress] = LibDaoV2.CandidateInfoV2({
+            sequencerIndex: _sequencerIndex,
             candidateIndex: 0,
             memberJoinedTime: 0,
             indexMembers: 0,
@@ -368,9 +425,9 @@ contract DAOv2CommitteeV2 is
             claimedTimestamp: 0
         });
 
-        candidatesV2.push(msg.sender);
+        candidatesV2.push(senderAddress);
 
-        return success;
+        return candidatesV2.length;
     }
 
     /// @notice Replaces an existing member
@@ -752,7 +809,7 @@ contract DAOv2CommitteeV2 is
     }
 
     function candidatesLength() external view returns (uint256) {
-        return candidates.length;
+        return candidatesV2.length;
     }
 
     function isExistCandidate(address _candidate) public view returns (bool isExist) {

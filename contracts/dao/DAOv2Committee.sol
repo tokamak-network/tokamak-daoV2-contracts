@@ -332,7 +332,7 @@ contract DAOv2Committee is
         
         //layer2Manager에서 indexCandidates는 로직에서 더하고 값을 넣으므로 index값은 같다.
         uint32 candidateIndex = toUint32(data,0);
-        // console.log(candidateIndex);
+        console.log(candidateIndex);
 
         _candidateInfosV2[msg.sender] = CandidateInfoV2({
             sequencerIndex: _sequencerIndex,
@@ -371,7 +371,7 @@ contract DAOv2Committee is
         );
 
         uint32 sequencerIndex = toUint32(data,0);
-        // console.log(sequencerIndex);
+        console.log(sequencerIndex);
 
         _candidateInfosV2[msg.sender] = CandidateInfoV2({
             sequencerIndex: sequencerIndex,

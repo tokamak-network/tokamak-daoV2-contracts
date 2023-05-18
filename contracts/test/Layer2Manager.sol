@@ -40,6 +40,10 @@ interface CandidateI {
     function layerInfo (uint32 _index) external view returns (bytes memory);
 }
 
+interface DAOv2I {
+
+}
+
 contract  Layer2Manager is AccessibleCommon, BaseProxyStorage, Layer2ManagerStorage, ILayer2Manager {
     /* ========== DEPENDENCIES ========== */
     using SafeERC20 for IERC20;
@@ -95,6 +99,13 @@ contract  Layer2Manager is AccessibleCommon, BaseProxyStorage, Layer2ManagerStor
         delayBlocksForWithdraw = _delayBlocksForWithdraw;
     }
 
+    function setDAOCommittee(address _dao)
+        external
+        onlyOwner
+    {
+        DAOCommittee = _dao;
+    }
+
     /* ========== only SeigManagerV2 ========== */
 
     /// @inheritdoc ILayer2Manager
@@ -117,9 +128,8 @@ contract  Layer2Manager is AccessibleCommon, BaseProxyStorage, Layer2ManagerStor
         uint256 amount
     )
         external override ifFree returns (uint32)
-    {
+    {   
         require(msg.sender == AddressManagerI(addressManager).getAddress('OVM_Sequencer'), 'NOT Sequencer');
-
         require(indexSequencers < maxLayer2Count, 'exceeded maxLayer2Count');
 
         require(
@@ -153,6 +163,14 @@ contract  Layer2Manager is AccessibleCommon, BaseProxyStorage, Layer2ManagerStor
 
         if (amount != 0) ton.safeTransferFrom(msg.sender, address(this), amount);
 
+        (bool success,) = DAOCommittee.call(
+            abi.encodeWithSignature(
+                "createOptimismSequencer(address,uint32)",
+                msg.sender,_index
+            )
+        );
+        require(success, "already candidate");
+        
         emit CreatedOptimismSequencer(
             _index, msg.sender, _name, addressManager, l1Bridge, l2Bridge, l2ton, amount);
 
@@ -191,6 +209,14 @@ contract  Layer2Manager is AccessibleCommon, BaseProxyStorage, Layer2ManagerStor
                 abi.encodePacked(msg.sender, _sequencerIndex, _commission, amount)),
             "Fail createCandidate"
         );
+
+        (bool success,) = DAOCommittee.call(
+            abi.encodeWithSignature(
+                "createCandidate(address,uint32,uint32)",
+                msg.sender,_sequencerIndex,_index
+            )
+        );
+        require(success, "already candidate");
 
         emit CreatedCandidate(_index, msg.sender, _name, _sequencerIndex, _commission, amount);
         return _index;

@@ -18,14 +18,24 @@ import DAOv2CommitteeV2_ABI from '../artifacts/contracts/dao/DAOv2CommitteeV2.so
 describe('DAOv2Committee', () => {
     let deployer: Signer, addr1: Signer, sequencer1: Signer, daoPrivateOwner: Signer
 
+    let accounts, candidate1: Signer, candidate2: Signer, candidate3: Signer
+
     let deployed: DAOStakingV2Fixture
     
     let daoCommitteProxyAddress = "0xDD9f0cCc044B0781289Ee318e5971b0139602C26"; //DAOCommitteProxy Address
+    let daoAdminAddress = "0xb4983da083a5118c903910db4f5a480b1d9f3687"
+    let daoCommitteV1Address = "0xd1A3fDDCCD09ceBcFCc7845dDba666B7B8e6D1fb";
+    let tonAddress = "0x2be5e8c109e2197D077D13A82dAead6a9b3433C5";
+    let daoValutAddress = "0x2520CD65BAa2cEEe9E6Ad6EBD3F45490C42dd303";
+    let agendaMangerAddress = "0xcD4421d082752f363E1687544a09d5112cD4f484";
+    let seigMangerAddress = "0x710936500aC59e8551331871Cbad3D33d5e0D909";
+    let layer2RegistryAddress = "0x0b3E174A2170083e770D5d4Cf56774D221b7063e";
 
     let DAOProxy: any
     let DAOProxyLogicV2: any
     let DAOOwner: any
     
+    let daoAdmin: Signer
 
     //mainnet
     let seigManagerInfo = {
@@ -50,8 +60,21 @@ describe('DAOv2Committee', () => {
     }
 
     let daoAgendaInfo = {
+        agendaFee: ethers.utils.parseEther("100"),
+        agendaFee2: ethers.utils.parseEther("200"),
         minimumNoticePeriodSeconds: 100,
-        minimumVotingPeriodSeconds: 200
+        minimumVotingPeriodSeconds: 100,
+        executingPeriodSeconds: 200
+    }
+
+    let candidateInfo = {
+        tonAmount1: ethers.utils.parseEther("100"),
+        tonAmount2: ethers.utils.parseEther("200"),
+        tonAmount3: ethers.utils.parseEther("300"),
+    }
+
+    let sequencerInfo = {
+        tonAmount1: ethers.utils.parseEther("300")
     }
 
     before('create fixture loader', async () => {
@@ -60,6 +83,17 @@ describe('DAOv2Committee', () => {
         addr1 = deployed.addr1;
         sequencer1 = deployed.sequencer1;
         daoPrivateOwner = deployed.daoPrivateOwner;
+
+        daoAdmin = await ethers.getSigner(daoAdminAddress)
+        await ethers.provider.send("hardhat_impersonateAccount",[daoAdminAddress]);
+        await ethers.provider.send("hardhat_setBalance", [
+            daoAdminAddress,
+            "0x8ac7230489e80000",
+        ]);
+
+        accounts = await ethers.getSigners();
+        [candidate1, candidate2, candidate3] = accounts;
+
     })
 
     describe("#0. setting DAOProxy and daov2Committe", () => {
@@ -71,8 +105,9 @@ describe('DAOv2Committee', () => {
             await ethers.provider.send("hardhat_impersonateAccount",[daoCommitteProxyAddress]);
             DAOOwner = await ethers.getSigner(daoCommitteProxyAddress);
             await DAOProxy.connect(DAOOwner).upgradeTo(deployed.daov2committeeV2.address);
+            expect(await DAOProxy.implementation()).to.be.eq(deployed.daov2committeeV2.address);
             console.log("DAO logicV2 Address :",deployed.daov2committeeV2.address);
-            console.log("logic upgradeTo : ",await DAOProxy.implementation());
+            // console.log("logic upgradeTo : ",await DAOProxy.implementation());
         })
 
         it("connect DAOProxyLogicV2", async () => {
@@ -182,8 +217,6 @@ describe('DAOv2Committee', () => {
                     deployed.stosDistribute.address
                 )
             
-                // console.log(await deployed.seigManagerV2.dao());
-                // console.log(deployed.daov2committeeProxy.address);
                 expect(await deployed.seigManagerV2.dao()).to.eq(DAOProxyLogicV2.address)
                 expect(await deployed.seigManagerV2.stosDistribute()).to.eq(deployed.stosDistribute.address)
     
@@ -268,6 +301,13 @@ describe('DAOv2Committee', () => {
                 expect(await deployed.layer2Manager.delayBlocksForWithdraw()).to.eq(layer2ManagerInfo.delayBlocksForWithdraw)
             })
         })
+
+        describe("#2-7. setDAOCommittee", async () => {
+            it('setDAOCommittee can be executed by only owner', async () => {
+                await deployed.layer2Manager.connect(deployer).setDAOCommittee(DAOProxy.address)
+                expect(await deployed.layer2Manager.DAOCommittee()).to.eq(DAOProxy.address)
+            })
+        })
     })
 
     describe("#3. OptimismSequencer set", () => {
@@ -305,147 +345,510 @@ describe('DAOv2Committee', () => {
         })
     })
 
-    describe("#5. DAOagendaManager set", () => {
-        describe("#5-1. Values to be set initialize & Values to change for testing", async () => {
-            it("set minimumNoticePeriodSeconds can not by not DAOContract", async () => {
-                await expect(
-                    deployed.daoagendaManager.connect(addr1).setMinimumNoticePeriodSeconds(daoAgendaInfo.minimumNoticePeriodSeconds)
-                ).to.be.revertedWith("Ownable: caller is not the owner")
-            })
+    // describe("#5. DAOagendaManager set", () => {
+    //     describe("#5-1. Values to be set initialize & Values to change for testing", async () => {
+    //         it("set minimumNoticePeriodSeconds can not by not DAOContract", async () => {
+    //             await expect(
+    //                 deployed.daoagendaManager.connect(addr1).setMinimumNoticePeriodSeconds(daoAgendaInfo.minimumNoticePeriodSeconds)
+    //             ).to.be.revertedWith("Ownable: caller is not the owner")
+    //         })
 
-            it("set minimumNoticePeriodSeconds by only DAOContract", async () => {
-                await deployed.daoagendaManager.connect(deployed.DAOContract).setMinimumNoticePeriodSeconds(daoAgendaInfo.minimumNoticePeriodSeconds);
-                expect(await deployed.daoagendaManager.minimumNoticePeriodSeconds()).to.be.eq(daoAgendaInfo.minimumNoticePeriodSeconds)
-            })
+    //         it("set minimumNoticePeriodSeconds by only DAOContract", async () => {
+    //             await deployed.daoagendaManager.connect(deployed.DAOContract).setMinimumNoticePeriodSeconds(daoAgendaInfo.minimumNoticePeriodSeconds);
+    //             expect(await deployed.daoagendaManager.minimumNoticePeriodSeconds()).to.be.eq(daoAgendaInfo.minimumNoticePeriodSeconds)
+    //         })
 
-            it("set minimumVotingPeriodSeconds can not by not DAOContract", async () => {
-                await expect(
-                    deployed.daoagendaManager.connect(addr1).setMinimumVotingPeriodSeconds(daoAgendaInfo.minimumVotingPeriodSeconds)
-                ).to.be.revertedWith("Ownable: caller is not the owner") 
-            })
+    //         it("set minimumVotingPeriodSeconds can not by not DAOContract", async () => {
+    //             await expect(
+    //                 deployed.daoagendaManager.connect(addr1).setMinimumVotingPeriodSeconds(daoAgendaInfo.minimumVotingPeriodSeconds)
+    //             ).to.be.revertedWith("Ownable: caller is not the owner") 
+    //         })
 
-            it("set minimumVotingPeriodSeconds by only DAOContract", async () => {
-                await deployed.daoagendaManager.connect(deployed.DAOContract).setMinimumVotingPeriodSeconds(daoAgendaInfo.minimumVotingPeriodSeconds);
-                expect(await deployed.daoagendaManager.minimumVotingPeriodSeconds()).to.be.eq(daoAgendaInfo.minimumVotingPeriodSeconds)
-            })
+    //         it("set minimumVotingPeriodSeconds by only DAOContract", async () => {
+    //             await deployed.daoagendaManager.connect(deployed.DAOContract).setMinimumVotingPeriodSeconds(daoAgendaInfo.minimumVotingPeriodSeconds);
+    //             expect(await deployed.daoagendaManager.minimumVotingPeriodSeconds()).to.be.eq(daoAgendaInfo.minimumVotingPeriodSeconds)
+    //         })
             
-            /*
-              V1Proxy 그대로 사용하면서 필요없어짐
-            // it("set committee can not by not DAOContract", async () => {
-            //     await expect(
-            //         deployed.daoagendaManager.connect(addr1).setCommittee(deployed.daov2committeeProxy.address)
-            //     ).to.be.revertedWith("Ownable: caller is not the owner") 
-            // })
+    //         /*
+    //           V1Proxy 그대로 사용하면서 필요없어짐
+    //         // it("set committee can not by not DAOContract", async () => {
+    //         //     await expect(
+    //         //         deployed.daoagendaManager.connect(addr1).setCommittee(deployed.daov2committeeProxy.address)
+    //         //     ).to.be.revertedWith("Ownable: caller is not the owner") 
+    //         // })
 
-            // it("set committee by only DAOContract", async () => {
-            //     await deployed.daoagendaManager.connect(deployed.DAOContract).setCommittee(deployed.daov2committeeProxy.address);
-            //     expect(await deployed.daoagendaManager.committee()).to.be.eq(deployed.daov2committeeProxy.address);
-            // })
+    //         // it("set committee by only DAOContract", async () => {
+    //         //     await deployed.daoagendaManager.connect(deployed.DAOContract).setCommittee(deployed.daov2committeeProxy.address);
+    //         //     expect(await deployed.daoagendaManager.committee()).to.be.eq(deployed.daov2committeeProxy.address);
+    //         // })
 
-            // it("set transferOwnership can not by not DAOContract", async () => {
-            //     await expect(
-            //         deployed.daoagendaManager.connect(addr1).setMinimumVotingPeriodSeconds(deployed.daov2committeeProxy.address)
-            //     ).to.be.revertedWith("Ownable: caller is not the owner") 
-            // })
+    //         // it("set transferOwnership can not by not DAOContract", async () => {
+    //         //     await expect(
+    //         //         deployed.daoagendaManager.connect(addr1).setMinimumVotingPeriodSeconds(deployed.daov2committeeProxy.address)
+    //         //     ).to.be.revertedWith("Ownable: caller is not the owner") 
+    //         // })
 
-            // it("set transferOwnership to committee by only DAOContract", async () => {
-            //     await deployed.daoagendaManager.connect(deployed.DAOContract).transferOwnership(deployed.daov2committeeProxy.address);
-            //     expect(await deployed.daoagendaManager.owner()).to.be.eq(deployed.daov2committeeProxy.address);
-            // })
-            */
-        })
-    })
+    //         // it("set transferOwnership to committee by only DAOContract", async () => {
+    //         //     await deployed.daoagendaManager.connect(deployed.DAOContract).transferOwnership(deployed.daov2committeeProxy.address);
+    //         //     expect(await deployed.daoagendaManager.owner()).to.be.eq(deployed.daov2committeeProxy.address);
+    //         // })
+    //         */
+    //     })
+    // })
 
-    describe("#6. DAOVault set", () => {
-        // describe("#6-1. transferOwnership", async () => {
-        //     it("set transferOwnership to committee by only DAOContract", async () => {
-        //         await deployed.daovault.connect(deployed.DAOContract).transferOwnership(deployed.daov2committeeProxy.address);
-        //         expect(await deployed.daovault.owner()).to.be.eq(deployed.daov2committeeProxy.address);
-        //     })
-        // })
-    })
+    // describe("#6. DAOVault set", () => {
+    //     // describe("#6-1. transferOwnership", async () => {
+    //     //     it("set transferOwnership to committee by only DAOContract", async () => {
+    //     //         await deployed.daovault.connect(deployed.DAOContract).transferOwnership(deployed.daov2committeeProxy.address);
+    //     //         expect(await deployed.daovault.owner()).to.be.eq(deployed.daov2committeeProxy.address);
+    //     //     })
+    //     // })
+    // })
 
     describe("#7. DAOv2Committee set", () => {
-        describe("#7-1. initialize setting", () => {
-            it("grantRole DAOContract", async () => {
-                await DAOProxyLogicV2.connect(DAOOwner).grantRole(
-                    "0x0000000000000000000000000000000000000000000000000000000000000000",
-                    deployer.address
-                )
-            })
-            // it("setSeigManagerV2 can not by not owner", async () => {
-            //     await expect(
-            //         DAOProxyLogicV2.connect(addr1).setSeigManagerV2(
-            //             deployed.seigManagerV2Proxy.address,
-            //         )
-            //     ).to.be.revertedWith("DAOCommitteeV2: msg.sender is not an admin") 
-            // })
-
-            it("setSeigManagerV2 can by only owner", async () => {
-                await DAOProxyLogicV2.connect(DAOOwner).setSeigManagerV2(
-                    deployed.seigManagerV2Proxy.address,
-                );
-                console.log("123");
-                // expect(await deployed.daov2committeeProxy.ton()).to.be.eq(deployed.ton.address);
-                // expect(await deployed.daov2committeeProxy.seigManagerV2()).to.be.eq(deployed.seigManagerV2Proxy.address);
-                // expect(await deployed.daov2committeeProxy.agendaManager()).to.be.eq(deployed.daoagendaManager.address);
-                // expect(await deployed.daov2committeeProxy.daoVault()).to.be.eq(deployed.daovault.address);
-                // expect(await deployed.daov2committeeProxy.layer2Manager()).to.be.eq(deployed.layer2ManagerProxy.address);
-                // expect(await deployed.daov2committeeProxy.candidate()).to.be.eq(deployed.candidateProxy.address);
-                // expect(await deployed.daov2committeeProxy.sequencer()).to.be.eq(deployed.optimismSequencerProxy.address);
-            })
-
+        describe("#7-0. Role Test", () => {
             it("hasRole", async () => {
                 let tx = await DAOProxyLogicV2.connect(DAOOwner).hasRole(
                     "0x0000000000000000000000000000000000000000000000000000000000000000",
                     deployer.address
                 )
-                console.log(tx);
+                expect(tx).to.be.eq(false);
                 let tx2 = await DAOProxyLogicV2.connect(DAOOwner).hasRole(
                     "0x0000000000000000000000000000000000000000000000000000000000000000",
-                    addr1.address
+                    DAOOwner.address
                 )
-                console.log(tx2);
+                expect(tx2).to.be.eq(true);
+            })
+            it("grantRole can not by not owner", async () => {
+                await expect(
+                    DAOProxyLogicV2.connect(addr1).grantRole(
+                        deployed.seigManagerV2Proxy.address,
+                    )
+                ).to.be.revertedWith("") 
+            })
+
+            it("grantRole can by only owner", async () => {
+                await DAOProxyLogicV2.connect(daoAdmin).grantRole(
+                    "0x0000000000000000000000000000000000000000000000000000000000000000",
+                    deployer.address
+                )
+                expect(await DAOProxyLogicV2.connect(daoAdmin).hasRole(
+                    "0x0000000000000000000000000000000000000000000000000000000000000000",
+                    deployer.address
+                )).to.be.eq(true)
             })
 
             it("DEFAULT_ADMIN_ROLE", async () => {
                 let tx = await DAOProxyLogicV2.connect(DAOOwner).DEFAULT_ADMIN_ROLE()
-                console.log(tx);
+                expect(tx).to.be.equal("0x0000000000000000000000000000000000000000000000000000000000000000")
             })
 
-            it("check and setActivityRewardPerSecond", async () => {
-                let tx = await DAOProxyLogicV2.activityRewardPerSecond()
-                console.log(tx);
-                await DAOProxyLogicV2.connect(DAOOwner).setActivityRewardPerSecond(123);
-                let tx2 = await DAOProxyLogicV2.activityRewardPerSecond()
-                console.log(tx2);
+            it("revokeRole can not by owner", async () => {
+                await expect(
+                    DAOProxyLogicV2.connect(addr1).revokeRole(
+                        deployed.seigManagerV2Proxy.address,
+                    )
+                ).to.be.revertedWith("") 
+            })
+
+            it("revokeRole can by only owner", async () => {
+                await DAOProxyLogicV2.connect(daoAdmin).revokeRole(
+                    "0x0000000000000000000000000000000000000000000000000000000000000000",
+                    deployer.address
+                )
+                expect(await DAOProxyLogicV2.connect(daoAdmin).hasRole(
+                    "0x0000000000000000000000000000000000000000000000000000000000000000",
+                    deployer.address
+                )).to.be.eq(false)
+            })
+
+        })
+
+        describe("#7-1. initialize setting", () => {
+            it("setSeigManagerV2 can not by not owner", async () => {
+                await expect(
+                    DAOProxyLogicV2.connect(addr1).setSeigManagerV2(
+                        deployed.seigManagerV2Proxy.address,
+                    )
+                ).to.be.revertedWith("DAOCommitteeV2: msg.sender is not an admin") 
+            })
+
+            it("setSeigManagerV2 can by only owner", async () => {
+                await DAOProxyLogicV2.connect(daoAdmin).setSeigManagerV2(
+                    deployed.seigManagerV2Proxy.address,
+                );
+                expect(await DAOProxyLogicV2.ton()).to.be.eq(deployed.ton.address);
+                expect(await DAOProxyLogicV2.seigManagerV2()).to.be.eq(deployed.seigManagerV2Proxy.address);
+                expect(await DAOProxyLogicV2.daoVault()).to.be.eq(deployed.daovault.address);
+                expect(await DAOProxyLogicV2.agendaManager()).to.be.eq(deployed.daoagendaManager.address);
+                expect(await DAOProxyLogicV2.layer2Registry()).to.be.eq(layer2RegistryAddress);
+                // console.log("layer2Manger : ",await DAOProxyLogicV2.layer2Manager());
+                // console.log("candidate : ",await DAOProxyLogicV2.candidate());
+                // console.log("sequencer : ",await DAOProxyLogicV2.sequencer());
+                // console.log("pauseProxy : ",await DAOProxyLogicV2.pauseProxy());
+            })
+
+            it("setDaoVault can not by not owner", async () => {
+                await expect(
+                    DAOProxyLogicV2.connect(addr1).setDaoVault(
+                        sequencer1.address,
+                    )
+                ).to.be.revertedWith("DAOCommitteeV2: msg.sender is not an admin") 
+            })
+
+            it("setDaoVault can by only owner", async () => {
+                await DAOProxyLogicV2.connect(daoAdmin).setDaoVault(
+                    sequencer1.address,
+                );
+                expect(await DAOProxyLogicV2.daoVault()).to.be.eq(sequencer1.address);
+                await DAOProxyLogicV2.connect(daoAdmin).setDaoVault(
+                    deployed.daovault.address,
+                );
+                expect(await DAOProxyLogicV2.daoVault()).to.be.eq(deployed.daovault.address);
+            })
+
+            it("setLayer2Manager can not by not owner", async () => {
+                await expect(
+                    DAOProxyLogicV2.connect(addr1).setLayer2Manager(
+                        sequencer1.address,
+                    )
+                ).to.be.revertedWith("DAOCommitteeV2: msg.sender is not an admin") 
+            })
+
+            it("setLayer2Manager can by only owner", async () => {
+                await DAOProxyLogicV2.connect(daoAdmin).setLayer2Manager(
+                    deployed.layer2ManagerProxy.address,
+                );
+                expect(await DAOProxyLogicV2.layer2Manager()).to.be.eq(deployed.layer2ManagerProxy.address);
+            })
+
+            it("setAgendaManager can not by not owner", async () => {
+                await expect(
+                    DAOProxyLogicV2.connect(addr1).setAgendaManager(
+                        sequencer1.address,
+                    )
+                ).to.be.revertedWith("DAOCommitteeV2: msg.sender is not an admin") 
+            })
+
+            it("setAgendaManager can by only owner", async () => {
+                await DAOProxyLogicV2.connect(daoAdmin).setAgendaManager(
+                    sequencer1.address,
+                );
+                expect(await DAOProxyLogicV2.agendaManager()).to.be.eq(sequencer1.address);
+                await DAOProxyLogicV2.connect(daoAdmin).setAgendaManager(
+                    deployed.daoagendaManager.address,
+                );
+                expect(await DAOProxyLogicV2.agendaManager()).to.be.eq(deployed.daoagendaManager.address);
+            })
+
+            it("setCandidates can not by not owner", async () => {
+                await expect(
+                    DAOProxyLogicV2.connect(addr1).setCandidates(
+                        sequencer1.address
+                    )
+                ).to.be.revertedWith("DAOCommitteeV2: msg.sender is not an admin") 
+            })
+
+            it("setCandidates can by only owner", async () => {
+                await DAOProxyLogicV2.connect(daoAdmin).setCandidates(
+                    deployed.candidateProxy.address
+                );
+                expect(await DAOProxyLogicV2.candidate()).to.be.eq(deployed.candidateProxy.address);
+                // expect(await deployed.daov2committeeProxy.candidate()).to.be.eq(deployed.candidateProxy.address);
+                // expect(await deployed.daov2committeeProxy.sequencer()).to.be.eq(deployed.optimismSequencerProxy.address);
+            })
+
+            it("setOptimismSequencer can not by not owner", async () => {
+                await expect(
+                    DAOProxyLogicV2.connect(addr1).setOptimismSequencer(
+                        sequencer1.address
+                    )
+                ).to.be.revertedWith("DAOCommitteeV2: msg.sender is not an admin") 
+            })
+
+            it("setOptimismSequencer can by only owner", async () => {
+                await DAOProxyLogicV2.connect(daoAdmin).setOptimismSequencer(
+                    deployed.optimismSequencerProxy.address
+                );
+                expect(await DAOProxyLogicV2.sequencer()).to.be.eq(deployed.optimismSequencerProxy.address);
+            })
+
+            it("setTon can not by not owner", async () => {
+                await expect(
+                    DAOProxyLogicV2.connect(addr1).setTon(
+                        sequencer1.address
+                    )
+                ).to.be.revertedWith("DAOCommitteeV2: msg.sender is not an admin") 
+            })
+
+            it("setTon can by only owner", async () => {
+                await DAOProxyLogicV2.connect(daoAdmin).setTon(
+                    deployed.ton.address
+                );
+                expect(await DAOProxyLogicV2.ton()).to.be.eq(deployed.ton.address);
+            })
+
+            it("setActivityRewardPerSecond can not by not owner", async () => {
+                await expect(
+                    DAOProxyLogicV2.connect(addr1).setActivityRewardPerSecond(
+                        123
+                    )
+                ).to.be.revertedWith("DAOCommitteeV2: msg.sender is not an admin") 
+            })
+
+            it("setActivityRewardPerSecond can by only owner", async () => {
+                await DAOProxyLogicV2.connect(daoAdmin).setActivityRewardPerSecond(
+                    123
+                );
+                expect(await DAOProxyLogicV2.activityRewardPerSecond()).to.be.eq(123);
+                await DAOProxyLogicV2.connect(daoAdmin).setActivityRewardPerSecond(
+                    31709791983764
+                );
+                expect(await DAOProxyLogicV2.activityRewardPerSecond()).to.be.eq(31709791983764);
             })
         })
 
-        // describe("#7-2. transferOwnership", () => {
-        //     it("transferOwnership can not by not owner", async () => {
-        //         await expect(
-        //             deployed.daov2committeeProxy.connect(addr1).transferAdmin(
-        //                 daoPrivateOwner.address
-        //             )
-        //         ).to.be.revertedWith("Accessible: Caller is not an admin") 
-        //     })
+        describe("#7-2. DAO Agenda Policy setting", () => {
+            it("setQuorum can not by not owner", async () => {
+                await expect(
+                    DAOProxyLogicV2.connect(addr1).setQuorum(
+                        3
+                    )
+                ).to.be.revertedWith("DAOCommitteeV2: msg.sender is not an admin") 
+            })
 
-        //     it("transferOwnership by only owner", async () => {
-        //         await deployed.daov2committeeProxy.connect(deployer).transferAdmin(
-        //             daoPrivateOwner.address
-        //         );
-        //         expect(await deployed.daov2committeeProxy.isAdmin(daoPrivateOwner.address)).to.be.eq(true);
-        //         expect(await deployed.daov2committeeProxy.isAdmin(deployed.daov2committeeProxy.address)).to.be.eq(true);
-        //     })
-        // })
+            it("setQuorum can by only owner", async () => {
+                await DAOProxyLogicV2.connect(daoAdmin).setQuorum(
+                    3
+                );
+                expect(await DAOProxyLogicV2.quorum()).to.be.eq(3);
 
-        describe("#7-3. createCandidate", () => {
+                await DAOProxyLogicV2.connect(daoAdmin).setQuorum(
+                    2
+                );
+                expect(await DAOProxyLogicV2.quorum()).to.be.eq(2);
+            })
 
+            it("setCreateAgendaFees can not by not owner", async () => {
+                await expect(
+                    DAOProxyLogicV2.connect(addr1).setCreateAgendaFees(
+                        daoAgendaInfo.agendaFee
+                    )
+                ).to.be.revertedWith("DAOCommitteeV2: msg.sender is not an admin") 
+            })
+
+            it("setCreateAgendaFees can by only owner", async () => {
+                await DAOProxyLogicV2.connect(daoAdmin).setCreateAgendaFees(
+                    daoAgendaInfo.agendaFee2
+                );
+                expect(await deployed.daoagendaManager.createAgendaFees()).to.be.eq(daoAgendaInfo.agendaFee2);
+
+                await DAOProxyLogicV2.connect(daoAdmin).setCreateAgendaFees(
+                    daoAgendaInfo.agendaFee
+                );
+                expect(await deployed.daoagendaManager.createAgendaFees()).to.be.eq(daoAgendaInfo.agendaFee);
+            })
+
+            it("setMinimumNoticePeriodSeconds can not by not owner", async () => {
+                await expect(
+                    DAOProxyLogicV2.connect(addr1).setMinimumNoticePeriodSeconds(
+                        daoAgendaInfo.minimumNoticePeriodSeconds
+                    )
+                ).to.be.revertedWith("DAOCommitteeV2: msg.sender is not an admin") 
+            })
+
+            it("setMinimumNoticePeriodSeconds can by only owner", async () => {
+                await DAOProxyLogicV2.connect(daoAdmin).setMinimumNoticePeriodSeconds(
+                    daoAgendaInfo.minimumNoticePeriodSeconds
+                );
+                expect(await deployed.daoagendaManager.minimumNoticePeriodSeconds()).to.be.eq(daoAgendaInfo.minimumNoticePeriodSeconds)
+            })
+
+            it("setMinimumVotingPeriodSeconds can not by not owner", async () => {
+                await expect(
+                    DAOProxyLogicV2.connect(addr1).setMinimumVotingPeriodSeconds(
+                        daoAgendaInfo.minimumVotingPeriodSeconds
+                    )
+                ).to.be.revertedWith("DAOCommitteeV2: msg.sender is not an admin") 
+            })
+
+            it("setMinimumVotingPeriodSeconds can by only owner", async () => {
+                await DAOProxyLogicV2.connect(daoAdmin).setMinimumVotingPeriodSeconds(
+                    daoAgendaInfo.minimumVotingPeriodSeconds
+                );
+                expect(await deployed.daoagendaManager.minimumVotingPeriodSeconds()).to.be.eq(daoAgendaInfo.minimumVotingPeriodSeconds)
+            })
+
+            it("setExecutingPeriodSeconds can not by not owner", async () => {
+                await expect(
+                    DAOProxyLogicV2.connect(addr1).setExecutingPeriodSeconds(
+                        daoAgendaInfo.executingPeriodSeconds
+                    )
+                ).to.be.revertedWith("DAOCommitteeV2: msg.sender is not an admin") 
+            })
+
+            it("setExecutingPeriodSeconds can by only owner", async () => {
+                await DAOProxyLogicV2.connect(daoAdmin).setExecutingPeriodSeconds(
+                    daoAgendaInfo.executingPeriodSeconds
+                );
+                expect(await deployed.daoagendaManager.executingPeriodSeconds()).to.be.eq(daoAgendaInfo.executingPeriodSeconds)
+            })
         })
 
-        describe("#7-4. createSequencerCandidate", () => {
+        describe("#7-3. createSequencerCandidate", () => {
+            it('Cannot be created unless the caller is the layer\'s sequencer.', async () => {
+                expect(await deployed.addressManager.getAddress("OVM_Sequencer")).to.not.eq(addr1.address)
+                let name = "Tokamak Optimism";
+                let amount = ethers.utils.parseEther("100");
+    
+                await expect(
+                    deployed.layer2Manager.connect(addr1).createOptimismSequencer(
+                        ethers.utils.formatBytes32String(name),
+                        deployed.addressManager.address,
+                        deployed.l1Bridge.address,
+                        deployed.l2Bridge.address,
+                        deployed.l2ton.address,
+                        amount
+                    )
+                    ).to.be.revertedWith("NOT Sequencer")
+            })
+    
+            it('If the minimum security deposit is not provided, it cannot be created.', async () => {
+                let name = "Tokamak Optimism";
+                let amount = ethers.utils.parseEther("100");
+    
+                expect(await deployed.addressManager.getAddress("OVM_Sequencer")).to.eq(sequencer1.address)
+                await expect(
+                    deployed.layer2Manager.connect(sequencer1).createOptimismSequencer(
+                        ethers.utils.formatBytes32String(name),
+                        deployed.addressManager.address,
+                        deployed.l1Bridge.address,
+                        deployed.l2Bridge.address,
+                        deployed.l2ton.address,
+                        amount
+                    )).to.be.reverted;
+            })
+            
+            it('Approve the minimum security deposit and create.', async () => {
+                expect(await DAOProxyLogicV2.candidatesLength()).to.be.eq(0)
+                let name = "Tokamak Optimism";
+    
+                let totalLayers = await deployed.layer2Manager.totalLayers()
+                let getAllLayersBefore = await deployed.layer2Manager.getAllLayers();
+                expect(await deployed.addressManager.getAddress("OVM_Sequencer")).to.eq(sequencer1.address)
+                let totalSecurityDeposit = await deployed.layer2Manager.totalSecurityDeposit();
+                let amount = await deployed.layer2Manager.minimumDepositForSequencer();
+    
+                if (amount.gt(await deployed.ton.balanceOf(sequencer1.address)))
+                    await (await deployed.ton.connect(deployed.tonAdmin).mint(sequencer1.address, amount)).wait();
+    
+                if (amount.gte(await deployed.ton.allowance(sequencer1.address, deployed.layer2Manager.address)))
+                    await (await deployed.ton.connect(sequencer1).approve(deployed.layer2Manager.address, amount)).wait();
+    
+                const topic = deployed.layer2Manager.interface.getEventTopic('CreatedOptimismSequencer');
+    
+                const receipt = await (await snapshotGasCost(deployed.layer2Manager.connect(sequencer1).createOptimismSequencer(
+                        ethers.utils.formatBytes32String(name),
+                        deployed.addressManager.address,
+                        deployed.l1Bridge.address,
+                        deployed.l2Bridge.address,
+                        deployed.l2ton.address,
+                        amount
+                    ))).wait();
+    
+                const log = receipt.logs.find(x => x.topics.indexOf(topic) >= 0);
+                const deployedEvent = deployed.layer2Manager.interface.parseLog(log);
+    
+                let sequencerIndex = deployedEvent.args._index;
+    
+                expect(deployedEvent.args._sequencer).to.eq(sequencer1.address);
+                expect(deployedEvent.args._name).to.eq(ethers.utils.formatBytes32String(name));
+                expect(deployedEvent.args.addressManager).to.eq(deployed.addressManager.address);
+                expect(deployedEvent.args.l1Bridge).to.eq(deployed.l1Bridge.address);
+                expect(deployedEvent.args.l2Bridge).to.eq(deployed.l2Bridge.address);
+    
+                expect(deployedEvent.args.l2ton).to.eq(deployed.l2ton.address);
+    
+                expect(await deployed.layer2Manager.totalLayers()).to.eq(totalLayers.add(1))
+                expect(await deployed.layer2Manager.totalSecurityDeposit()).to.eq(totalSecurityDeposit.add(amount))
+    
+                let layerKey = await getLayerKey({
+                        addressManager: deployed.addressManager.address,
+                        l1Messenger: ethers.constants.AddressZero,
+                        l2Messenger: ethers.constants.AddressZero,
+                        l1Bridge: deployed.l1Bridge.address,
+                        l2Bridge: deployed.l2Bridge.address,
+                        l2ton: deployed.l2ton.address
+                    }
+                );
+    
+                expect(await deployed.optimismSequencer.getLayerKey(sequencerIndex)).to.eq(layerKey)
+    
+                let layer = await deployed.optimismSequencer.getLayerInfo(sequencerIndex);
+    
+                expect(layer.addressManager).to.eq(deployed.addressManager.address)
+                expect(layer.l1Bridge).to.eq(deployed.l1Bridge.address)
+                expect(layer.l2Bridge).to.eq(deployed.l2Bridge.address)
+                expect(layer.l2ton).to.eq(deployed.l2ton.address)
+    
+                expect(await deployed.layer2Manager.layerKeys(layerKey)).to.eq(true)
+                expect(await deployed.layer2Manager.indexSequencers()).to.eq(sequencerIndex)
+    
+                let getAllLayersAfter = await deployed.layer2Manager.getAllLayers();
+    
+                expect(getAllLayersBefore.optimismSequencerIndexes_.length).to.eq(
+                    getAllLayersAfter.optimismSequencerIndexes_.length-1
+                )
+            })
 
+            it("DAOContract check candidate", async () => {
+                expect(await DAOProxyLogicV2.candidatesLength()).to.be.eq(1)
+                expect(await DAOProxyLogicV2.candidatesV2(0)).to.be.eq(sequencer1.address)
+                expect(await DAOProxyLogicV2.isExistCandidate(sequencer1.address)).to.be.eq(true);
+            })
         })
+
+        describe("#7-4. createCandidate", () => {
+            it('Approve the minimum deposit and create.', async () => {
+                console.log(candidate1.address)
+                let name = "Tokamak Candidate #1";
+                let getAllCandidatesBefore = await deployed.layer2Manager.getAllCandidates();
+    
+                let totalLayers = await deployed.layer2Manager.totalLayers()
+                let totalCandidates = await deployed.layer2Manager.totalCandidates()
+    
+                let sequencerIndex = await deployed.layer2Manager.optimismSequencerIndexes(totalLayers.sub(ethers.constants.One))
+    
+                let amount = await deployed.layer2Manager.minimumDepositForCandidate();
+    
+                if (amount.gt(await deployed.ton.balanceOf(candidate1.address)))
+                    await (await deployed.ton.connect(deployed.tonAdmin).mint(candidate1.address, amount)).wait();
+    
+                if (amount.gte(await deployed.ton.allowance(candidate1.address, deployed.layer2Manager.address)))
+                    await (await deployed.ton.connect(candidate1).approve(deployed.layer2Manager.address, amount)).wait();
+    
+                const commission = 500;
+                await snapshotGasCost(deployed.layer2Manager.connect(candidate1).createCandidate(
+                    sequencerIndex,
+                    ethers.utils.formatBytes32String(name),
+                    commission,
+                    amount
+                ))
+
+                expect(await deployed.layer2Manager.totalCandidates()).to.eq(totalCandidates.add(1))
+                let getAllCandidatesAfter = await deployed.layer2Manager.getAllCandidates();
+                expect(getAllCandidatesBefore.candidateNamesIndexes_.length).to.eq(
+                    getAllCandidatesAfter.candidateNamesIndexes_.length-1
+                )
+            })
+            
+            it("DAOContract check candidate", async () => {
+                expect(await DAOProxyLogicV2.candidatesLength()).to.be.eq(2)
+                expect(await DAOProxyLogicV2.candidatesV2(1)).to.be.eq(candidate1.address)
+                expect(await DAOProxyLogicV2.isExistCandidate(candidate1.address)).to.be.eq(true);
+            })
+        })
+
+
     })
 })
