@@ -52,6 +52,13 @@ describe('DAOv2Committee', () => {
         ratesUnits: 10000
     }
 
+    let rates = {
+        ratesDao: 5000,           // 0.5 , 0.002 %
+        ratesStosHolders: 2000,  // 0.2
+        ratesTonStakers: 3000,   // 0.3
+        ratesUnits: 10000
+    }
+
     let layer2ManagerInfo = {
         minimumDepositForSequencer: ethers.utils.parseEther("100"),
         minimumDepositForCandidate: ethers.utils.parseEther("200"),
@@ -189,13 +196,6 @@ describe('DAOv2Committee', () => {
 
         describe("#1-5. setDividendRates", () => {
             it('setDividendRates can be executed by only owner ', async () => {
-                let rates = {
-                    ratesDao: 5000,           // 0.5 , 0.002 %
-                    ratesStosHolders: 2000,  // 0.2
-                    ratesTonStakers: 3000,   // 0.3
-                    ratesUnits: 10000
-                }
-    
                 await deployed.seigManagerV2.connect(deployer).setDividendRates(
                     rates.ratesDao,
                     rates.ratesStosHolders,
@@ -214,11 +214,11 @@ describe('DAOv2Committee', () => {
             it('setAddress can be executed by only owner ', async () => {
 
                 await deployed.seigManagerV2.connect(deployer).setAddress(
-                    DAOProxyLogicV2.address,
+                    daoValutAddress,
                     deployed.stosDistribute.address
                 )
             
-                expect(await deployed.seigManagerV2.dao()).to.eq(DAOProxyLogicV2.address)
+                expect(await deployed.seigManagerV2.dao()).to.eq(daoValutAddress)
                 expect(await deployed.seigManagerV2.stosDistribute()).to.eq(deployed.stosDistribute.address)
     
             })
@@ -751,6 +751,44 @@ describe('DAOv2Committee', () => {
                 expect(await DAOProxyLogicV2.candidatesV2(0)).to.be.eq(sequencer1.address)
                 expect(await DAOProxyLogicV2.isExistCandidate(sequencer1.address)).to.be.eq(true);
             })
+
+            it("You can stake without approval before staking", async () => {
+                let layerIndex = await deployed.layer2Manager.indexSequencers();
+                let balanceOf = await deployed.optimismSequencer.balanceOf(layerIndex, sequencer1.address);
+                let balanceOfLton = await deployed.optimismSequencer["balanceOfLton(uint32,address)"](layerIndex, sequencer1.address);
+
+                let totalStakedLton = await deployed.optimismSequencer.totalStakedLton()
+                let totalStakeAccountList = await deployed.optimismSequencer.totalStakeAccountList()
+
+                if (sequencerInfo.tonAmount1.gt(await deployed.ton.balanceOf(sequencer1.address)))
+                    await (await deployed.ton.connect(deployed.tonAdmin).mint(sequencer1.address, sequencerInfo.tonAmount1)).wait();
+
+                const data = ethers.utils.solidityPack(
+                    ["uint32"],
+                    [layerIndex]
+                );
+
+                await deployed.ton.connect(sequencer1).approveAndCall(
+                    deployed.optimismSequencer.address,
+                    sequencerInfo.tonAmount1,
+                    data
+                );
+
+                expect(await deployed.optimismSequencer.totalStakedLton()).to.gt(totalStakedLton)
+
+                let getLayerStakes = await deployed.optimismSequencer.getLayerStakes(layerIndex, sequencer1.address);
+
+                if (!getLayerStakes.stake) {
+                    expect(await deployed.optimismSequencer.totalStakeAccountList()).to.eq(totalStakeAccountList.add(1))
+                    expect(await deployed.optimismSequencer.stakeAccountList(totalStakeAccountList)).to.eq(sequencer1.address)
+                }
+
+                let lton = await deployed.seigManagerV2.getTonToLton(sequencerInfo.tonAmount1);
+                expect(await deployed.optimismSequencer["balanceOfLton(uint32,address)"](layerIndex, sequencer1.address))
+                    .to.eq(balanceOfLton.add(lton))
+                expect(await deployed.optimismSequencer.balanceOf(layerIndex, sequencer1.address))
+                    .to.eq(balanceOf.add(sequencerInfo.tonAmount1))
+                })
         })
 
         describe("#7-4. createCandidate", () => {
@@ -880,6 +918,174 @@ describe('DAOv2Committee', () => {
             })
         })
 
+        describe("#7-5. updateSeigniorage", () => {
+            it('After the recent seignorage issuance, seignorage will not be issued unless the minimum block has passed.', async () => {
+                const lastSeigBlock = await deployed.seigManagerV2.lastSeigBlock()
+                const minimumBlocksForUpdateSeig = await deployed.seigManagerV2.minimumBlocksForUpdateSeig()
+                const block = await ethers.provider.getBlock('latest')
+    
+                await DAOProxyLogicV2.connect(candidate1).updateSeigniorage()
+    
+                if (block.number - lastSeigBlock.toNumber() < minimumBlocksForUpdateSeig ) {
+                    expect(await deployed.seigManagerV2.lastSeigBlock()).to.eq(lastSeigBlock)
+                } else {
+                    expect(await deployed.seigManagerV2.lastSeigBlock()).to.gt(lastSeigBlock)
+                }
+            })
+
+            it("pass blocks", async function () {
+                const minimumBlocksForUpdateSeig = await deployed.seigManagerV2.minimumBlocksForUpdateSeig()
+                let i
+                for (i = 0; i < minimumBlocksForUpdateSeig; i++){
+                    await ethers.provider.send('evm_mine');
+                }
+            });
+    
+            it('If the staked amount is greater than 0, indexLton increase.', async () => {    
+                let prevBalanceOfCandidate = await deployed.candidate.balanceOf(1, candidate1.address);
+                let prevBalanceLtonOfCandidate =await deployed.candidate["balanceOfLton(uint32,address)"](1, candidate1.address)
+                // console.log("prevBalanceOfCandidate:", prevBalanceOfCandidate)
+                // console.log("prevBalanceLtonOfCandidate:", prevBalanceLtonOfCandidate)
+
+                expect(await deployed.seigManagerV2.ratesDao()).to.eq(rates.ratesDao)
+                expect(await deployed.seigManagerV2.ratesStosHolders()).to.eq(rates.ratesStosHolders)
+                expect(await deployed.seigManagerV2.getTotalLton()).to.gt(ethers.constants.Zero)
+                const indexLton = await deployed.seigManagerV2.indexLton();
+                await DAOProxyLogicV2.connect(candidate1).updateSeigniorage()
+                expect(await deployed.seigManagerV2.indexLton()).to.gt(indexLton)
+                
+                // console.log(await deployed.candidate["balanceOfLton(uint32,address)"](1, candidate1.address))
+                // console.log(await deployed.candidate.balanceOf(1, candidate1.address))
+
+                expect(await deployed.candidate["balanceOfLton(uint32,address)"](1, candidate1.address)).to.eq(prevBalanceLtonOfCandidate)
+                expect(await deployed.candidate.balanceOf(1, candidate1.address)).to.gt(prevBalanceOfCandidate)
+            });
+        })
+
+        describe("#7-6. increaseMaxMember & decreaseMaxMember", () => {
+            it("now MaxMember is 3", async () => {
+                expect(await DAOProxyLogicV2.maxMember()).to.be.eq(3)
+            })
+
+            it("increaseMaxMember can not by not owner", async () => {
+                let maxMeber = Number(await DAOProxyLogicV2.maxMember())
+                await expect(
+                    DAOProxyLogicV2.connect(addr1).increaseMaxMember((maxMeber+1),(maxMeber))
+                ).to.be.revertedWith("DAOCommitteeV2: msg.sender is not an admin") 
+            })
+
+            it("increaseMaxMember can not under nowMember", async () => {
+                let maxMeber = Number(await DAOProxyLogicV2.maxMember())
+                await expect(
+                    DAOProxyLogicV2.connect(daoAdmin).increaseMaxMember((maxMeber-1),(maxMeber-2))
+                ).to.be.revertedWith("DAOCommittee: You have to call decreaseMaxMember to decrease") 
+            })
+            
+            it("increaseMaxMember can by only owner", async () => {
+                let maxMeber = Number(await DAOProxyLogicV2.maxMember())
+                await DAOProxyLogicV2.connect(daoAdmin).increaseMaxMember((maxMeber+1),maxMeber)
+                expect(await DAOProxyLogicV2.maxMember()).to.be.eq((maxMeber+1))
+                expect(await DAOProxyLogicV2.quorum()).to.be.eq(maxMeber)
+            })
+
+            it("decreaseMaxMember can not by not owner", async () => {
+                let maxMeber = Number(await DAOProxyLogicV2.maxMember())
+                // let reducingMamber = await DAOProxyLogicV2.members((maxMeber-1))
+                // console.log("reducingMamber :", reducingMamber);
+                await expect(
+                    DAOProxyLogicV2.connect(addr1).decreaseMaxMember((maxMeber-1),(maxMeber-2))
+                ).to.be.revertedWith("DAOCommitteeV2: msg.sender is not an admin") 
+            })
+
+            it("decreaseMaxMember can not invalid member index", async () => {
+                let maxMeber = Number(await DAOProxyLogicV2.maxMember())
+                await expect(
+                    DAOProxyLogicV2.connect(daoAdmin).decreaseMaxMember((maxMeber+1),(maxMeber))
+                ).to.be.revertedWith("DAOCommitteeV2: invalid member index") 
+            })
+
+            it("decreaseMaxMember can not invalid member index", async () => {
+                let maxMeber = Number(await DAOProxyLogicV2.maxMember())
+                await DAOProxyLogicV2.connect(daoAdmin).decreaseMaxMember((maxMeber-1),(maxMeber-2))
+                expect(await DAOProxyLogicV2.maxMember()).to.be.eq((maxMeber-1))
+                expect(await DAOProxyLogicV2.quorum()).to.be.eq(maxMeber-2)
+            })
+        })
+        
+        describe("#7-7. Member challenge", () => {
+            it("not candidate not challenge", async () => {
+                await expect(
+                    DAOProxyLogicV2.connect(addr1).changeMember(0)
+                ).to.be.revertedWith("DAOCommitteeV2: not registerd") 
+            })
+
+            it("There is a member of V1, but a V2 candidate challenge", async () => {
+                let changeIndex = 0;
+                let beforeMember = await DAOProxyLogicV2.members(changeIndex)
+                const topic = deployed.daov2committeeV2.interface.getEventTopic('ChangedMember');
+                const receipt = await(await DAOProxyLogicV2.connect(candidate1).changeMember(changeIndex)).wait();
+                const log = receipt.logs.find(x => x.topics.indexOf(topic) >= 0);
+                const deployedEvent = deployed.daov2committeeV2.interface.parseLog(log);
+                
+                expect(deployedEvent.args.slotIndex).to.eq(changeIndex);
+                expect(deployedEvent.args.prevMember).to.eq(beforeMember);
+                expect(deployedEvent.args.newMember).to.eq(candidate1.address);
+            })
+
+            it("everyMember change V2member", async () => {
+                let changeIndex = 1;
+                let beforeMember = await DAOProxyLogicV2.members(changeIndex)
+                const topic = deployed.daov2committeeV2.interface.getEventTopic('ChangedMember');
+                const receipt = await(await DAOProxyLogicV2.connect(candidate2).changeMember(changeIndex)).wait();
+                const log = receipt.logs.find(x => x.topics.indexOf(topic) >= 0);
+                const deployedEvent = deployed.daov2committeeV2.interface.parseLog(log);
+                
+                expect(deployedEvent.args.slotIndex).to.eq(changeIndex);
+                expect(deployedEvent.args.prevMember).to.eq(beforeMember);
+                expect(deployedEvent.args.newMember).to.eq(candidate2.address);
+                
+                let changeIndex2 = 2;
+                let beforeMember2 = await DAOProxyLogicV2.members(changeIndex2)
+                const topic2 = deployed.daov2committeeV2.interface.getEventTopic('ChangedMember');
+                const receipt2 = await(await DAOProxyLogicV2.connect(candidate3).changeMember(changeIndex2)).wait();
+                const log2 = receipt2.logs.find(x => x.topics.indexOf(topic2) >= 0);
+                const deployedEvent2 = deployed.daov2committeeV2.interface.parseLog(log2);
+                
+                expect(deployedEvent2.args.slotIndex).to.eq(changeIndex2);
+                expect(deployedEvent2.args.prevMember).to.eq(beforeMember2);
+                expect(deployedEvent2.args.newMember).to.eq(candidate3.address);
+            })
+
+            it("If the deposit amount is less, the challenge fails.", async () => {
+                // console.log(await deployed.optimismSequencer["balanceOfLton(uint32,address)"](1, sequencer1.address))
+                // console.log(await deployed.candidate["balanceOfLton(uint32,address)"](3, candidate3.address))
+                await expect(
+                    DAOProxyLogicV2.connect(sequencer1).changeMember(2)
+                ).to.be.revertedWith("not enough amount") 
+            })
+
+            it("Even if the deposit amount is the same, the challenge fails.", async () => {
+                // console.log(await deployed.optimismSequencer["balanceOfLton(uint32,address)"](1, sequencer1.address))
+                // console.log(await deployed.candidate["balanceOfLton(uint32,address)"](2, candidate2.address))
+                await expect(
+                    DAOProxyLogicV2.connect(sequencer1).changeMember(1)
+                ).to.be.revertedWith("not enough amount") 
+            })
+
+            it("If the deposit amount is greater, the challenge succeeds.", async () => {
+                let changeIndex = 0;
+                let beforeMember = await DAOProxyLogicV2.members(changeIndex)
+                const topic = deployed.daov2committeeV2.interface.getEventTopic('ChangedMember');
+                const receipt = await(await DAOProxyLogicV2.connect(sequencer1).changeMember(changeIndex)).wait();
+                const log = receipt.logs.find(x => x.topics.indexOf(topic) >= 0);
+                const deployedEvent = deployed.daov2committeeV2.interface.parseLog(log);
+                
+                expect(deployedEvent.args.slotIndex).to.eq(changeIndex);
+                expect(deployedEvent.args.prevMember).to.eq(beforeMember);
+                expect(deployedEvent.args.prevMember).to.eq(candidate1.address);
+                expect(deployedEvent.args.newMember).to.eq(sequencer1.address);
+            })
+        })
 
     })
 })

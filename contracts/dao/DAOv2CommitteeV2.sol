@@ -440,13 +440,13 @@ contract DAOv2CommitteeV2 is
         validMemberIndex(_memberIndex)
         returns (bool)
     {
-        require(isExistCandidate(msg.sender), "DAOCommittee: not registerd");
+        require(isExistCandidate(msg.sender), "DAOCommitteeV2: not registerd");
         address newMember = msg.sender;
 
         LibDaoV2.CandidateInfoV2 storage candidateInfo = _candidateInfosV2[newMember];
         require(
             candidateInfo.memberJoinedTime == 0,
-            "DAOCommittee: already member"
+            "DAOCommitteeV2: already member"
         );
 
         address prevMember = members[_memberIndex];
@@ -476,24 +476,24 @@ contract DAOv2CommitteeV2 is
         if (candidateInfo.candidateIndex == 0) {
             if(prevCandidateInfo.candidateIndex == 0) {
                 require(
-                    IStaking(address(sequencer)).balanceOfLton(candidateInfo.sequencerIndex) > IStaking(address(sequencer)).balanceOfLton(prevCandidateInfo.sequencerIndex),
+                    IStaking(address(sequencer)).balanceOfLton(candidateInfo.sequencerIndex,newMember) > IStaking(address(sequencer)).balanceOfLton(prevCandidateInfo.sequencerIndex,prevMember),
                     "not enough amount"
                 );
             } else {
                 require(
-                    IStaking(address(sequencer)).balanceOfLton(candidateInfo.sequencerIndex) > IStaking(address(candidate)).balanceOfLton(prevCandidateInfo.sequencerIndex),
+                    IStaking(address(sequencer)).balanceOfLton(candidateInfo.sequencerIndex,newMember) > IStaking(address(candidate)).balanceOfLton(prevCandidateInfo.candidateIndex,prevMember),
                     "not enough amount"
                 );
             }
         } else {
             if(prevCandidateInfo.candidateIndex == 0) {
                 require(
-                    IStaking(address(candidate)).balanceOfLton(candidateInfo.sequencerIndex) > IStaking(address(sequencer)).balanceOfLton(prevCandidateInfo.sequencerIndex),
+                    IStaking(address(candidate)).balanceOfLton(candidateInfo.candidateIndex,newMember) > IStaking(address(sequencer)).balanceOfLton(prevCandidateInfo.sequencerIndex,prevMember),
                     "not enough amount"
                 );
             } else {
                 require(
-                    IStaking(address(candidate)).balanceOfLton(candidateInfo.sequencerIndex) > IStaking(address(candidate)).balanceOfLton(prevCandidateInfo.sequencerIndex),
+                    IStaking(address(candidate)).balanceOfLton(candidateInfo.candidateIndex,newMember) > IStaking(address(candidate)).balanceOfLton(prevCandidateInfo.candidateIndex,prevMember),
                     "not enough amount"
                 );
             }
