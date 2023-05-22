@@ -36,4 +36,12 @@ contract StorageStateCommitteeV2 {
         _;
     }
 
+    function isMemberV2(address _candidate) public view returns (bool) {
+        return _candidateInfosV2[_candidate].memberJoinedTime > 0;
+    }
+
+    function candidateInfosV2(address _candidate) external view returns (LibDaoV2.CandidateInfoV2 memory) {
+        return _candidateInfosV2[_candidate];
+    }
+
 }

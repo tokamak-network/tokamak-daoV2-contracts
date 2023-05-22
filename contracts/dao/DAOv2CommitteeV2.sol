@@ -123,6 +123,11 @@ contract DAOv2CommitteeV2 is
         _;
     }
 
+    modifier onlyMemberV2() {
+        require(isMember(msg.sender) || isMemberV2(msg.sender), "DAOCommitteeV2: not a member");
+        _;
+    }
+
     //////////////////////////////////////////////////////////////////////
     // setters
 
@@ -536,7 +541,7 @@ contract DAOv2CommitteeV2 is
 
     /// @notice Retires member
     /// @return Whether or not the execution succeeded
-    function retireMember() onlyMember external returns (bool) {
+    function retireMember() onlyMemberV2 external returns (bool) {
         require(isExistCandidate(msg.sender), "DAOCommittee: not registerd");
         // address candidate = ICandidate(msg.sender).candidate();
         LibDaoV2.CandidateInfoV2 storage candidateInfo = _candidateInfosV2[msg.sender];

@@ -30,6 +30,7 @@ describe('DAOv2Committee', () => {
     let agendaMangerAddress = "0xcD4421d082752f363E1687544a09d5112cD4f484";
     let seigMangerAddress = "0x710936500aC59e8551331871Cbad3D33d5e0D909";
     let layer2RegistryAddress = "0x0b3E174A2170083e770D5d4Cf56774D221b7063e";
+    let addr0 = "0x0000000000000000000000000000000000000000"
 
     let DAOProxy: any
     let DAOProxyLogicV2: any
@@ -1043,6 +1044,8 @@ describe('DAOv2Committee', () => {
                 expect(deployedEvent.args.slotIndex).to.eq(changeIndex);
                 expect(deployedEvent.args.prevMember).to.eq(beforeMember);
                 expect(deployedEvent.args.newMember).to.eq(candidate2.address);
+
+                expect(await DAOProxyLogicV2.isMemberV2(candidate2.address)).to.be.equal(true)
                 
                 let changeIndex2 = 2;
                 let beforeMember2 = await DAOProxyLogicV2.members(changeIndex2)
@@ -1054,6 +1057,8 @@ describe('DAOv2Committee', () => {
                 expect(deployedEvent2.args.slotIndex).to.eq(changeIndex2);
                 expect(deployedEvent2.args.prevMember).to.eq(beforeMember2);
                 expect(deployedEvent2.args.newMember).to.eq(candidate3.address);
+
+                expect(await DAOProxyLogicV2.isMemberV2(candidate3.address)).to.be.equal(true)
             })
 
             it("If the deposit amount is less, the challenge fails.", async () => {
@@ -1085,6 +1090,58 @@ describe('DAOv2Committee', () => {
                 expect(deployedEvent.args.prevMember).to.eq(candidate1.address);
                 expect(deployedEvent.args.newMember).to.eq(sequencer1.address);
             })
+
+            it("cannot run retire if you are not a member.", async () => {
+                await expect(
+                    DAOProxyLogicV2.connect(addr1).retireMember()
+                ).to.be.revertedWith("DAOCommitteeV2: not a member") 
+            })
+
+            it("Members can retire. The member retired at address0.", async () => {
+                let changeIndex = 2;
+                const topic = deployed.daov2committeeV2.interface.getEventTopic('ChangedMember');
+                const receipt = await(await DAOProxyLogicV2.connect(candidate3).retireMember()).wait();
+                const log = receipt.logs.find(x => x.topics.indexOf(topic) >= 0);
+                const deployedEvent = deployed.daov2committeeV2.interface.parseLog(log);
+                
+                expect(deployedEvent.args.slotIndex).to.eq(changeIndex);
+                expect(deployedEvent.args.prevMember).to.eq(candidate3.address);
+                expect(deployedEvent.args.newMember).to.eq(addr0);
+            })
+
+            it("Even after retirement, you can register as a member again.", async () => {
+                expect(await DAOProxyLogicV2.isMemberV2(candidate3.address)).to.be.equal(false)
+
+                let changeIndex2 = 2;
+                let beforeMember2 = await DAOProxyLogicV2.members(changeIndex2)
+                const topic2 = deployed.daov2committeeV2.interface.getEventTopic('ChangedMember');
+                const receipt2 = await(await DAOProxyLogicV2.connect(candidate3).changeMember(changeIndex2)).wait();
+                const log2 = receipt2.logs.find(x => x.topics.indexOf(topic2) >= 0);
+                const deployedEvent2 = deployed.daov2committeeV2.interface.parseLog(log2);
+                
+                expect(deployedEvent2.args.slotIndex).to.eq(changeIndex2);
+                expect(deployedEvent2.args.prevMember).to.eq(beforeMember2);
+                expect(deployedEvent2.args.newMember).to.eq(candidate3.address);
+
+                expect(await DAOProxyLogicV2.isMemberV2(candidate3.address)).to.be.equal(true)
+            })
+
+            it("fill all slots", async () => {
+                expect(await DAOProxyLogicV2.members(0)).to.be.equal(sequencer1);
+                expect(await DAOProxyLogicV2.members(1)).to.be.equal(candidate2);
+                expect(await DAOProxyLogicV2.members(2)).to.be.equal(candidate3);
+            })
+
+            it("can not exceed maximum", async () => {
+                expect(await DAOProxyLogicV2.maxMember()).to.be.equal(3);
+                await expect(
+                    DAOProxyLogicV2.connect(candidate1).changeMember(3)
+                ).to.be.revertedWith("DAOCommitteeV2: invalid member index") 
+            })
+        })
+
+        describe("Agenda Test", () => {
+
         })
 
     })
