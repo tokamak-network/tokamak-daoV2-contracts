@@ -596,7 +596,7 @@ contract DAOv2CommitteeV2 is
         external
         validAgendaManager
     {
-        require(isExistCandidate(msg.sender), "DAOCommittee: not registerd");
+        require(isExistCandidate(msg.sender), "DAOCommitteeV2: not registerd");
         // CandidateInfo storage candidateInfo = _candidateInfos[msg.sender];
 
         agendaManager.castVote(
