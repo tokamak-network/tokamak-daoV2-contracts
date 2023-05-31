@@ -57,7 +57,7 @@ describe('DAOv2Committee', () => {
     let deployer: Signer, addr1: Signer, sequencer1: Signer, daoPrivateOwner: Signer
 
     // let candidate1: Signer, candidate2: Signer, candidate3: Signer
-    let candidate1: any, candidate2: any, candidate3: any
+    let candidate1: any, candidate2: any, candidate3: any, candidate4:any
     let candidates: Signer[] = [];
 
     let deployed: DAOStakingV2Fixture
@@ -154,6 +154,7 @@ describe('DAOv2Committee', () => {
         tonAmount1: ethers.utils.parseEther("200"),
         tonAmount2: ethers.utils.parseEther("300"),
         tonAmount3: ethers.utils.parseEther("400"),
+        tonAmount4: ethers.utils.parseEther("100"),
     }
 
     let sequencerInfo = {
@@ -230,6 +231,7 @@ describe('DAOv2Committee', () => {
         candidate1 = deployed.candidate1;
         candidate2 = deployed.candidate2;
         candidate3 = deployed.candidate3;
+        candidate4 = deployed.daoPrivateOwner;
         candidates.push(sequencer1)
         candidates.push(candidate2)
         candidates.push(candidate3)
@@ -1018,6 +1020,7 @@ describe('DAOv2Committee', () => {
                 expect(await DAOProxyLogicV2.candidatesV2(2)).to.be.eq(candidate2.address)
                 expect(await DAOProxyLogicV2.isExistCandidate(candidate2.address)).to.be.eq(true);
             })
+
             it('Approve the minimum deposit and create candidate3.', async () => {
                 let name = "Tokamak Candidate #3";
                 let getAllCandidatesBefore = await deployed.layer2Manager.getAllCandidates();
@@ -1058,6 +1061,48 @@ describe('DAOv2Committee', () => {
                 expect(await DAOProxyLogicV2.candidatesLength()).to.be.eq(4)
                 expect(await DAOProxyLogicV2.candidatesV2(3)).to.be.eq(candidate3.address)
                 expect(await DAOProxyLogicV2.isExistCandidate(candidate3.address)).to.be.eq(true);
+            })
+
+            it('Approve the minimum deposit and create candidate4.', async () => {
+                let name = "Tokamak Candidate #4";
+                let getAllCandidatesBefore = await deployed.layer2Manager.getAllCandidates();
+    
+                let totalLayers = await deployed.layer2Manager.totalLayers()
+                let totalCandidates = await deployed.layer2Manager.totalCandidates()
+    
+                let sequencerIndex = await deployed.layer2Manager.optimismSequencerIndexes(totalLayers.sub(ethers.constants.One))
+    
+                let amount = await deployed.layer2Manager.minimumDepositForCandidate();
+
+                if(candidateInfo.tonAmount4 < amount) {
+                    candidateInfo.tonAmount4 = amount;
+                }
+    
+                if (amount.gt(await deployed.ton.balanceOf(candidate4.address)))
+                    await (await deployed.ton.connect(deployed.tonAdmin).mint(candidate4.address, candidateInfo.tonAmount4)).wait();
+    
+                if (amount.gte(await deployed.ton.allowance(candidate4.address, deployed.layer2Manager.address)))
+                    await (await deployed.ton.connect(candidate4).approve(deployed.layer2Manager.address, candidateInfo.tonAmount4)).wait();
+    
+                const commission = 500;
+                await snapshotGasCost(deployed.layer2Manager.connect(candidate4).createCandidate(
+                    sequencerIndex,
+                    ethers.utils.formatBytes32String(name),
+                    commission,
+                    candidateInfo.tonAmount4
+                ))
+
+                expect(await deployed.layer2Manager.totalCandidates()).to.eq(totalCandidates.add(1))
+                let getAllCandidatesAfter = await deployed.layer2Manager.getAllCandidates();
+                expect(getAllCandidatesBefore.candidateNamesIndexes_.length).to.eq(
+                    getAllCandidatesAfter.candidateNamesIndexes_.length-1
+                )
+            })
+            
+            it("DAOContract check candidate4", async () => {
+                expect(await DAOProxyLogicV2.candidatesLength()).to.be.eq(5)
+                expect(await DAOProxyLogicV2.candidatesV2(4)).to.be.eq(candidate4.address)
+                expect(await DAOProxyLogicV2.isExistCandidate(candidate4.address)).to.be.eq(true);
             })
         })
 
@@ -1699,8 +1744,6 @@ describe('DAOv2Committee', () => {
     //                 claimableAfterAmount.should.be.bignumber.equal(toBN("0")); 
     //             }
     //         });
-      
-
     //     });
     // })
 })
