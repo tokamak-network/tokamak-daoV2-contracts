@@ -1977,30 +1977,14 @@ describe('DAOv2Committee', () => {
                 const maxMember = 4
                 const quorum = 3
                 const wtonAmount = 1000000000000000000000000000
-    
-                // console.log("------------------------------------")
-                // console.log(newMinimumNoticePeriod.toString(16));
-                // console.log(daoAgendaFee.toHexString());
-                // console.log((daoAgendaFee.toHexString()).substr(2));
-                // console.log(daoAgendaFee2.toString(16));
-                // console.log(executingPeriod.toString(16));
-                // console.log(wtonAmount.toString(16));
-                // console.log("------------------------------------")
+
     
                 const data1 = padLeft(newMinimumNoticePeriod.toString(16), 64);
-                // console.log(data1)
-                // const data2 = padLeft(daoAgendaFee.toHexString(), 64);
-                // console.log(data2)
-                // console.log(data2.substr(2));
                 const data2 = padLeft(daoAgendaFee2.toString(16), 64);
-                // console.log(data2)
                 const data3 = padLeft(maxMember.toString(16), 64);
                 const data4 = padLeft(quorum.toString(16), 64);
                 const data5 = data3 + data4
                 console.log(data5);
-                // console.log(data3)
-                // const data4 = padLeft(wtonAmount.toString(16), 64);
-                // console.log(data4)
     
                 const functionBytecode1 = selector1.concat(data1)
                 const functionBytecode2 = selector2.concat(data2)
