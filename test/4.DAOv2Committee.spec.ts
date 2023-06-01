@@ -1624,11 +1624,11 @@ describe('DAOv2Committee', () => {
                 const noticePeriod = await deployed.daoagendaManager.minimumNoticePeriodSeconds();
                 const votingPeriod = await deployed.daoagendaManager.minimumVotingPeriodSeconds();
                 const selector = Web3EthAbi.encodeFunctionSignature("setMinimumNoticePeriodSeconds(uint256)");
-                console.log(selector);
+                // console.log(selector);
                 const newMinimumNoticePeriod = 20;
                 const data = padLeft(newMinimumNoticePeriod.toString(16), 64);
                 const functionBytecode = selector.concat(data);
-                console.log(functionBytecode);
+                // console.log(functionBytecode);
     
                 const param = Web3EthAbi.encodeParameters(
                     ["address[]", "uint128", "uint128", "bool", "bytes[]"],
@@ -1712,38 +1712,95 @@ describe('DAOv2Committee', () => {
         });
     })
 
-    // describe("#9. Vault", () => {
-    //     it('check DAOVault balance', async function () {
-    //         let amount = await deployed.ton.balanceOf(deployed.daovault.address);
-    //         expect(amount).to.be.gt(0);
-    //     });
+    describe("#9. Vault", () => {
+        it('check DAOVault balance', async function () {
+            let amount = await deployed.ton.balanceOf(deployed.daovault.address);
+            expect(amount).to.be.gt(0);
+        });
       
-    //     describe('Claim activity reward', function () {
-    //         it('dao candidate', async function () {
-    //             for (let i = 0; i < candidates.length; i++) {
-    //                 const candidate = candidates[i];
-    //                 const beforeBalance = await deployed.ton.balanceOf(candidates[i].address);
+        describe('Claim activity reward', function () {
+            it("Candidates who were not members will not receive any rewards.", async () => {
+                expect(await DAOProxyLogicV2.isMemberV2(candidate4.address)).to.be.equal(false)
+                let claimableAmount = await DAOProxyLogicV2.getClaimableActivityReward(candidate4.address);
+                expect(claimableAmount).to.be.equal(0)
+            })
 
-    //                 const fee = await DAOProxyLogicV2.activityRewardPerSecond();
-      
-    //                 const beforeBalanceTV = await deployed.ton.balanceOf(deployed.daovault.address);
-    //                 // const beforeBalanceWV = await wton.balanceOf(deployed.daoVault.address);
-      
-    //                 const claimableAmount = await DAOProxyLogicV2.getClaimableActivityReward(candidates[i].address);
-    //                 expect(claimableAmount).to.be.gt(0);
-      
-    //                 await candidateContract.claimActivityReward({from: candidate});
-      
-    //                 const afterBalanceTV = await ton.balanceOf(daoVault.address);
-    //                 const afterBalanceWV = await wton.balanceOf(daoVault.address);
-      
-    //                 const afterBalance = await ton.balanceOf(candidate);
-    //                 afterBalance.sub(beforeBalance).should.be.bignumber.gte(claimableAmount);
-                
-    //                 const claimableAfterAmount = await committeeProxy.getClaimableActivityReward(candidate);
-    //                 claimableAfterAmount.should.be.bignumber.equal(toBN("0")); 
-    //             }
-    //         });
-    //     });
-    // })
+            it("Candidates who were members even if they are not current members can receive rewards.", async () => {
+                expect(await DAOProxyLogicV2.isMemberV2(candidate1.address)).to.be.equal(false)
+                let claimableAmount = await DAOProxyLogicV2.getClaimableActivityReward(candidate1.address);
+                expect(claimableAmount).to.be.gt(0)
+            })
+
+            it("All current members can receive rewards.", async () => {
+                expect(await DAOProxyLogicV2.isMemberV2(sequencer1.address)).to.be.equal(true)
+                expect(await DAOProxyLogicV2.isMemberV2(candidate2.address)).to.be.equal(true)
+                expect(await DAOProxyLogicV2.isMemberV2(candidate3.address)).to.be.equal(true)
+                expect(await DAOProxyLogicV2.getClaimableActivityReward(sequencer1.address)).to.be.gt(0)
+                expect(await DAOProxyLogicV2.getClaimableActivityReward(candidate2.address)).to.be.gt(0)
+                expect(await DAOProxyLogicV2.getClaimableActivityReward(candidate3.address)).to.be.gt(0)
+            })
+
+            it("Anyone who has a claimReward can receive a claim.", async () => {
+                const beforeBalance = await deployed.ton.balanceOf(candidate1.address);
+
+                const claimableAmount = await DAOProxyLogicV2.getClaimableActivityReward(candidate1.address);
+                expect(claimableAmount).to.be.gt(0)
+
+                await DAOProxyLogicV2.connect(candidate1).claimActivityReward(candidate1.address);
+
+                const afterBalance = await deployed.ton.balanceOf(candidate1.address);
+
+                expect(Number(afterBalance)-Number(beforeBalance)).to.be.equal(Number(claimableAmount));
+            })
+
+            it("All current members can claim.", async () => {
+                const beforeBalance = await deployed.ton.balanceOf(sequencer1.address);
+                console.log(beforeBalance)
+
+                const claimableAmount = await DAOProxyLogicV2.getClaimableActivityReward(sequencer1.address);
+                console.log(claimableAmount)
+                expect(claimableAmount).to.be.gt(0)
+
+                await DAOProxyLogicV2.connect(sequencer1).claimActivityReward(sequencer1.address);
+
+                const afterBalance = await deployed.ton.balanceOf(sequencer1.address);
+                console.log(afterBalance)
+
+                //getClaim할때는 period가 1001140인데 calimActivity할때는 period가 1001141이다
+                //멤버는 초당 reward를 받기 때문에 getClaim과의 정확한 비교는 힘들다.
+                expect(Number(afterBalance)).to.be.gt(Number(beforeBalance));
+                expect(Number(afterBalance)-Number(beforeBalance)).to.be.gt(Number(claimableAmount));
+
+                const beforeBalance2 = await deployed.ton.balanceOf(candidate2.address);
+
+                const claimableAmount2 = await DAOProxyLogicV2.getClaimableActivityReward(candidate2.address);
+                expect(claimableAmount2).to.be.gt(0)
+
+                await DAOProxyLogicV2.connect(candidate2).claimActivityReward(candidate2.address);
+
+                const afterBalance2 = await deployed.ton.balanceOf(candidate2.address);
+
+                expect(Number(afterBalance2)-Number(beforeBalance2)).to.be.gt(Number(claimableAmount2));
+                expect(Number(afterBalance2)).to.be.gt(Number(beforeBalance2));
+
+                const beforeBalance3 = await deployed.ton.balanceOf(candidate3.address);
+
+                const claimableAmount3 = await DAOProxyLogicV2.getClaimableActivityReward(candidate3.address);
+                expect(claimableAmount3).to.be.gt(0)
+
+                await DAOProxyLogicV2.connect(candidate3).claimActivityReward(candidate3.address);
+
+                const afterBalance3 = await deployed.ton.balanceOf(candidate3.address);
+
+                expect(Number(afterBalance3)-Number(beforeBalance3)).to.be.gt(Number(claimableAmount3));
+                expect(Number(afterBalance3)).to.be.gt(Number(beforeBalance3));
+            })
+        });
+    })
+
+    describe("#10. multi Agenda test", () => {
+        it("Multi Agenda", async () => {
+            
+        })
+    })
 })
