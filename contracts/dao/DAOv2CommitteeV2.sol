@@ -684,7 +684,7 @@ contract DAOv2CommitteeV2 is
         // );
 
         uint256 amount = getClaimableActivityReward(msg.sender);
-        console.log("amount : ", amount);
+        // console.log("amount : ", amount);
         require(amount > 0, "DAOCommittee: you don't have claimable ton");
 
         daoVault.claimTON(_receiver, amount);
@@ -835,7 +835,7 @@ contract DAOv2CommitteeV2 is
             }
         }
 
-        console.log("period : ", period);
+        // console.log("period : ", period);
         return period.mul(activityRewardPerSecond);
     }
 
