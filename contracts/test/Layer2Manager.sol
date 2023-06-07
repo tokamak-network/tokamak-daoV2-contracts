@@ -212,7 +212,7 @@ contract  Layer2Manager is AccessibleCommon, BaseProxyStorage, Layer2ManagerStor
 
         (bool success,) = DAOCommittee.call(
             abi.encodeWithSignature(
-                "createCandidate(address,uint32,uint32)",
+                "createCandidateV2(address,uint32,uint32)",
                 msg.sender,_sequencerIndex,_index
             )
         );

@@ -13,7 +13,7 @@ import { SafeMath } from "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import { IERC20 } from  "../../node_modules/@openzeppelin/contracts/token/ERC20/IERC20.sol";
 // import { IDAOCommittee } from "../interfaces/IDAOCommittee.sol";
 // import { ICandidate } from "../interfaces/ICandidate.sol";
-// import { ILayer2 } from "../interfaces/ILayer2.sol";
+import { ILayer2 } from "../interfaces/ILayer2.sol";
 // import { IDAOAgendaManager } from "../interfaces/IDAOAgendaManager.sol";
 import { LibAgenda } from "../lib/Agenda.sol";
 import { ERC165Checker } from "../../node_modules/@openzeppelin/contracts/utils/introspection/ERC165Checker.sol";
@@ -129,7 +129,60 @@ contract DAOv2CommitteeV2 is
     }
 
     //////////////////////////////////////////////////////////////////////
-    // setters
+    // V1 Owner
+
+    /// @notice Set SeigManager contract address
+    /// @param _seigManager New SeigManager contract address
+    function setSeigManager(address _seigManager) external onlyOwner nonZero(_seigManager) {
+        seigManager = ISeigManager(_seigManager);
+    }
+
+    /// @notice Set SeigManager contract address on candidate contracts
+    /// @param _candidateContracts Candidate contracts to be set
+    /// @param _seigManager New SeigManager contract address
+    function setCandidatesSeigManager(
+        address[] calldata _candidateContracts,
+        address _seigManager
+    )
+        external
+        onlyOwner
+        nonZero(_seigManager)
+    {
+        for (uint256 i = 0; i < _candidateContracts.length; i++) {
+            ICandidate(_candidateContracts[i]).setSeigManager(_seigManager);
+        }
+    }
+
+    /// @notice Set DAOCommitteeProxy contract address on candidate contracts
+    /// @param _candidateContracts Candidate contracts to be set
+    /// @param _committee New DAOCommitteeProxy contract address
+    function setCandidatesCommittee(
+        address[] calldata _candidateContracts,
+        address _committee
+    )
+        external
+        onlyOwner
+        nonZero(_committee)
+    {
+        for (uint256 i = 0; i < _candidateContracts.length; i++) {
+            ICandidate(_candidateContracts[i]).setCommittee(_committee);
+        }
+    }
+
+    /// @notice Set Layer2Registry contract address
+    /// @param _layer2Registry New Layer2Registry contract address
+    function setLayer2Registry(address _layer2Registry) external onlyOwner nonZero(_layer2Registry) {
+        layer2Registry = ILayer2Registry(_layer2Registry);
+    }
+
+    /// @notice Set CandidateFactory contract address
+    /// @param _candidateFactory New CandidateFactory contract address
+    function setCandidateFactory(address _candidateFactory) external onlyOwner nonZero(_candidateFactory) {
+        candidateFactory = ICandidateFactory(_candidateFactory);
+    }
+
+    //////////////////////////////////////////////////////////////////////
+    // V2 Owner
 
     /// @notice Set SeigManagerV2 contract address
     /// @param _seigManagerV2 New SeigManagerV2 contract address
@@ -343,7 +396,78 @@ contract DAOv2CommitteeV2 is
     //     return success;
     // }
 
-    function createCandidate(
+    /// @notice Creates a candidate contract and register it on SeigManager
+    /// @param _memo A memo for the candidate
+    function createCandidate(string calldata _memo)
+        external
+        validSeigManager
+        validLayer2Registry
+        validCommitteeL2Factory
+    {
+        require(!isExistCandidate(msg.sender), "DAOCommittee: candidate already registerd");
+
+        // Candidate
+        address candidateContract = candidateFactory.deploy(
+            msg.sender,
+            false,
+            _memo,
+            address(this),
+            address(seigManager)
+        );
+
+        require(
+            candidateContract != address(0),
+            "DAOCommittee: deployed candidateContract is zero"
+        );
+        require(
+            _candidateInfos[msg.sender].candidateContract == address(0),
+            "DAOCommittee: The candidate already has contract"
+        );
+        require(
+            layer2Registry.registerAndDeployCoinage(candidateContract, address(seigManager)),
+            "DAOCommittee: failed to registerAndDeployCoinage"
+        );
+
+        _candidateInfos[msg.sender] = CandidateInfo({
+            candidateContract: candidateContract,
+            memberJoinedTime: 0,
+            indexMembers: 0,
+            rewardPeriod: 0,
+            claimedTimestamp: 0
+        });
+
+        candidates.push(msg.sender);
+       
+        emit CandidateContractCreated(msg.sender, candidateContract, _memo);
+    }
+
+    /// @notice Registers the exist layer2 on DAO
+    /// @param _layer2 Layer2 contract address to be registered
+    /// @param _memo A memo for the candidate
+    function registerLayer2Candidate(address _layer2, string memory _memo)
+        external
+        validSeigManager
+        validLayer2Registry
+        validCommitteeL2Factory
+    {
+        _registerLayer2Candidate(msg.sender, _layer2, _memo);
+    }
+
+    /// @notice Registers the exist layer2 on DAO by owner
+    /// @param _operator Operator address of the layer2 contract
+    /// @param _layer2 Layer2 contract address to be registered
+    /// @param _memo A memo for the candidate
+    function registerLayer2CandidateByOwner(address _operator, address _layer2, string memory _memo)
+        external
+        onlyOwner
+        validSeigManager
+        validLayer2Registry
+        validCommitteeL2Factory
+    {
+        _registerLayer2Candidate(_operator, _layer2, _memo);
+    }
+
+    function createCandidateV2(
         address senderAddress,
         uint32 _sequencerIndex,
         uint32 _candidateIndex
@@ -353,7 +477,7 @@ contract DAOv2CommitteeV2 is
         validLayer2Manager
         returns (uint256)
     {
-        require(!isExistCandidate(senderAddress), "DAOCommittee: candidate already registerd");
+        require(!isExistCandidate(senderAddress), "DAOCommitteeV2: candidate already registerd");
 
         _candidateInfosV2[senderAddress] = LibDaoV2.CandidateInfoV2({
             sequencerIndex: _sequencerIndex,
@@ -770,6 +894,58 @@ contract DAOv2CommitteeV2 is
             data := add(param, 32)
         }
         return data;
+    }
+
+    function _registerLayer2Candidate(address _operator, address _layer2, string memory _memo)
+        internal
+        validSeigManager
+        validLayer2Registry
+        validCommitteeL2Factory
+    {
+        require(!isExistCandidate(_layer2), "DAOCommittee: candidate already registerd");
+
+        require(
+            _layer2 != address(0),
+            "DAOCommittee: deployed candidateContract is zero"
+        );
+        require(
+            _candidateInfos[_layer2].candidateContract == address(0),
+            "DAOCommittee: The candidate already has contract"
+        );
+        ILayer2 layer2 = ILayer2(_layer2);
+        require(
+            layer2.isLayer2(),
+            "DAOCommittee: invalid layer2 contract"
+        );
+        require(
+            layer2.operator() == _operator,
+            "DAOCommittee: invalid operator"
+        );
+
+        address candidateContract = candidateFactory.deploy(
+            _layer2,
+            true,
+            _memo,
+            address(this),
+            address(seigManager)
+        );
+
+        require(
+            candidateContract != address(0),
+            "DAOCommittee: deployed candidateContract is zero"
+        );
+
+        _candidateInfos[_layer2] = CandidateInfo({
+            candidateContract: candidateContract,
+            memberJoinedTime: 0,
+            indexMembers: 0,
+            rewardPeriod: 0,
+            claimedTimestamp: 0
+        });
+
+        candidates.push(_layer2);
+       
+        emit Layer2Registered(_layer2, candidateContract, _memo);
     }
     
 
