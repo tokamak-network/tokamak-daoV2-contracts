@@ -764,6 +764,15 @@ contract DAOv2CommitteeV2 is
         return result;
     }
 
+    function callTest(address target, uint256 paramLength, bytes memory param) external pure returns (bytes memory) {
+        bytes memory data;
+        assembly {
+            data := add(param, 32)
+        }
+        return data;
+    }
+    
+
     //////////////////////////////////////////////////////////////////////
     // view
 

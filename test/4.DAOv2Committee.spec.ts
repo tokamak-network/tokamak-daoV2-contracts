@@ -2107,4 +2107,12 @@ describe('DAOv2Committee', () => {
             });
         })
     })
+
+    describe("#11. callTest", () => {
+        it("just calldata check", async () => {
+            const selector1 = Web3EthAbi.encodeFunctionSignature("setMinimumNoticePeriodSeconds(uint256)");
+            const newMinimumNoticePeriod = 150
+            const data1 = padLeft(newMinimumNoticePeriod.toString(16), 64);
+        })
+    })
 })
