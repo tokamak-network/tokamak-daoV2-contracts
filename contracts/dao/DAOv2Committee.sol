@@ -307,7 +307,7 @@ contract DAOv2Committee is
     //////////////////////////////////////////////////////////////////////
     // Managing members
 
-    function createCandidate(
+    function createCandidateV2(
         uint32 _sequencerIndex,
         bytes32 _name,
         uint16 _commission,

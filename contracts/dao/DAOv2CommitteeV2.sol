@@ -101,7 +101,7 @@ contract DAOv2CommitteeV2 is
 
     event ChangedMemo(
         address candidate,
-        bytes32 newMemo
+        string newMemo
     );
 
     event ActivityRewardChanged(
@@ -467,6 +467,42 @@ contract DAOv2CommitteeV2 is
         _registerLayer2Candidate(_operator, _layer2, _memo);
     }
 
+    /// @notice Set memo
+    /// @param _candidate candidate address
+    /// @param _memo New memo on this candidate
+    function setMemoOnCandidate(
+        address _candidate,
+        string calldata _memo
+    )
+        external
+    {
+        address candidateContract = candidateContract(_candidate);
+        setMemoOnCandidateContract(candidateContract, _memo);
+    }
+
+    /// @notice Set memo
+    /// @param _candidateContract candidate contract address
+    /// @param _memo New memo on this candidate
+    function setMemoOnCandidateContract(
+        address _candidateContract,
+        string calldata _memo
+    )
+        public
+    {
+        address candidate = ICandidate(_candidateContract).candidate();
+        address contractOwner = candidate;
+        if (ICandidate(_candidateContract).isLayer2Candidate()) {
+            contractOwner = ILayer2(candidate).operator();
+        }
+        require(
+            msg.sender == contractOwner,
+            "DAOCommittee: sender is not the candidate of this contract"
+        );
+
+        ICandidate(_candidateContract).setMemo(_memo);
+        emit ChangedMemo(candidate, _memo);
+    }
+
     function createCandidateV2(
         address senderAddress,
         uint32 _sequencerIndex,
@@ -477,7 +513,7 @@ contract DAOv2CommitteeV2 is
         validLayer2Manager
         returns (uint256)
     {
-        require(!isExistCandidate(senderAddress), "DAOCommitteeV2: candidate already registerd");
+        require(!isExistCandidateV2(senderAddress), "DAOCommitteeV2: candidate already registerd");
 
         _candidateInfosV2[senderAddress] = LibDaoV2.CandidateInfoV2({
             sequencerIndex: _sequencerIndex,
@@ -543,7 +579,7 @@ contract DAOv2CommitteeV2 is
         validLayer2Manager
         returns (uint256)
     {
-        require(!isExistCandidate(senderAddress), "DAOCommitteeV2: candidate already registerd");
+        require(!isExistCandidateV2(senderAddress), "DAOCommitteeV2: candidate already registerd");
 
         _candidateInfosV2[senderAddress] = LibDaoV2.CandidateInfoV2({
             sequencerIndex: _sequencerIndex,
@@ -569,7 +605,7 @@ contract DAOv2CommitteeV2 is
         validMemberIndex(_memberIndex)
         returns (bool)
     {
-        require(isExistCandidate(msg.sender), "DAOCommitteeV2: not registerd");
+        require(isExistCandidateV2(msg.sender), "DAOCommitteeV2: not registerd");
         address newMember = msg.sender;
 
         LibDaoV2.CandidateInfoV2 storage candidateInfo = _candidateInfosV2[newMember];
@@ -637,22 +673,22 @@ contract DAOv2CommitteeV2 is
         return true;
     }
 
-    function setNameOnRegistrant(
-        bytes32 _name
-    )
-        external
-    {
-        require(isExistCandidate(msg.sender), "DAOCommittee: not registerd");
-        //msg.sender가 sequencer인지 candidate인지 알기 위해서 소환
-        LibDaoV2.CandidateInfoV2 memory candidateInfo = _candidateInfosV2[msg.sender];
-        if(candidateInfo.candidateIndex == 0) {
-            //msg.sender가 sqeuencer일때 name 변경
-        } else {
-            //msg.sender가 candidate일때 name 변경
-        }
+    // function setNameOnRegistrant(
+    //     bytes32 _name
+    // )
+    //     external
+    // {
+    //     require(isExistCandidate(msg.sender), "DAOCommittee: not registerd");
+    //     //msg.sender가 sequencer인지 candidate인지 알기 위해서 소환
+    //     LibDaoV2.CandidateInfoV2 memory candidateInfo = _candidateInfosV2[msg.sender];
+    //     if(candidateInfo.candidateIndex == 0) {
+    //         //msg.sender가 sqeuencer일때 name 변경
+    //     } else {
+    //         //msg.sender가 candidate일때 name 변경
+    //     }
 
-        emit ChangedMemo(msg.sender, _name);
-    }
+    //     emit ChangedMemo(msg.sender, _name);
+    // }
 
     /// @notice Call updateSeigniorage on SeigManager
     /// @return Whether or not the execution succeeded
@@ -666,7 +702,7 @@ contract DAOv2CommitteeV2 is
     /// @notice Retires member
     /// @return Whether or not the execution succeeded
     function retireMember() onlyMemberV2 external returns (bool) {
-        require(isExistCandidate(msg.sender), "DAOCommittee: not registerd");
+        require(isExistCandidateV2(msg.sender), "DAOCommitteeV2: not registerd");
         // address candidate = ICandidate(msg.sender).candidate();
         LibDaoV2.CandidateInfoV2 storage candidateInfo = _candidateInfosV2[msg.sender];
         require(
@@ -720,7 +756,7 @@ contract DAOv2CommitteeV2 is
         external
         validAgendaManager
     {
-        require(isExistCandidate(msg.sender), "DAOCommitteeV2: not registerd");
+        require(isExistCandidateV2(msg.sender), "DAOCommitteeV2: not registerd");
         // CandidateInfo storage candidateInfo = _candidateInfos[msg.sender];
 
         agendaManager.castVote(
@@ -796,7 +832,7 @@ contract DAOv2CommitteeV2 is
 
     /// @notice Claims the activity reward for member
     function claimActivityReward(address _receiver) external {
-        require(isExistCandidate(msg.sender), "DAOCommittee: not registerd");
+        require(isExistCandidateV2(msg.sender), "DAOCommittee: not registerd");
         //msg.sender가 sequencer인지 candidate인지 알기 위해서 소환
         LibDaoV2.CandidateInfoV2 memory candidateInfo = _candidateInfosV2[msg.sender];
 
@@ -1004,6 +1040,10 @@ contract DAOv2CommitteeV2 is
     }
 
     function isExistCandidate(address _candidate) public view returns (bool isExist) {
+        return _candidateInfos[_candidate].candidateContract != address(0);
+    }
+
+    function isExistCandidateV2(address _candidate) public view returns (bool isExist) {
         //sequencerIndex가 0이 아니면 candidate로 등록을 하였다는 의미
         return _candidateInfosV2[_candidate].sequencerIndex != 0;
     }
