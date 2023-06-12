@@ -240,7 +240,7 @@ contract DAOv2CommitteeV2 is
         external
         onlyOwner
     {
-        require(maxMember < _newMaxMember, "DAOCommittee: You have to call decreaseMaxMember to decrease");
+        require(maxMember < _newMaxMember, "DAO: maxMember error");
         uint256 prevMaxMember = maxMember;
         maxMember = _newMaxMember;
         fillMemberSlot();
@@ -290,8 +290,8 @@ contract DAOv2CommitteeV2 is
         onlyOwner
         validAgendaManager
     {
-        require(_quorum > maxMember.div(2), "DAOCommittee: invalid quorum");
-        require(_quorum <= maxMember, "DAOCommittee: quorum exceed max member");
+        require(_quorum > maxMember.div(2), "DAO: quorum error");
+        require(_quorum <= maxMember, "DAO: max member error");
         quorum = _quorum;
         emit QuorumChanged(quorum);
     }
@@ -355,46 +355,6 @@ contract DAOv2CommitteeV2 is
 
     //////////////////////////////////////////////////////////////////////
     // Managing members
-
-    // function createCandidate(
-    //     uint32 _sequencerIndex,
-    //     bytes32 _name,
-    //     uint16 _commission,
-    //     uint256 amount
-    // )
-    //     external
-    //     validSeigManagerV2
-    //     validLayer2Manager
-    //     returns (bool)
-    // {
-    //     require(!isExistCandidate(msg.sender), "DAOCommittee: candidate already registerd");
-    //     // require(layer2Manager.existedLayer2Index(_sequencerIndex) == true, "wrong index");
-
-    //     //msg.sender는 Layer2Manager에게 미리 amount만큼 approve해야한다
-    //     (bool success, bytes memory data) = address(layer2Manager).delegatecall(
-    //         abi.encodeWithSignature(
-    //             "createCandidate(uint32,bytes32,uint16,uint256)",
-    //             _sequencerIndex,_name,_commission,amount
-    //         )
-    //     );
-
-    //     //layer2Manager에서 indexCandidates는 로직에서 더하고 값을 넣으므로 index값은 같다.
-    //     uint32 candidateIndex = toUint32(data,0);
-    //     console.log(candidateIndex);
-
-    //     _candidateInfosV2[msg.sender] = LibDaoV2.CandidateInfoV2({
-    //         sequencerIndex: _sequencerIndex,
-    //         candidateIndex: candidateIndex,
-    //         memberJoinedTime: 0,
-    //         indexMembers: 0,
-    //         rewardPeriod: 0,
-    //         claimedTimestamp: 0
-    //     });
-
-    //     candidatesV2.push(msg.sender);
-
-    //     return success;
-    // }
 
     /// @notice Creates a candidate contract and register it on SeigManager
     /// @param _memo A memo for the candidate
@@ -496,7 +456,7 @@ contract DAOv2CommitteeV2 is
         }
         require(
             msg.sender == contractOwner,
-            "DAOCommittee: sender is not the candidate of this contract"
+            "DAO: sender is not candidate"
         );
 
         ICandidate(_candidateContract).setMemo(_memo);
@@ -528,47 +488,6 @@ contract DAOv2CommitteeV2 is
 
         return candidatesV2.length;
     }
-
-    // function createOptimismSequencer(
-    //     bytes32 _name,
-    //     address addressManager,
-    //     address l1Bridge,
-    //     address l2Bridge,
-    //     address l2ton,
-    //     uint256 amount
-    // )
-    //     external
-    //     validSeigManagerV2
-    //     validLayer2Manager
-    //     returns (bool)
-    // {
-    //     require(!isExistCandidate(msg.sender), "DAOCommitteeV2: candidate already registerd");
-
-    //     //msg.sender는 Layer2Manager에게 미리 amount만큼 approve해야한다
-    //     (bool success, bytes memory data) = layer2Manager.delegatecall(
-    //         abi.encodeWithSignature(
-    //             "createOptimismSequencer(bytes32,address,address,address,address,uint256)",
-    //             _name,addressManager,l1Bridge,l2Bridge,l2ton,amount
-    //         )
-    //     );
-    //     console.log(success);
-    //     require(success,"DAOCommitteeV2: sequencer fail");
-    //     uint32 sequencerIndex = toUint32(data,0);
-    //     console.log(sequencerIndex);
-
-    //     _candidateInfosV2[msg.sender] = LibDaoV2.CandidateInfoV2({
-    //         sequencerIndex: sequencerIndex,
-    //         candidateIndex: 0,
-    //         memberJoinedTime: 0,
-    //         indexMembers: 0,
-    //         rewardPeriod: 0,
-    //         claimedTimestamp: 0
-    //     });
-
-    //     candidatesV2.push(msg.sender);
-
-    //     return success;
-    // }
 
     function createOptimismSequencer(
         address senderAddress,
@@ -673,26 +592,53 @@ contract DAOv2CommitteeV2 is
         return true;
     }
 
-    // function setNameOnRegistrant(
-    //     bytes32 _name
-    // )
+    // function changeMember(
+    //     uint256 _memberIndex
+    // ) 
     //     external
+    //     validMemberIndex(_memberIndex)
+    //     returns (bool)
     // {
-    //     require(isExistCandidate(msg.sender), "DAOCommittee: not registerd");
-    //     //msg.sender가 sequencer인지 candidate인지 알기 위해서 소환
-    //     LibDaoV2.CandidateInfoV2 memory candidateInfo = _candidateInfosV2[msg.sender];
-    //     if(candidateInfo.candidateIndex == 0) {
-    //         //msg.sender가 sqeuencer일때 name 변경
-    //     } else {
-    //         //msg.sender가 candidate일때 name 변경
-    //     }
+    //     //candidateIndex가 0이면 시퀀서로 등록된 것이다.
+    //     //요청한 msg.sender는 V1이나 V2의 candidate여야한다.
+    //     /*
+    //         V1, V2 멤버 혼용
+    //         V2멤버는 시퀀서와 candidate가 있다.
+    //         1. 뉴멤버가 V1멤버일때
+    //             1-1. 이전멤버가 V1일때
+    //             1-2. 이전멤버가 V2의 시퀀서 일때
+    //             1-3. 이전멤버가 V2의 candidate일때
+    //         2. 뉴멤버가 V2멤버일때
+    //             2-1. 이전멤버가 V1일때
+    //     */
 
-    //     emit ChangedMemo(msg.sender, _name);
     // }
 
     /// @notice Call updateSeigniorage on SeigManager
+    /// @param _candidate Candidate address to be updated
     /// @return Whether or not the execution succeeded
-    function updateSeigniorage() public returns (bool) {
+    function updateSeigniorage(address _candidate) public returns (bool) {
+        address candidateContract = _candidateInfos[_candidate].candidateContract;
+        return ICandidate(candidateContract).updateSeigniorage();
+    }
+
+    /// @notice Call updateSeigniorage on SeigManager
+    /// @param _candidates Candidate addresses to be updated
+    /// @return Whether or not the execution succeeded
+    function updateSeigniorages(address[] calldata _candidates) external returns (bool) {
+        for (uint256 i = 0; i < _candidates.length; i++) {
+            require(
+                updateSeigniorage(_candidates[i]),
+                "DAOCommittee: failed to update seigniorage"
+            );
+        }
+
+        return true;
+    }
+
+    /// @notice Call updateSeigniorage on SeigManagerV2
+    /// @return Whether or not the execution succeeded
+    function updateSeigniorageV2() public returns (bool) {
         return seigManagerV2.updateSeigniorage();
     }
 
@@ -834,14 +780,14 @@ contract DAOv2CommitteeV2 is
     function claimActivityReward(address _receiver) external {
         require(isExistCandidateV2(msg.sender), "DAOCommittee: not registerd");
         //msg.sender가 sequencer인지 candidate인지 알기 위해서 소환
-        LibDaoV2.CandidateInfoV2 memory candidateInfo = _candidateInfosV2[msg.sender];
+        LibDaoV2.CandidateInfoV2 memory candidateInfoV2 = _candidateInfosV2[msg.sender];
 
-        // address candidate = ICandidate(msg.sender).candidate();
-        // CandidateInfo storage candidateInfo = _candidateInfos[candidate];
-        // require(
-        //     candidateInfo.candidateContract == msg.sender,
-        //     "DAOCommittee: invalid candidate contract"
-        // );
+        address candidate = ICandidate(msg.sender).candidate();
+        CandidateInfo storage candidateInfo = _candidateInfos[candidate];
+        require(
+            candidateInfo.candidateContract == msg.sender,
+            "DAOCommittee: invalid candidate contract"
+        );
 
         uint256 amount = getClaimableActivityReward(msg.sender);
         // console.log("amount : ", amount);
@@ -924,14 +870,6 @@ contract DAOv2CommitteeV2 is
         return result;
     }
 
-    function callTest(address target, uint256 paramLength, bytes memory param) external pure returns (bytes memory) {
-        bytes memory data;
-        assembly {
-            data := add(param, 32)
-        }
-        return data;
-    }
-
     function _registerLayer2Candidate(address _operator, address _layer2, string memory _memo)
         internal
         validSeigManager
@@ -989,11 +927,74 @@ contract DAOv2CommitteeV2 is
     // view
 
     function isCandidate(address _candidate) external view returns (bool) {
-        // CandidateInfo memory info = _candidateInfos[msg.sender];
-        return _candidateInfosV2[_candidate].sequencerIndex != 0;
+        CandidateInfo storage info = _candidateInfos[_candidate];
+
+        if (info.candidateContract == address(0)) {
+            return false;
+        }
+
+        bool supportIsCandidateContract = ERC165Checker.supportsInterface(
+            info.candidateContract,
+            ICandidate(info.candidateContract).isCandidateContract.selector
+        );
+
+        if (supportIsCandidateContract == false) {
+            return false;
+        }
+
+        return ICandidate(info.candidateContract).isCandidateContract();
     }
 
     function totalSupplyOnCandidate(
+        address _candidate
+    )
+        external
+        view
+        returns (uint256 totalsupply)
+    {
+        address candidateContract = candidateContract(_candidate);
+        return totalSupplyOnCandidateContract(candidateContract);
+    }
+
+    function balanceOfOnCandidate(
+        address _candidate,
+        address _account
+    )
+        external
+        view
+        returns (uint256 amount)
+    {
+        address candidateContract = candidateContract(_candidate);
+        return balanceOfOnCandidateContract(candidateContract, _account);
+    }
+
+        
+    function totalSupplyOnCandidateContract(
+        address _candidateContract
+    )
+        public
+        view
+        returns (uint256 totalsupply)
+    {
+        require(_candidateContract != address(0), "This account is not a candidate");
+
+        return ICandidate(_candidateContract).totalStaked();
+    }
+
+    function balanceOfOnCandidateContract(
+        address _candidateContract,
+        address _account
+    )
+        public
+        view
+        returns (uint256 amount)
+    {
+        require(_candidateContract != address(0), "This account is not a candidate");
+
+        return ICandidate(_candidateContract).stakedOf(_account);
+    }
+
+    function totalSupplyOnCandidateV2(
         uint32 _index
     )
         external
@@ -1003,7 +1004,7 @@ contract DAOv2CommitteeV2 is
         return IStaking(address(candidate)).balanceOfLton(_index);
     }
 
-    function totalSupplyOnSequencer(
+    function totalSupplyOnSequencerV2(
         uint32 _index
     )
         external
@@ -1013,7 +1014,7 @@ contract DAOv2CommitteeV2 is
         return IStaking(address(sequencer)).balanceOfLton(_index);
     }
 
-    function balanceOfOnCandidate(
+    function balanceOfOnCandidateV2(
         uint32 _index,
         address _account
     )
@@ -1024,7 +1025,7 @@ contract DAOv2CommitteeV2 is
         return IStaking(address(candidate)).balanceOfLton(_index,_account);
     }
 
-    function balanceOfOnSequencer(
+    function balanceOfOnSequencerV2(
         uint32 _index,
         address _account
     )
@@ -1035,7 +1036,12 @@ contract DAOv2CommitteeV2 is
         return IStaking(address(sequencer)).balanceOfLton(_index,_account);
     }
 
+
     function candidatesLength() external view returns (uint256) {
+        return candidates.length;
+    }
+
+    function candidatesLengthV2() external view returns (uint256) {
         return candidatesV2.length;
     }
 
@@ -1060,19 +1066,33 @@ contract DAOv2CommitteeV2 is
             }
         }
 
-        // console.log("period : ", period);
         return period.mul(activityRewardPerSecond);
     }
 
-    function toUint32(bytes memory _bytes, uint256 _start) internal pure returns (uint16) {
-        require(_start + 4 >= _start, 'toUint16_overflow');
-        require(_bytes.length >= _start + 4, 'toUint16_outOfBounds');
-        uint16 tempUint;
+    function getClaimableActivityRewardV1(address _candidate) public view returns (uint256) {
+        CandidateInfo storage info = _candidateInfos[_candidate];
+        uint256 period = info.rewardPeriod;
 
-        assembly {
-            tempUint := mload(add(add(_bytes, 0x4), _start))
+        if (info.memberJoinedTime > 0) {
+            if (info.memberJoinedTime > info.claimedTimestamp) {
+                period = period.add(block.timestamp.sub(info.memberJoinedTime));
+            } else {
+                period = period.add(block.timestamp.sub(info.claimedTimestamp));
+            }
         }
 
-        return tempUint;
+        return period.mul(activityRewardPerSecond);
     }
+
+    // function toUint32(bytes memory _bytes, uint256 _start) internal pure returns (uint16) {
+    //     require(_start + 4 >= _start, 'toUint16_overflow');
+    //     require(_bytes.length >= _start + 4, 'toUint16_outOfBounds');
+    //     uint16 tempUint;
+
+    //     assembly {
+    //         tempUint := mload(add(add(_bytes, 0x4), _start))
+    //     }
+
+    //     return tempUint;
+    // }
 }

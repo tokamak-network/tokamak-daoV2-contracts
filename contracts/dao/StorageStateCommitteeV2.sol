@@ -44,4 +44,15 @@ contract StorageStateCommitteeV2 {
         return _candidateInfosV2[_candidate];
     }
 
+    function isCandidateV2(address _candidate) public view returns (uint8) {
+        if(_candidateInfosV2[_candidate].sequencerIndex > 0) {
+            if(_candidateInfosV2[_candidate].candidateIndex > 0) {
+                return 2;
+            } else {
+                return 1;
+            }
+        }
+        return 0;
+    }
+
 }

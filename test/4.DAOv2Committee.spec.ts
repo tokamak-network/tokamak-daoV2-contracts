@@ -816,7 +816,7 @@ describe('DAOv2Committee', () => {
             })
             
             it('Approve the minimum security deposit and create.', async () => {
-                expect(await DAOProxyLogicV2.candidatesLength()).to.be.eq(0)
+                expect(await DAOProxyLogicV2.candidatesLengthV2()).to.be.eq(0)
                 let name = "Tokamak Optimism";
     
                 let totalLayers = await deployed.layer2Manager.totalLayers()
@@ -892,9 +892,9 @@ describe('DAOv2Committee', () => {
             })
 
             it("DAOContract check candidate", async () => {
-                expect(await DAOProxyLogicV2.candidatesLength()).to.be.eq(1)
+                expect(await DAOProxyLogicV2.candidatesLengthV2()).to.be.eq(1)
                 expect(await DAOProxyLogicV2.candidatesV2(0)).to.be.eq(sequencer1.address)
-                expect(await DAOProxyLogicV2.isExistCandidate(sequencer1.address)).to.be.eq(true);
+                expect(await DAOProxyLogicV2.isExistCandidateV2(sequencer1.address)).to.be.eq(true);
             })
 
             it("You can stake without approval before staking", async () => {
@@ -974,9 +974,9 @@ describe('DAOv2Committee', () => {
             })
             
             it("DAOContract check candidate1", async () => {
-                expect(await DAOProxyLogicV2.candidatesLength()).to.be.eq(2)
+                expect(await DAOProxyLogicV2.candidatesLengthV2()).to.be.eq(2)
                 expect(await DAOProxyLogicV2.candidatesV2(1)).to.be.eq(candidate1.address)
-                expect(await DAOProxyLogicV2.isExistCandidate(candidate1.address)).to.be.eq(true);
+                expect(await DAOProxyLogicV2.isExistCandidateV2(candidate1.address)).to.be.eq(true);
             })
 
             it('Approve the minimum deposit and create candidate2.', async () => {
@@ -1016,9 +1016,9 @@ describe('DAOv2Committee', () => {
             })
             
             it("DAOContract check candidate2", async () => {
-                expect(await DAOProxyLogicV2.candidatesLength()).to.be.eq(3)
+                expect(await DAOProxyLogicV2.candidatesLengthV2()).to.be.eq(3)
                 expect(await DAOProxyLogicV2.candidatesV2(2)).to.be.eq(candidate2.address)
-                expect(await DAOProxyLogicV2.isExistCandidate(candidate2.address)).to.be.eq(true);
+                expect(await DAOProxyLogicV2.isExistCandidateV2(candidate2.address)).to.be.eq(true);
             })
 
             it('Approve the minimum deposit and create candidate3.', async () => {
@@ -1058,9 +1058,9 @@ describe('DAOv2Committee', () => {
             })
             
             it("DAOContract check candidate3", async () => {
-                expect(await DAOProxyLogicV2.candidatesLength()).to.be.eq(4)
+                expect(await DAOProxyLogicV2.candidatesLengthV2()).to.be.eq(4)
                 expect(await DAOProxyLogicV2.candidatesV2(3)).to.be.eq(candidate3.address)
-                expect(await DAOProxyLogicV2.isExistCandidate(candidate3.address)).to.be.eq(true);
+                expect(await DAOProxyLogicV2.isExistCandidateV2(candidate3.address)).to.be.eq(true);
             })
 
             it('Approve the minimum deposit and create candidate4.', async () => {
@@ -1100,9 +1100,9 @@ describe('DAOv2Committee', () => {
             })
             
             it("DAOContract check candidate4", async () => {
-                expect(await DAOProxyLogicV2.candidatesLength()).to.be.eq(5)
+                expect(await DAOProxyLogicV2.candidatesLengthV2()).to.be.eq(5)
                 expect(await DAOProxyLogicV2.candidatesV2(4)).to.be.eq(candidate4.address)
-                expect(await DAOProxyLogicV2.isExistCandidate(candidate4.address)).to.be.eq(true);
+                expect(await DAOProxyLogicV2.isExistCandidateV2(candidate4.address)).to.be.eq(true);
             })
         })
 
@@ -1112,7 +1112,7 @@ describe('DAOv2Committee', () => {
                 const minimumBlocksForUpdateSeig = await deployed.seigManagerV2.minimumBlocksForUpdateSeig()
                 const block = await ethers.provider.getBlock('latest')
     
-                await DAOProxyLogicV2.connect(candidate1).updateSeigniorage()
+                await DAOProxyLogicV2.connect(candidate1).updateSeigniorageV2()
     
                 if (block.number - lastSeigBlock.toNumber() < minimumBlocksForUpdateSeig ) {
                     expect(await deployed.seigManagerV2.lastSeigBlock()).to.eq(lastSeigBlock)
@@ -1139,7 +1139,7 @@ describe('DAOv2Committee', () => {
                 expect(await deployed.seigManagerV2.ratesStosHolders()).to.eq(rates.ratesStosHolders)
                 expect(await deployed.seigManagerV2.getTotalLton()).to.gt(ethers.constants.Zero)
                 const indexLton = await deployed.seigManagerV2.indexLton();
-                await DAOProxyLogicV2.connect(candidate1).updateSeigniorage()
+                await DAOProxyLogicV2.connect(candidate1).updateSeigniorageV2()
                 expect(await deployed.seigManagerV2.indexLton()).to.gt(indexLton)
                 
                 // console.log(await deployed.candidate["balanceOfLton(uint32,address)"](1, candidate1.address))

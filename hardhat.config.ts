@@ -67,13 +67,13 @@ const config: HardhatUserConfig = {
       {
         version: '0.8.18',
         settings: {
-          optimizer: { enabled: true, runs: 10_000 },
+          optimizer: { enabled: true, runs: 100 },
         },
       },
       {
         version: '0.7.6', // Required for DAOCommitteeProxy
         settings: {
-          optimizer: { enabled: true, runs: 10_000 },
+          optimizer: { enabled: true, runs: 100 },
         },
       },
     ],
