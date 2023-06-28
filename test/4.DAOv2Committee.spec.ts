@@ -81,6 +81,8 @@ describe('DAOv2Committee', () => {
     let agendaID: any
     let beforeAgendaID: any
 
+    let sequencerIndexSave: any
+
     const votesList = [
         {
           "votes": [VOTE_ABSTAIN, VOTE_ABSTAIN, VOTE_ABSTAIN],
@@ -161,28 +163,27 @@ describe('DAOv2Committee', () => {
         tonAmount1: ethers.utils.parseEther("300")
     }
 
-    async function isVoter(_agendaID: any, voter: any) {
+    async function isVoter(_agendaID: any, voter: any, _index: any) {
         const agenda = await deployed.daoagendaManager.agendas(_agendaID);
         // console.log("voter :", voter);
         if (agenda[AGENDA_INDEX_STATUS] == AGENDA_STATUS_NOTICE) {
             // console.log("true or false1 : ",await DAOProxyLogicV2.isMemberV2(voter));
-            return (await DAOProxyLogicV2.isMemberV2(voter));
+            return (await DAOProxyLogicV2.isMemberV2(voter,_index));
         } else {
             // console.log("true or false2 : ",await deployed.daoagendaManager.isVoter(_agendaID, voter))
             return (await deployed.daoagendaManager.isVoter(_agendaID, voter));
         }
     }
 
-    async function castVote(_agendaID: any, voter: any, _vote: any) {
+    async function castVote(_agendaID: any, voter: any, _vote: any, _index:any) {
         const agenda1 = await deployed.daoagendaManager.agendas(_agendaID);
         const beforeCountingYes = agenda1[AGENDA_INDEX_COUNTING_YES];
         const beforeCountingNo = agenda1[AGENDA_INDEX_COUNTING_NO];
         const beforeCountingAbstain = agenda1[AGENDA_INDEX_COUNTING_ABSTAIN];
-
-        expect(await isVoter(_agendaID, voter.address)).to.be.equal(true);
+        expect(await isVoter(_agendaID, voter.address,_index)).to.be.equal(true);
         await expect(DAOProxyLogicV2.connect(voter).endAgendaVoting(_agendaID)).to.be.reverted;
         // await DAOProxyLogicV2.castVote(_agendaID, _vote, "test comment", {from: voter});
-        await DAOProxyLogicV2.connect(voter).castVote(_agendaID, _vote, "test comment");
+        await DAOProxyLogicV2.connect(voter).castVote(_agendaID, _vote, "test comment", _index);
 
         const voterInfo2 = await deployed.daoagendaManager.voterInfos(_agendaID, voter.address);
         expect(voterInfo2[VOTER_INFO_ISVOTER]).to.be.equal(true);
@@ -556,7 +557,7 @@ describe('DAOv2Committee', () => {
                     DAOProxyLogicV2.connect(addr1).setSeigManagerV2(
                         deployed.seigManagerV2Proxy.address,
                     )
-                ).to.be.revertedWith("DAOCommitteeV2: msg.sender is not an admin") 
+                ).to.be.revertedWith("DAO: NA") 
             })
 
             it("setSeigManagerV2 can by only owner", async () => {
@@ -579,7 +580,7 @@ describe('DAOv2Committee', () => {
                     DAOProxyLogicV2.connect(addr1).setDaoVault(
                         sequencer1.address,
                     )
-                ).to.be.revertedWith("DAOCommitteeV2: msg.sender is not an admin") 
+                ).to.be.revertedWith("DAO: NA") 
             })
 
             it("setDaoVault can by only owner", async () => {
@@ -598,7 +599,7 @@ describe('DAOv2Committee', () => {
                     DAOProxyLogicV2.connect(addr1).setLayer2Manager(
                         sequencer1.address,
                     )
-                ).to.be.revertedWith("DAOCommitteeV2: msg.sender is not an admin") 
+                ).to.be.revertedWith("DAO: NA") 
             })
 
             it("setLayer2Manager can by only owner", async () => {
@@ -613,7 +614,7 @@ describe('DAOv2Committee', () => {
                     DAOProxyLogicV2.connect(addr1).setAgendaManager(
                         sequencer1.address,
                     )
-                ).to.be.revertedWith("DAOCommitteeV2: msg.sender is not an admin") 
+                ).to.be.revertedWith("DAO: NA") 
             })
 
             it("setAgendaManager can by only owner", async () => {
@@ -632,7 +633,7 @@ describe('DAOv2Committee', () => {
                     DAOProxyLogicV2.connect(addr1).setCandidates(
                         sequencer1.address
                     )
-                ).to.be.revertedWith("DAOCommitteeV2: msg.sender is not an admin") 
+                ).to.be.revertedWith("DAO: NA") 
             })
 
             it("setCandidates can by only owner", async () => {
@@ -649,7 +650,7 @@ describe('DAOv2Committee', () => {
                     DAOProxyLogicV2.connect(addr1).setOptimismSequencer(
                         sequencer1.address
                     )
-                ).to.be.revertedWith("DAOCommitteeV2: msg.sender is not an admin") 
+                ).to.be.revertedWith("DAO: NA") 
             })
 
             it("setOptimismSequencer can by only owner", async () => {
@@ -664,7 +665,7 @@ describe('DAOv2Committee', () => {
                     DAOProxyLogicV2.connect(addr1).setTon(
                         sequencer1.address
                     )
-                ).to.be.revertedWith("DAOCommitteeV2: msg.sender is not an admin") 
+                ).to.be.revertedWith("DAO: NA") 
             })
 
             it("setTon can by only owner", async () => {
@@ -679,7 +680,7 @@ describe('DAOv2Committee', () => {
                     DAOProxyLogicV2.connect(addr1).setActivityRewardPerSecond(
                         123
                     )
-                ).to.be.revertedWith("DAOCommitteeV2: msg.sender is not an admin") 
+                ).to.be.revertedWith("DAO: NA") 
             })
 
             it("setActivityRewardPerSecond can by only owner", async () => {
@@ -700,7 +701,7 @@ describe('DAOv2Committee', () => {
                     DAOProxyLogicV2.connect(addr1).setQuorum(
                         3
                     )
-                ).to.be.revertedWith("DAOCommitteeV2: msg.sender is not an admin") 
+                ).to.be.revertedWith("DAO: NA") 
             })
 
             it("setQuorum can by only owner", async () => {
@@ -720,7 +721,7 @@ describe('DAOv2Committee', () => {
                     DAOProxyLogicV2.connect(addr1).setCreateAgendaFees(
                         daoAgendaInfo.agendaFee
                     )
-                ).to.be.revertedWith("DAOCommitteeV2: msg.sender is not an admin") 
+                ).to.be.revertedWith("DAO: NA") 
             })
 
             it("setCreateAgendaFees can by only owner", async () => {
@@ -740,7 +741,7 @@ describe('DAOv2Committee', () => {
                     DAOProxyLogicV2.connect(addr1).setMinimumNoticePeriodSeconds(
                         daoAgendaInfo.minimumNoticePeriodSeconds
                     )
-                ).to.be.revertedWith("DAOCommitteeV2: msg.sender is not an admin") 
+                ).to.be.revertedWith("DAO: NA") 
             })
 
             it("setMinimumNoticePeriodSeconds can by only owner", async () => {
@@ -755,7 +756,7 @@ describe('DAOv2Committee', () => {
                     DAOProxyLogicV2.connect(addr1).setMinimumVotingPeriodSeconds(
                         daoAgendaInfo.minimumVotingPeriodSeconds
                     )
-                ).to.be.revertedWith("DAOCommitteeV2: msg.sender is not an admin") 
+                ).to.be.revertedWith("DAO: NA") 
             })
 
             it("setMinimumVotingPeriodSeconds can by only owner", async () => {
@@ -770,7 +771,7 @@ describe('DAOv2Committee', () => {
                     DAOProxyLogicV2.connect(addr1).setExecutingPeriodSeconds(
                         daoAgendaInfo.executingPeriodSeconds
                     )
-                ).to.be.revertedWith("DAOCommitteeV2: msg.sender is not an admin") 
+                ).to.be.revertedWith("DAO: NA") 
             })
 
             it("setExecutingPeriodSeconds can by only owner", async () => {
@@ -850,6 +851,7 @@ describe('DAOv2Committee', () => {
                 const deployedEvent = deployed.layer2Manager.interface.parseLog(log);
     
                 let sequencerIndex = deployedEvent.args._index;
+                sequencerIndexSave = deployedEvent.args._index;
     
                 expect(deployedEvent.args._sequencer).to.eq(sequencer1.address);
                 expect(deployedEvent.args._name).to.eq(ethers.utils.formatBytes32String(name));
@@ -894,7 +896,7 @@ describe('DAOv2Committee', () => {
             it("DAOContract check candidate", async () => {
                 expect(await DAOProxyLogicV2.candidatesLengthV2()).to.be.eq(1)
                 expect(await DAOProxyLogicV2.candidatesV2(0)).to.be.eq(sequencer1.address)
-                expect(await DAOProxyLogicV2.isExistCandidateV2(sequencer1.address)).to.be.eq(true);
+                expect(await DAOProxyLogicV2.isExistCandidateV2(sequencer1.address,sequencerIndexSave)).to.be.eq(true);
             })
 
             it("You can stake without approval before staking", async () => {
@@ -976,7 +978,7 @@ describe('DAOv2Committee', () => {
             it("DAOContract check candidate1", async () => {
                 expect(await DAOProxyLogicV2.candidatesLengthV2()).to.be.eq(2)
                 expect(await DAOProxyLogicV2.candidatesV2(1)).to.be.eq(candidate1.address)
-                expect(await DAOProxyLogicV2.isExistCandidateV2(candidate1.address)).to.be.eq(true);
+                expect(await DAOProxyLogicV2.isExistCandidateV2(candidate1.address,sequencerIndexSave)).to.be.eq(true);
             })
 
             it('Approve the minimum deposit and create candidate2.', async () => {
@@ -1018,7 +1020,7 @@ describe('DAOv2Committee', () => {
             it("DAOContract check candidate2", async () => {
                 expect(await DAOProxyLogicV2.candidatesLengthV2()).to.be.eq(3)
                 expect(await DAOProxyLogicV2.candidatesV2(2)).to.be.eq(candidate2.address)
-                expect(await DAOProxyLogicV2.isExistCandidateV2(candidate2.address)).to.be.eq(true);
+                expect(await DAOProxyLogicV2.isExistCandidateV2(candidate2.address,sequencerIndexSave)).to.be.eq(true);
             })
 
             it('Approve the minimum deposit and create candidate3.', async () => {
@@ -1060,7 +1062,7 @@ describe('DAOv2Committee', () => {
             it("DAOContract check candidate3", async () => {
                 expect(await DAOProxyLogicV2.candidatesLengthV2()).to.be.eq(4)
                 expect(await DAOProxyLogicV2.candidatesV2(3)).to.be.eq(candidate3.address)
-                expect(await DAOProxyLogicV2.isExistCandidateV2(candidate3.address)).to.be.eq(true);
+                expect(await DAOProxyLogicV2.isExistCandidateV2(candidate3.address,sequencerIndexSave)).to.be.eq(true);
             })
 
             it('Approve the minimum deposit and create candidate4.', async () => {
@@ -1102,7 +1104,7 @@ describe('DAOv2Committee', () => {
             it("DAOContract check candidate4", async () => {
                 expect(await DAOProxyLogicV2.candidatesLengthV2()).to.be.eq(5)
                 expect(await DAOProxyLogicV2.candidatesV2(4)).to.be.eq(candidate4.address)
-                expect(await DAOProxyLogicV2.isExistCandidateV2(candidate4.address)).to.be.eq(true);
+                expect(await DAOProxyLogicV2.isExistCandidateV2(candidate4.address,sequencerIndexSave)).to.be.eq(true);
             })
         })
 
@@ -1159,14 +1161,14 @@ describe('DAOv2Committee', () => {
                 let maxMeber = Number(await DAOProxyLogicV2.maxMember())
                 await expect(
                     DAOProxyLogicV2.connect(addr1).increaseMaxMember((maxMeber+1),(maxMeber))
-                ).to.be.revertedWith("DAOCommitteeV2: msg.sender is not an admin") 
+                ).to.be.revertedWith("DAO: NA") 
             })
 
             it("increaseMaxMember can not under nowMember", async () => {
                 let maxMeber = Number(await DAOProxyLogicV2.maxMember())
                 await expect(
                     DAOProxyLogicV2.connect(daoAdmin).increaseMaxMember((maxMeber-1),(maxMeber-2))
-                ).to.be.revertedWith("DAO: maxMember error") 
+                ).to.be.revertedWith("DAO: ME") 
             })
             
             it("increaseMaxMember can by only owner", async () => {
@@ -1182,14 +1184,14 @@ describe('DAOv2Committee', () => {
                 // console.log("reducingMamber :", reducingMamber);
                 await expect(
                     DAOProxyLogicV2.connect(addr1).decreaseMaxMember((maxMeber-1),(maxMeber-2))
-                ).to.be.revertedWith("DAOCommitteeV2: msg.sender is not an admin") 
+                ).to.be.revertedWith("DAO: NA") 
             })
 
             it("decreaseMaxMember can not invalid member index", async () => {
                 let maxMeber = Number(await DAOProxyLogicV2.maxMember())
                 await expect(
                     DAOProxyLogicV2.connect(daoAdmin).decreaseMaxMember((maxMeber+1),(maxMeber))
-                ).to.be.revertedWith("DAOCommitteeV2: invalid member index") 
+                ).to.be.revertedWith("DAO: VI") 
             })
 
             it("decreaseMaxMember can not invalid member index", async () => {
@@ -1203,15 +1205,15 @@ describe('DAOv2Committee', () => {
         describe("#7-7. Member challenge", () => {
             it("not candidate not challenge", async () => {
                 await expect(
-                    DAOProxyLogicV2.connect(addr1).changeMember(0)
-                ).to.be.revertedWith("DAOCommitteeV2: not registerd") 
+                    DAOProxyLogicV2.connect(addr1).changeMember(0,sequencerIndexSave)
+                ).to.be.revertedWith("DAO: not registerd") 
             })
 
             it("There is a member of V1, but a V2 candidate challenge", async () => {
                 let changeIndex = 0;
                 let beforeMember = await DAOProxyLogicV2.members(changeIndex)
                 const topic = deployed.daov2committeeV2.interface.getEventTopic('ChangedMember');
-                const receipt = await(await DAOProxyLogicV2.connect(candidate1).changeMember(changeIndex)).wait();
+                const receipt = await(await DAOProxyLogicV2.connect(candidate1).changeMember(changeIndex,sequencerIndexSave)).wait();
                 const log = receipt.logs.find(x => x.topics.indexOf(topic) >= 0);
                 const deployedEvent = deployed.daov2committeeV2.interface.parseLog(log);
                 
@@ -1224,7 +1226,7 @@ describe('DAOv2Committee', () => {
                 let changeIndex = 1;
                 let beforeMember = await DAOProxyLogicV2.members(changeIndex)
                 const topic = deployed.daov2committeeV2.interface.getEventTopic('ChangedMember');
-                const receipt = await(await DAOProxyLogicV2.connect(candidate2).changeMember(changeIndex)).wait();
+                const receipt = await(await DAOProxyLogicV2.connect(candidate2).changeMember(changeIndex,sequencerIndexSave)).wait();
                 const log = receipt.logs.find(x => x.topics.indexOf(topic) >= 0);
                 const deployedEvent = deployed.daov2committeeV2.interface.parseLog(log);
                 
@@ -1232,12 +1234,12 @@ describe('DAOv2Committee', () => {
                 expect(deployedEvent.args.prevMember).to.eq(beforeMember);
                 expect(deployedEvent.args.newMember).to.eq(candidate2.address);
 
-                expect(await DAOProxyLogicV2.isMemberV2(candidate2.address)).to.be.equal(true)
+                expect(await DAOProxyLogicV2.isMemberV2(candidate2.address,sequencerIndexSave)).to.be.equal(true)
                 
                 let changeIndex2 = 2;
                 let beforeMember2 = await DAOProxyLogicV2.members(changeIndex2)
                 const topic2 = deployed.daov2committeeV2.interface.getEventTopic('ChangedMember');
-                const receipt2 = await(await DAOProxyLogicV2.connect(candidate3).changeMember(changeIndex2)).wait();
+                const receipt2 = await(await DAOProxyLogicV2.connect(candidate3).changeMember(changeIndex2,sequencerIndexSave)).wait();
                 const log2 = receipt2.logs.find(x => x.topics.indexOf(topic2) >= 0);
                 const deployedEvent2 = deployed.daov2committeeV2.interface.parseLog(log2);
                 
@@ -1245,14 +1247,14 @@ describe('DAOv2Committee', () => {
                 expect(deployedEvent2.args.prevMember).to.eq(beforeMember2);
                 expect(deployedEvent2.args.newMember).to.eq(candidate3.address);
 
-                expect(await DAOProxyLogicV2.isMemberV2(candidate3.address)).to.be.equal(true)
+                expect(await DAOProxyLogicV2.isMemberV2(candidate3.address,sequencerIndexSave)).to.be.equal(true)
             })
 
             it("If the deposit amount is less, the challenge fails.", async () => {
                 // console.log(await deployed.optimismSequencer["balanceOfLton(uint32,address)"](1, sequencer1.address))
                 // console.log(await deployed.candidate["balanceOfLton(uint32,address)"](3, candidate3.address))
                 await expect(
-                    DAOProxyLogicV2.connect(sequencer1).changeMember(2)
+                    DAOProxyLogicV2.connect(sequencer1).changeMember(2,sequencerIndexSave)
                 ).to.be.revertedWith("not enough amount") 
             })
 
@@ -1260,7 +1262,7 @@ describe('DAOv2Committee', () => {
                 // console.log(await deployed.optimismSequencer["balanceOfLton(uint32,address)"](1, sequencer1.address))
                 // console.log(await deployed.candidate["balanceOfLton(uint32,address)"](2, candidate2.address))
                 await expect(
-                    DAOProxyLogicV2.connect(sequencer1).changeMember(1)
+                    DAOProxyLogicV2.connect(sequencer1).changeMember(1,sequencerIndexSave)
                 ).to.be.revertedWith("not enough amount") 
             })
 
@@ -1268,7 +1270,7 @@ describe('DAOv2Committee', () => {
                 let changeIndex = 0;
                 let beforeMember = await DAOProxyLogicV2.members(changeIndex)
                 const topic = deployed.daov2committeeV2.interface.getEventTopic('ChangedMember');
-                const receipt = await(await DAOProxyLogicV2.connect(sequencer1).changeMember(changeIndex)).wait();
+                const receipt = await(await DAOProxyLogicV2.connect(sequencer1).changeMember(changeIndex,sequencerIndexSave)).wait();
                 const log = receipt.logs.find(x => x.topics.indexOf(topic) >= 0);
                 const deployedEvent = deployed.daov2committeeV2.interface.parseLog(log);
                 
@@ -1280,14 +1282,14 @@ describe('DAOv2Committee', () => {
 
             it("cannot run retire if you are not a member.", async () => {
                 await expect(
-                    DAOProxyLogicV2.connect(addr1).retireMember()
-                ).to.be.revertedWith("DAOCommitteeV2: not a member") 
+                    DAOProxyLogicV2.connect(addr1).retireMember(sequencerIndexSave)
+                ).to.be.revertedWith("DAO: NM") 
             })
 
             it("Members can retire. The member retired at address0.", async () => {
                 let changeIndex = 2;
                 const topic = deployed.daov2committeeV2.interface.getEventTopic('ChangedMember');
-                const receipt = await(await DAOProxyLogicV2.connect(candidate3).retireMember()).wait();
+                const receipt = await(await DAOProxyLogicV2.connect(candidate3).retireMember(sequencerIndexSave)).wait();
                 const log = receipt.logs.find(x => x.topics.indexOf(topic) >= 0);
                 const deployedEvent = deployed.daov2committeeV2.interface.parseLog(log);
                 
@@ -1297,12 +1299,12 @@ describe('DAOv2Committee', () => {
             })
 
             it("Even after retirement, you can register as a member again.", async () => {
-                expect(await DAOProxyLogicV2.isMemberV2(candidate3.address)).to.be.equal(false)
+                expect(await DAOProxyLogicV2.isMemberV2(candidate3.address,sequencerIndexSave)).to.be.equal(false)
 
                 let changeIndex2 = 2;
                 let beforeMember2 = await DAOProxyLogicV2.members(changeIndex2)
                 const topic2 = deployed.daov2committeeV2.interface.getEventTopic('ChangedMember');
-                const receipt2 = await(await DAOProxyLogicV2.connect(candidate3).changeMember(changeIndex2)).wait();
+                const receipt2 = await(await DAOProxyLogicV2.connect(candidate3).changeMember(changeIndex2,sequencerIndexSave)).wait();
                 const log2 = receipt2.logs.find(x => x.topics.indexOf(topic2) >= 0);
                 const deployedEvent2 = deployed.daov2committeeV2.interface.parseLog(log2);
                 
@@ -1310,7 +1312,7 @@ describe('DAOv2Committee', () => {
                 expect(deployedEvent2.args.prevMember).to.be.eq(beforeMember2);
                 expect(deployedEvent2.args.newMember).to.be.eq(candidate3.address);
 
-                expect(await DAOProxyLogicV2.isMemberV2(candidate3.address)).to.be.equal(true)
+                expect(await DAOProxyLogicV2.isMemberV2(candidate3.address,sequencerIndexSave)).to.be.equal(true)
             })
 
             it("fill all slots", async () => {
@@ -1322,8 +1324,8 @@ describe('DAOv2Committee', () => {
             it("can not exceed maximum", async () => {
                 expect(await DAOProxyLogicV2.maxMember()).to.be.equal(3);
                 await expect(
-                    DAOProxyLogicV2.connect(candidate1).changeMember(3)
-                ).to.be.revertedWith("DAOCommitteeV2: invalid member index") 
+                    DAOProxyLogicV2.connect(candidate1).changeMember(3,sequencerIndexSave)
+                ).to.be.revertedWith("DAO: VI") 
             })
         })
     })
@@ -1389,7 +1391,7 @@ describe('DAOv2Committee', () => {
                         for (let j = 0; j < votesList[i].votes.length; j++) {
                     //   for (let j = 0; j < 1; j++) {
                         console.log("candidates[",j,"] : ",candidates[j].address);
-                        await castVote(agendaID, candidates[j], votesList[i].votes[j]);
+                        await castVote(agendaID, candidates[j], votesList[i].votes[j], sequencerIndexSave);
                         }
                     });
         
@@ -1489,7 +1491,7 @@ describe('DAOv2Committee', () => {
             });
     
             it(`cast vote`, async function () {
-                await castVote(agendaID, candidates[0], VOTE_YES);
+                await castVote(agendaID, candidates[0], VOTE_YES, sequencerIndexSave);
             });
     
             it("check vote result/status", async function () {
@@ -1580,8 +1582,8 @@ describe('DAOv2Committee', () => {
             });
     
             it(`cast vote`, async function () {
-              await castVote(agendaID, candidates[0], VOTE_YES);
-              await castVote(agendaID, candidates[1], VOTE_YES);
+              await castVote(agendaID, candidates[0], VOTE_YES, sequencerIndexSave);
+              await castVote(agendaID, candidates[1], VOTE_YES, sequencerIndexSave);
             });
     
             it("check vote result/status", async function () {
@@ -1669,9 +1671,9 @@ describe('DAOv2Committee', () => {
             });
     
             it(`cast vote`, async function () {
-                await castVote(agendaID, candidates[0], VOTE_YES);
-                await castVote(agendaID, candidates[1], VOTE_YES);
-                await castVote(agendaID, candidates[2], VOTE_YES);
+                await castVote(agendaID, candidates[0], VOTE_YES, sequencerIndexSave);
+                await castVote(agendaID, candidates[1], VOTE_YES, sequencerIndexSave);
+                await castVote(agendaID, candidates[2], VOTE_YES, sequencerIndexSave);
             });
     
             it("check vote result/status", async function () {
@@ -1707,7 +1709,7 @@ describe('DAOv2Committee', () => {
               expect(await deployed.daoagendaManager.canExecuteAgenda(agendaID)).to.be.equal(false);
               await expect(
                 DAOProxyLogicV2.executeAgenda(agendaID)
-              ).to.be.revertedWith("DAOCommittee: can not execute the agenda"); 
+              ).to.be.revertedWith("DAO: can not execute the agenda"); 
             });
         });
     })
@@ -1720,33 +1722,33 @@ describe('DAOv2Committee', () => {
       
         describe('Claim activity reward', function () {
             it("Candidates who were not members will not receive any rewards.", async () => {
-                expect(await DAOProxyLogicV2.isMemberV2(candidate4.address)).to.be.equal(false)
-                let claimableAmount = await DAOProxyLogicV2.getClaimableActivityReward(candidate4.address);
+                expect(await DAOProxyLogicV2.isMemberV2(candidate4.address,sequencerIndexSave)).to.be.equal(false)
+                let claimableAmount = await DAOProxyLogicV2.getClaimableActivityReward(candidate4.address,sequencerIndexSave);
                 expect(claimableAmount).to.be.equal(0)
             })
 
             it("Candidates who were members even if they are not current members can receive rewards.", async () => {
-                expect(await DAOProxyLogicV2.isMemberV2(candidate1.address)).to.be.equal(false)
-                let claimableAmount = await DAOProxyLogicV2.getClaimableActivityReward(candidate1.address);
+                expect(await DAOProxyLogicV2.isMemberV2(candidate1.address,sequencerIndexSave)).to.be.equal(false)
+                let claimableAmount = await DAOProxyLogicV2.getClaimableActivityReward(candidate1.address,sequencerIndexSave);
                 expect(claimableAmount).to.be.gt(0)
             })
 
             it("All current members can receive rewards.", async () => {
-                expect(await DAOProxyLogicV2.isMemberV2(sequencer1.address)).to.be.equal(true)
-                expect(await DAOProxyLogicV2.isMemberV2(candidate2.address)).to.be.equal(true)
-                expect(await DAOProxyLogicV2.isMemberV2(candidate3.address)).to.be.equal(true)
-                expect(await DAOProxyLogicV2.getClaimableActivityReward(sequencer1.address)).to.be.gt(0)
-                expect(await DAOProxyLogicV2.getClaimableActivityReward(candidate2.address)).to.be.gt(0)
-                expect(await DAOProxyLogicV2.getClaimableActivityReward(candidate3.address)).to.be.gt(0)
+                expect(await DAOProxyLogicV2.isMemberV2(sequencer1.address,sequencerIndexSave)).to.be.equal(true)
+                expect(await DAOProxyLogicV2.isMemberV2(candidate2.address,sequencerIndexSave)).to.be.equal(true)
+                expect(await DAOProxyLogicV2.isMemberV2(candidate3.address,sequencerIndexSave)).to.be.equal(true)
+                expect(await DAOProxyLogicV2.getClaimableActivityReward(sequencer1.address,sequencerIndexSave)).to.be.gt(0)
+                expect(await DAOProxyLogicV2.getClaimableActivityReward(candidate2.address,sequencerIndexSave)).to.be.gt(0)
+                expect(await DAOProxyLogicV2.getClaimableActivityReward(candidate3.address,sequencerIndexSave)).to.be.gt(0)
             })
 
             it("Anyone who has a claimReward can receive a claim.", async () => {
                 const beforeBalance = await deployed.ton.balanceOf(candidate1.address);
 
-                const claimableAmount = await DAOProxyLogicV2.getClaimableActivityReward(candidate1.address);
+                const claimableAmount = await DAOProxyLogicV2.getClaimableActivityReward(candidate1.address,sequencerIndexSave);
                 expect(claimableAmount).to.be.gt(0)
 
-                await DAOProxyLogicV2.connect(candidate1).claimActivityReward(candidate1.address,true);
+                await DAOProxyLogicV2.connect(candidate1).claimActivityReward(candidate1.address, sequencerIndexSave, true);
 
                 const afterBalance = await deployed.ton.balanceOf(candidate1.address);
 
@@ -1757,11 +1759,11 @@ describe('DAOv2Committee', () => {
                 const beforeBalance = await deployed.ton.balanceOf(sequencer1.address);
                 // console.log(beforeBalance)
 
-                const claimableAmount = await DAOProxyLogicV2.getClaimableActivityReward(sequencer1.address);
+                const claimableAmount = await DAOProxyLogicV2.getClaimableActivityReward(sequencer1.address,sequencerIndexSave);
                 // console.log(claimableAmount)
                 expect(claimableAmount).to.be.gt(0)
 
-                await DAOProxyLogicV2.connect(sequencer1).claimActivityReward(sequencer1.address, true);
+                await DAOProxyLogicV2.connect(sequencer1).claimActivityReward(sequencer1.address, sequencerIndexSave, true);
 
                 const afterBalance = await deployed.ton.balanceOf(sequencer1.address);
                 // console.log(afterBalance)
@@ -1773,10 +1775,10 @@ describe('DAOv2Committee', () => {
 
                 const beforeBalance2 = await deployed.ton.balanceOf(candidate2.address);
 
-                const claimableAmount2 = await DAOProxyLogicV2.getClaimableActivityReward(candidate2.address);
+                const claimableAmount2 = await DAOProxyLogicV2.getClaimableActivityReward(candidate2.address,sequencerIndexSave);
                 expect(claimableAmount2).to.be.gt(0)
 
-                await DAOProxyLogicV2.connect(candidate2).claimActivityReward(candidate2.address, true);
+                await DAOProxyLogicV2.connect(candidate2).claimActivityReward(candidate2.address, sequencerIndexSave, true);
 
                 const afterBalance2 = await deployed.ton.balanceOf(candidate2.address);
 
@@ -1785,10 +1787,10 @@ describe('DAOv2Committee', () => {
 
                 const beforeBalance3 = await deployed.ton.balanceOf(candidate3.address);
 
-                const claimableAmount3 = await DAOProxyLogicV2.getClaimableActivityReward(candidate3.address);
+                const claimableAmount3 = await DAOProxyLogicV2.getClaimableActivityReward(candidate3.address,sequencerIndexSave);
                 expect(claimableAmount3).to.be.gt(0)
 
-                await DAOProxyLogicV2.connect(candidate3).claimActivityReward(candidate3.address, true);
+                await DAOProxyLogicV2.connect(candidate3).claimActivityReward(candidate3.address, sequencerIndexSave, true);
 
                 const afterBalance3 = await deployed.ton.balanceOf(candidate3.address);
 
@@ -1907,8 +1909,8 @@ describe('DAOv2Committee', () => {
             });
     
             it(`cast vote`, async function () {
-                await castVote(agendaID, candidates[0], VOTE_YES);
-                await castVote(agendaID, candidates[1], VOTE_YES);
+                await castVote(agendaID, candidates[0], VOTE_YES, sequencerIndexSave);
+                await castVote(agendaID, candidates[1], VOTE_YES, sequencerIndexSave);
             });
     
             it("check vote result/status", async function () {
@@ -2053,8 +2055,8 @@ describe('DAOv2Committee', () => {
             });
     
             it(`cast vote`, async function () {
-                await castVote(agendaID, candidates[0], VOTE_YES);
-                await castVote(agendaID, candidates[1], VOTE_YES);
+                await castVote(agendaID, candidates[0], VOTE_YES, sequencerIndexSave);
+                await castVote(agendaID, candidates[1], VOTE_YES, sequencerIndexSave);
             });
     
             it("check vote result/status", async function () {
@@ -2108,11 +2110,11 @@ describe('DAOv2Committee', () => {
         })
     })
 
-    describe("#11. callTest", () => {
-        it("just calldata check", async () => {
-            const selector1 = Web3EthAbi.encodeFunctionSignature("setMinimumNoticePeriodSeconds(uint256)");
-            const newMinimumNoticePeriod = 150
-            const data1 = padLeft(newMinimumNoticePeriod.toString(16), 64);
-        })
-    })
+    // describe("#11. callTest", () => {
+    //     it("just calldata check", async () => {
+    //         const selector1 = Web3EthAbi.encodeFunctionSignature("setMinimumNoticePeriodSeconds(uint256)");
+    //         const newMinimumNoticePeriod = 150
+    //         const data1 = padLeft(newMinimumNoticePeriod.toString(16), 64);
+    //     })
+    // })
 })

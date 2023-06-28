@@ -24,7 +24,9 @@ contract StorageStateCommitteeV2 {
 
     address[] public candidatesV2;
 
-    mapping(address => LibDaoV2.CandidateInfoV2) internal _candidateInfosV2;
+    mapping(uint => uint32) public sqMemberIndex;
+
+    mapping(address => mapping(uint32 => LibDaoV2.CandidateInfoV2)) internal _candidateInfosV2;
 
     modifier validLayer2Manager() {
         require(address(layer2Manager) != address(0), "StorageStateCommittee: invalid Layer2Manager");
@@ -36,27 +38,31 @@ contract StorageStateCommitteeV2 {
         _;
     }
 
-    function isMemberV2(address _candidate) public view returns (bool) {
-        return _candidateInfosV2[_candidate].memberJoinedTime > 0;
+    function isMemberV2(address _candidate, uint32 _index) public view returns (bool) {
+        return _candidateInfosV2[_candidate][_index].memberJoinedTime > 0;
     }
 
-    function candidateInfosV2(address _candidate) external view returns (LibDaoV2.CandidateInfoV2 memory) {
-        return _candidateInfosV2[_candidate];
+    function candidateInfosV2(address _candidate, uint32 _index) external view returns (LibDaoV2.CandidateInfoV2 memory) {
+        return _candidateInfosV2[_candidate][_index];
     }
 
-    //0을 리턴하면 V2의 candidate & sequenverCandidate가 아니다.
+    //0을 리턴하면 V2의 candidate & sequenerCandidate가 아니다.
     //1을 리턴하면 V2의 sequencerCandidate이다
     //2를 리턴하면 V2의 candidate이다.
-    function isCandidateV2(address _candidate) public view returns (uint8) {
-        if(_candidateInfosV2[_candidate].sequencerIndex > 0) {
-            return (_candidateInfosV2[_candidate].candidateIndex > 0) ? 2 : 1; 
-            // if(_candidateInfosV2[_candidate].candidateIndex > 0) {
-            //     return 2;
-            // } else {
-            //     return 1;
-            // }
+    function isCandidateV2(address _candidate, uint32 _index) public view returns (uint8) {
+        if(_index > 0){
+            return (_candidateInfosV2[_candidate][_index].candidateIndex > 0) ? 2 : 1; 
         }
         return 0;
+        // if(_candidateInfosV2[_candidate].sequencerIndex > 0) {
+        //     return (_candidateInfosV2[_candidate][_index].candidateIndex > 0) ? 2 : 1; 
+        //     // if(_candidateInfosV2[_candidate].candidateIndex > 0) {
+        //     //     return 2;
+        //     // } else {
+        //     //     return 1;
+        //     // }
+        // }
+        // return 0;
     }
 
 }

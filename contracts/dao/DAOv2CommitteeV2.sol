@@ -109,22 +109,22 @@ contract DAOv2CommitteeV2 is
     );
 
     modifier onlyOwner() {
-        require(hasRole(DEFAULT_ADMIN_ROLE, msg.sender), "DAOCommitteeV2: msg.sender is not an admin");
+        require(hasRole(DEFAULT_ADMIN_ROLE, msg.sender), "DAO: NA");
         _;
     }
 
     modifier validMemberIndex(uint256 _index) {
-        require(_index < maxMember, "DAOCommitteeV2: invalid member index");
+        require(_index < maxMember, "DAO: VI");
         _;
     }
 
     modifier nonZero(address _addr) {
-        require(_addr != address(0), "DAOCommitteeV2: zero address");
+        require(_addr != address(0), "DAO: ZA");
         _;
     }
 
-    modifier onlyMemberV2() {
-        require(isMember(msg.sender) || isMemberV2(msg.sender), "DAOCommitteeV2: not a member");
+    modifier onlyMemberV2(uint32 _index) {
+        require(isMember(msg.sender) || isMemberV2(msg.sender, _index), "DAO: NM");
         _;
     }
 
@@ -240,7 +240,7 @@ contract DAOv2CommitteeV2 is
         external
         onlyOwner
     {
-        require(maxMember < _newMaxMember, "DAO: maxMember error");
+        require(maxMember < _newMaxMember, "DAO: ME");
         uint256 prevMaxMember = maxMember;
         maxMember = _newMaxMember;
         fillMemberSlot();
@@ -290,8 +290,8 @@ contract DAOv2CommitteeV2 is
         onlyOwner
         validAgendaManager
     {
-        require(_quorum > maxMember.div(2), "DAO: quorum error");
-        require(_quorum <= maxMember, "DAO: max member error");
+        require(_quorum > maxMember.div(2), "DAO: QE");
+        require(_quorum <= maxMember, "DAO: ME");
         quorum = _quorum;
         emit QuorumChanged(quorum);
     }
@@ -364,7 +364,7 @@ contract DAOv2CommitteeV2 is
         validLayer2Registry
         validCommitteeL2Factory
     {
-        require(!isExistCandidate(msg.sender), "DAOCommittee: candidate already registerd");
+        require(!isExistCandidate(msg.sender), "DAO: already registerd");
 
         // Candidate
         address candidateContract = candidateFactory.deploy(
@@ -377,7 +377,7 @@ contract DAOv2CommitteeV2 is
 
         require(
             candidateContract != address(0),
-            "DAOCommittee: deployed candidateContract is zero"
+            "DAO: CZ"
         );
         require(
             _candidateInfos[msg.sender].candidateContract == address(0),
@@ -473,9 +473,9 @@ contract DAOv2CommitteeV2 is
         validLayer2Manager
         returns (uint256)
     {
-        require(!isExistCandidateV2(senderAddress), "DAOCommitteeV2: candidate already registerd");
+        require(!isExistCandidateV2(senderAddress,_sequencerIndex), "DAO: already registerd");
 
-        _candidateInfosV2[senderAddress] = LibDaoV2.CandidateInfoV2({
+        _candidateInfosV2[senderAddress][_sequencerIndex] = LibDaoV2.CandidateInfoV2({
             sequencerIndex: _sequencerIndex,
             candidateIndex: _candidateIndex,
             memberJoinedTime: 0,
@@ -498,9 +498,9 @@ contract DAOv2CommitteeV2 is
         validLayer2Manager
         returns (uint256)
     {
-        require(!isExistCandidateV2(senderAddress), "DAOCommitteeV2: candidate already registerd");
+        require(!isExistCandidateV2(senderAddress,_sequencerIndex), "DAO: already registerd");
 
-        _candidateInfosV2[senderAddress] = LibDaoV2.CandidateInfoV2({
+        _candidateInfosV2[senderAddress][_sequencerIndex] = LibDaoV2.CandidateInfoV2({
             sequencerIndex: _sequencerIndex,
             candidateIndex: 0,
             memberJoinedTime: 0,
@@ -518,35 +518,42 @@ contract DAOv2CommitteeV2 is
     /// @param _memberIndex The member slot index to be replaced
     /// @return Whether or not the execution succeeded
     function changeMember(
-        uint256 _memberIndex
+        uint256 _memberIndex,
+        uint32 _sequencerIndex
     )
         external
         validMemberIndex(_memberIndex)
         returns (bool)
     {
-        require(isExistCandidateV2(msg.sender), "DAOCommitteeV2: not registerd");
+        require(isExistCandidateV2(msg.sender,_sequencerIndex), "DAO: not registerd");
         address newMember = msg.sender;
 
-        LibDaoV2.CandidateInfoV2 storage candidateInfo = _candidateInfosV2[newMember];
+        LibDaoV2.CandidateInfoV2 storage candidateInfo = _candidateInfosV2[newMember][_sequencerIndex];
         require(
             candidateInfo.memberJoinedTime == 0,
-            "DAOCommitteeV2: already member"
+            "DAO: already member"
         );
 
         address prevMember = members[_memberIndex];
         // address prevMemberContract = candidateContract(prevMember);
 
+        //
         candidateInfo.memberJoinedTime = uint128(block.timestamp);
         candidateInfo.indexMembers = _memberIndex;
+        //만약 이전 멤버가 V2였다면 해당 멤버의sequencerIndex를 불러옴
+        uint32 preSqIndex = sqMemberIndex[_memberIndex];
+        
 
         members[_memberIndex] = newMember;
+        //memberIndex에 sequencerIndex를 저장
+        sqMemberIndex[_memberIndex] = _sequencerIndex;
 
         if (prevMember == address(0)) {
             emit ChangedMember(_memberIndex, prevMember, newMember);
             return true;
         }
 
-        LibDaoV2.CandidateInfoV2 storage prevCandidateInfo = _candidateInfosV2[prevMember];
+        LibDaoV2.CandidateInfoV2 storage prevCandidateInfo = _candidateInfosV2[prevMember][_sequencerIndex];
 
         //candidateIndex가 0이면 시퀀서로 등록된 것이다.
         /*
@@ -647,13 +654,13 @@ contract DAOv2CommitteeV2 is
 
     /// @notice Retires member
     /// @return Whether or not the execution succeeded
-    function retireMember() onlyMemberV2 external returns (bool) {
-        require((isExistCandidate(msg.sender) || isExistCandidateV2(msg.sender)), "DAO: not registerd");
+    function retireMember(uint32 _index) onlyMemberV2(_index) external returns (bool) {
+        require((isExistCandidate(msg.sender) || isExistCandidateV2(msg.sender,_index)), "DAO: not registerd");
         // address candidate = ICandidate(msg.sender).candidate();
-        LibDaoV2.CandidateInfoV2 storage candidateInfo = _candidateInfosV2[msg.sender];
+        LibDaoV2.CandidateInfoV2 storage candidateInfo = _candidateInfosV2[msg.sender][_index];
         require(
             candidateInfo.indexMembers != 0,
-            "DAOCommittee: already not member"
+            "DAOCommittee: not member"
         );
 
         members[candidateInfo.indexMembers] = address(0);
@@ -697,12 +704,13 @@ contract DAOv2CommitteeV2 is
     function castVote(
         uint256 _agendaID,
         uint256 _vote,
-        string calldata _comment
+        string calldata _comment,
+        uint32 _sqIndex
     )
         external
         validAgendaManager
     {
-        require((isExistCandidate(msg.sender) || isExistCandidateV2(msg.sender)), "DAO: not registerd");
+        require((isExistCandidate(msg.sender) || isExistCandidateV2(msg.sender,_sqIndex)), "DAO: not registerd");
 
         agendaManager.castVote(
             _agendaID,
@@ -740,7 +748,7 @@ contract DAOv2CommitteeV2 is
     function executeAgenda(uint256 _agendaID) external validAgendaManager {
         require(
             agendaManager.canExecuteAgenda(_agendaID),
-            "DAOCommittee: can not execute the agenda"
+            "DAO: can not execute the agenda"
         );
 
          (address[] memory target,
@@ -753,7 +761,7 @@ contract DAOv2CommitteeV2 is
             agendaManager.setExecutedAgenda(_agendaID);
             for (uint256 i = 0; i < target.length; i++) {
                 (bool success, ) = address(target[i]).call(functionBytecode[i]);
-                require(success, "DAOCommittee: Failed to execute the agenda");
+                require(success, "DAO: Failed to agenda");
             }
         } else {
             uint256 succeeded = 0;
@@ -776,7 +784,7 @@ contract DAOv2CommitteeV2 is
     }
 
     /// @notice Claims the activity reward for member
-    function claimActivityReward(address _receiver, bool _version) external {        
+    function claimActivityReward(address _receiver, uint32 _sqIndex, bool _version) external {        
         uint256 amount;
         if(!_version) {
             amount = getClaimableActivityRewardV1(msg.sender);
@@ -785,16 +793,16 @@ contract DAOv2CommitteeV2 is
             CandidateInfo storage candidateInfo = _candidateInfos[candidate];
             require(
                 candidateInfo.candidateContract == msg.sender,
-                "DAO: not candidate"
+                "DAO: not registerd"
             ); 
 
             candidateInfo.claimedTimestamp = uint128(block.timestamp);
             candidateInfo.rewardPeriod = 0;  
         } else {
-            amount = getClaimableActivityReward(msg.sender);
+            amount = getClaimableActivityReward(msg.sender,_sqIndex);
             require(amount > 0, "DAO: claimable ton 0");
-            require(isExistCandidateV2(msg.sender), "DAO: not registerd");
-            LibDaoV2.CandidateInfoV2 storage candidateInfoV2 = _candidateInfosV2[msg.sender];    
+            require(isExistCandidateV2(msg.sender,_sqIndex), "DAO: not registerd");
+            LibDaoV2.CandidateInfoV2 storage candidateInfoV2 = _candidateInfosV2[msg.sender][_sqIndex];    
             candidateInfoV2.claimedTimestamp = uint128(block.timestamp);
             candidateInfoV2.rewardPeriod = 0;
         }
@@ -880,24 +888,24 @@ contract DAOv2CommitteeV2 is
         validLayer2Registry
         validCommitteeL2Factory
     {
-        require(!isExistCandidate(_layer2), "DAOCommittee: candidate already registerd");
+        require(!isExistCandidate(_layer2), "DAO: not registerd");
 
         require(
             _layer2 != address(0),
-            "DAOCommittee: deployed candidateContract is zero"
+            "DAO: CZ"
         );
         require(
             _candidateInfos[_layer2].candidateContract == address(0),
-            "DAOCommittee: The candidate already has contract"
+            "DAO: already has contract"
         );
         ILayer2 layer2 = ILayer2(_layer2);
         require(
             layer2.isLayer2(),
-            "DAOCommittee: invalid layer2 contract"
+            "DAO: invalid layer2"
         );
         require(
             layer2.operator() == _operator,
-            "DAOCommittee: invalid operator"
+            "DAO: invalid operator"
         );
 
         address candidateContract = candidateFactory.deploy(
@@ -910,7 +918,7 @@ contract DAOv2CommitteeV2 is
 
         require(
             candidateContract != address(0),
-            "DAOCommittee: deployed candidateContract is zero"
+            "DAO: CZ"
         );
 
         _candidateInfos[_layer2] = CandidateInfo({
@@ -980,7 +988,7 @@ contract DAOv2CommitteeV2 is
         view
         returns (uint256 totalsupply)
     {
-        require(_candidateContract != address(0), "This account is not a candidate");
+        require(_candidateContract != address(0), "not a candidate");
 
         return ICandidate(_candidateContract).totalStaked();
     }
@@ -993,7 +1001,7 @@ contract DAOv2CommitteeV2 is
         view
         returns (uint256 amount)
     {
-        require(_candidateContract != address(0), "This account is not a candidate");
+        require(_candidateContract != address(0), "not a candidate");
 
         return ICandidate(_candidateContract).stakedOf(_account);
     }
@@ -1053,13 +1061,14 @@ contract DAOv2CommitteeV2 is
         return _candidateInfos[_candidate].candidateContract != address(0);
     }
 
-    function isExistCandidateV2(address _candidate) public view returns (bool isExist) {
+    function isExistCandidateV2(address _candidate, uint32 _sqIndex) public view returns (bool isExist) {
         //sequencerIndex가 0이 아니면 candidate로 등록을 하였다는 의미
-        return _candidateInfosV2[_candidate].sequencerIndex != 0;
+        return _candidateInfosV2[_candidate][_sqIndex].sequencerIndex != 0;
     }
 
-    function getClaimableActivityReward(address _candidate) public view returns (uint256) {
-        LibDaoV2.CandidateInfoV2 storage info = _candidateInfosV2[_candidate];    
+    function getClaimableActivityReward(address _candidate, uint32 _sqIndex) public view returns (uint256) {
+        LibDaoV2.CandidateInfoV2 storage info = _candidateInfosV2[_candidate][_sqIndex];    
+
         uint256 period = info.rewardPeriod;
 
         if (info.memberJoinedTime > 0) {
@@ -1073,27 +1082,6 @@ contract DAOv2CommitteeV2 is
 
         return period.mul(activityRewardPerSecond);
     }
-
-    // function getClaimableActivityReward(address _candidate, bool _version) public view returns (uint256) {
-    //     uint256 period;
-    //     if(_version == false) {
-    //         CandidateInfo storage info = _candidateInfos[_candidate];
-    //         period = info.rewardPeriod;
-
-    //         if (info.memberJoinedTime > 0) {
-    //             period = (info.memberJoinedTime > info.claimedTimestamp) ? period.add(block.timestamp.sub(info.memberJoinedTime)) : period.add(block.timestamp.sub(info.claimedTimestamp));
-    //         }
-    //     } else {
-    //         LibDaoV2.CandidateInfoV2 storage info = _candidateInfosV2[_candidate];    
-    //         period = info.rewardPeriod;
-
-    //         if (info.memberJoinedTime > 0) {
-    //             period = (info.memberJoinedTime > info.claimedTimestamp) ? period.add(block.timestamp.sub(info.memberJoinedTime)) : period.add(block.timestamp.sub(info.claimedTimestamp));
-    //         }
-    //     }
-
-    //     return period.mul(activityRewardPerSecond);
-    // }
 
     function getClaimableActivityRewardV1(address _candidate) public view returns (uint256) {
         CandidateInfo storage info = _candidateInfos[_candidate];
@@ -1109,17 +1097,5 @@ contract DAOv2CommitteeV2 is
         }
 
         return period.mul(activityRewardPerSecond);
-    }
-
-    function toUint32(bytes memory _bytes, uint256 _start) internal pure returns (uint16) {
-        require(_start + 4 >= _start, 'toUint16_overflow');
-        require(_bytes.length >= _start + 4, 'toUint16_outOfBounds');
-        uint16 tempUint;
-
-        assembly {
-            tempUint := mload(add(add(_bytes, 0x4), _start))
-        }
-
-        return tempUint;
     }
 }
