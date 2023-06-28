@@ -648,7 +648,7 @@ contract DAOv2CommitteeV2 is
     /// @notice Retires member
     /// @return Whether or not the execution succeeded
     function retireMember() onlyMemberV2 external returns (bool) {
-        require(isExistCandidateV2(msg.sender), "DAOCommitteeV2: not registerd");
+        require((isExistCandidate(msg.sender) || isExistCandidateV2(msg.sender)), "DAO: not registerd");
         // address candidate = ICandidate(msg.sender).candidate();
         LibDaoV2.CandidateInfoV2 storage candidateInfo = _candidateInfosV2[msg.sender];
         require(
@@ -702,8 +702,7 @@ contract DAOv2CommitteeV2 is
         external
         validAgendaManager
     {
-        require(isExistCandidateV2(msg.sender), "DAOCommitteeV2: not registerd");
-        // CandidateInfo storage candidateInfo = _candidateInfos[msg.sender];
+        require((isExistCandidate(msg.sender) || isExistCandidateV2(msg.sender)), "DAO: not registerd");
 
         agendaManager.castVote(
             _agendaID,
@@ -777,25 +776,30 @@ contract DAOv2CommitteeV2 is
     }
 
     /// @notice Claims the activity reward for member
-    function claimActivityReward(address _receiver) external {
-        require(isExistCandidateV2(msg.sender), "DAOCommittee: not registerd");
-        //msg.sender가 sequencer인지 candidate인지 알기 위해서 소환
-        LibDaoV2.CandidateInfoV2 memory candidateInfoV2 = _candidateInfosV2[msg.sender];
+    function claimActivityReward(address _receiver, bool _version) external {        
+        uint256 amount;
+        if(!_version) {
+            amount = getClaimableActivityRewardV1(msg.sender);
+            require(amount > 0, "DAO: claimable ton 0");
+            address candidate = ICandidate(msg.sender).candidate();
+            CandidateInfo storage candidateInfo = _candidateInfos[candidate];
+            require(
+                candidateInfo.candidateContract == msg.sender,
+                "DAO: not candidate"
+            ); 
 
-        address candidate = ICandidate(msg.sender).candidate();
-        CandidateInfo storage candidateInfo = _candidateInfos[candidate];
-        require(
-            candidateInfo.candidateContract == msg.sender,
-            "DAOCommittee: invalid candidate contract"
-        );
-
-        uint256 amount = getClaimableActivityReward(msg.sender);
-        // console.log("amount : ", amount);
-        require(amount > 0, "DAOCommittee: you don't have claimable ton");
+            candidateInfo.claimedTimestamp = uint128(block.timestamp);
+            candidateInfo.rewardPeriod = 0;  
+        } else {
+            amount = getClaimableActivityReward(msg.sender);
+            require(amount > 0, "DAO: claimable ton 0");
+            require(isExistCandidateV2(msg.sender), "DAO: not registerd");
+            LibDaoV2.CandidateInfoV2 storage candidateInfoV2 = _candidateInfosV2[msg.sender];    
+            candidateInfoV2.claimedTimestamp = uint128(block.timestamp);
+            candidateInfoV2.rewardPeriod = 0;
+        }
 
         daoVault.claimTON(_receiver, amount);
-        candidateInfo.claimedTimestamp = uint128(block.timestamp);
-        candidateInfo.rewardPeriod = 0;
 
         emit ClaimedActivityReward(msg.sender, _receiver, amount);
     }
@@ -1055,44 +1059,67 @@ contract DAOv2CommitteeV2 is
     }
 
     function getClaimableActivityReward(address _candidate) public view returns (uint256) {
-        LibDaoV2.CandidateInfoV2 storage info = _candidateInfosV2[_candidate];
+        LibDaoV2.CandidateInfoV2 storage info = _candidateInfosV2[_candidate];    
         uint256 period = info.rewardPeriod;
 
         if (info.memberJoinedTime > 0) {
-            if (info.memberJoinedTime > info.claimedTimestamp) {
-                period = period.add(block.timestamp.sub(info.memberJoinedTime));
-            } else {
-                period = period.add(block.timestamp.sub(info.claimedTimestamp));
-            }
+            period = (info.memberJoinedTime > info.claimedTimestamp) ? period.add(block.timestamp.sub(info.memberJoinedTime)) : period.add(block.timestamp.sub(info.claimedTimestamp));
+            // if (info.memberJoinedTime > info.claimedTimestamp) {
+            //     period = period.add(block.timestamp.sub(info.memberJoinedTime));
+            // } else {
+            //     period = period.add(block.timestamp.sub(info.claimedTimestamp));
+            // }
         }
 
         return period.mul(activityRewardPerSecond);
     }
+
+    // function getClaimableActivityReward(address _candidate, bool _version) public view returns (uint256) {
+    //     uint256 period;
+    //     if(_version == false) {
+    //         CandidateInfo storage info = _candidateInfos[_candidate];
+    //         period = info.rewardPeriod;
+
+    //         if (info.memberJoinedTime > 0) {
+    //             period = (info.memberJoinedTime > info.claimedTimestamp) ? period.add(block.timestamp.sub(info.memberJoinedTime)) : period.add(block.timestamp.sub(info.claimedTimestamp));
+    //         }
+    //     } else {
+    //         LibDaoV2.CandidateInfoV2 storage info = _candidateInfosV2[_candidate];    
+    //         period = info.rewardPeriod;
+
+    //         if (info.memberJoinedTime > 0) {
+    //             period = (info.memberJoinedTime > info.claimedTimestamp) ? period.add(block.timestamp.sub(info.memberJoinedTime)) : period.add(block.timestamp.sub(info.claimedTimestamp));
+    //         }
+    //     }
+
+    //     return period.mul(activityRewardPerSecond);
+    // }
 
     function getClaimableActivityRewardV1(address _candidate) public view returns (uint256) {
         CandidateInfo storage info = _candidateInfos[_candidate];
         uint256 period = info.rewardPeriod;
 
         if (info.memberJoinedTime > 0) {
-            if (info.memberJoinedTime > info.claimedTimestamp) {
-                period = period.add(block.timestamp.sub(info.memberJoinedTime));
-            } else {
-                period = period.add(block.timestamp.sub(info.claimedTimestamp));
-            }
+            period = (info.memberJoinedTime > info.claimedTimestamp) ? period.add(block.timestamp.sub(info.memberJoinedTime)) : period.add(block.timestamp.sub(info.claimedTimestamp));
+            // if (info.memberJoinedTime > info.claimedTimestamp) {
+            //     period = period.add(block.timestamp.sub(info.memberJoinedTime));
+            // } else {
+            //     period = period.add(block.timestamp.sub(info.claimedTimestamp));
+            // }
         }
 
         return period.mul(activityRewardPerSecond);
     }
 
-    // function toUint32(bytes memory _bytes, uint256 _start) internal pure returns (uint16) {
-    //     require(_start + 4 >= _start, 'toUint16_overflow');
-    //     require(_bytes.length >= _start + 4, 'toUint16_outOfBounds');
-    //     uint16 tempUint;
+    function toUint32(bytes memory _bytes, uint256 _start) internal pure returns (uint16) {
+        require(_start + 4 >= _start, 'toUint16_overflow');
+        require(_bytes.length >= _start + 4, 'toUint16_outOfBounds');
+        uint16 tempUint;
 
-    //     assembly {
-    //         tempUint := mload(add(add(_bytes, 0x4), _start))
-    //     }
+        assembly {
+            tempUint := mload(add(add(_bytes, 0x4), _start))
+        }
 
-    //     return tempUint;
-    // }
+        return tempUint;
+    }
 }

@@ -1166,7 +1166,7 @@ describe('DAOv2Committee', () => {
                 let maxMeber = Number(await DAOProxyLogicV2.maxMember())
                 await expect(
                     DAOProxyLogicV2.connect(daoAdmin).increaseMaxMember((maxMeber-1),(maxMeber-2))
-                ).to.be.revertedWith("DAOCommittee: You have to call decreaseMaxMember to decrease") 
+                ).to.be.revertedWith("DAO: maxMember error") 
             })
             
             it("increaseMaxMember can by only owner", async () => {
@@ -1746,7 +1746,7 @@ describe('DAOv2Committee', () => {
                 const claimableAmount = await DAOProxyLogicV2.getClaimableActivityReward(candidate1.address);
                 expect(claimableAmount).to.be.gt(0)
 
-                await DAOProxyLogicV2.connect(candidate1).claimActivityReward(candidate1.address);
+                await DAOProxyLogicV2.connect(candidate1).claimActivityReward(candidate1.address,true);
 
                 const afterBalance = await deployed.ton.balanceOf(candidate1.address);
 
@@ -1761,7 +1761,7 @@ describe('DAOv2Committee', () => {
                 // console.log(claimableAmount)
                 expect(claimableAmount).to.be.gt(0)
 
-                await DAOProxyLogicV2.connect(sequencer1).claimActivityReward(sequencer1.address);
+                await DAOProxyLogicV2.connect(sequencer1).claimActivityReward(sequencer1.address, true);
 
                 const afterBalance = await deployed.ton.balanceOf(sequencer1.address);
                 // console.log(afterBalance)
@@ -1776,7 +1776,7 @@ describe('DAOv2Committee', () => {
                 const claimableAmount2 = await DAOProxyLogicV2.getClaimableActivityReward(candidate2.address);
                 expect(claimableAmount2).to.be.gt(0)
 
-                await DAOProxyLogicV2.connect(candidate2).claimActivityReward(candidate2.address);
+                await DAOProxyLogicV2.connect(candidate2).claimActivityReward(candidate2.address, true);
 
                 const afterBalance2 = await deployed.ton.balanceOf(candidate2.address);
 
@@ -1788,7 +1788,7 @@ describe('DAOv2Committee', () => {
                 const claimableAmount3 = await DAOProxyLogicV2.getClaimableActivityReward(candidate3.address);
                 expect(claimableAmount3).to.be.gt(0)
 
-                await DAOProxyLogicV2.connect(candidate3).claimActivityReward(candidate3.address);
+                await DAOProxyLogicV2.connect(candidate3).claimActivityReward(candidate3.address, true);
 
                 const afterBalance3 = await deployed.ton.balanceOf(candidate3.address);
 

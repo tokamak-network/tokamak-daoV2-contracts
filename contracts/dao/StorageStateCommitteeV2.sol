@@ -44,13 +44,17 @@ contract StorageStateCommitteeV2 {
         return _candidateInfosV2[_candidate];
     }
 
+    //0을 리턴하면 V2의 candidate & sequenverCandidate가 아니다.
+    //1을 리턴하면 V2의 sequencerCandidate이다
+    //2를 리턴하면 V2의 candidate이다.
     function isCandidateV2(address _candidate) public view returns (uint8) {
         if(_candidateInfosV2[_candidate].sequencerIndex > 0) {
-            if(_candidateInfosV2[_candidate].candidateIndex > 0) {
-                return 2;
-            } else {
-                return 1;
-            }
+            return (_candidateInfosV2[_candidate].candidateIndex > 0) ? 2 : 1; 
+            // if(_candidateInfosV2[_candidate].candidateIndex > 0) {
+            //     return 2;
+            // } else {
+            //     return 1;
+            // }
         }
         return 0;
     }
