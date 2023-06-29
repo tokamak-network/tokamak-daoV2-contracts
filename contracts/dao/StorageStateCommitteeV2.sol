@@ -19,12 +19,15 @@ contract StorageStateCommitteeV2 {
     address public layer2Manager;
     ISeigManagerV2 public seigManagerV2;
     // address public seigManagerV2;
-    ICandidateV2 public candidate;
-    IOptimismSequencer public sequencer;
+    // ICandidateV2 public candidate;
+    // IOptimismSequencer public sequencer;
+    address public candidate;
+    address public sequencer;
 
     address[] public candidatesV2;
 
-    mapping(uint => uint32) public sqMemberIndex;
+    //memberIndex를 넣으면 해당 memberIndex의 sequencerIndex를 리턴
+    mapping(uint => uint32) internal seqIndex;
 
     mapping(address => mapping(uint32 => LibDaoV2.CandidateInfoV2)) internal _candidateInfosV2;
 
