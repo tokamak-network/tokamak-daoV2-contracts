@@ -10,10 +10,10 @@ import { ICandidateV2 } from "../interfaces/ICandidateV2.sol";
 import { IOptimismSequencer } from "../interfaces/IOptimismSequencer.sol";
 
 contract StorageStateCommitteeV2 {
-    address internal _implementation;
-    bool public pauseProxy;
+    // address internal _implementation;
+    // bool public pauseProxy;
 
-    address public logicAddress;  //0x3949c97925e5Aa13e34ddb18EAbf0B70ABB0C7d4 (CommitteeV2 logicAddress)
+    // address public logicAddress;  //0x3949c97925e5Aa13e34ddb18EAbf0B70ABB0C7d4 (CommitteeV2 logicAddress)
 
     // ILayer2Manager public layer2Manager;
     address public layer2Manager;
@@ -54,11 +54,11 @@ contract StorageStateCommitteeV2 {
     //2를 리턴하면 V2의 candidate이다.
     function isCandidateV2(address _candidate, uint32 _index) public view returns (uint8) {
         if(_index > 0){
-            return (_candidateInfosV2[_candidate][_index].candidateIndex > 0) ? 2 : 1; 
+            return (_candidateInfosV2[_candidate][_index].candidateIndex > 0) ? 2 : 1;
         }
         return 0;
         // if(_candidateInfosV2[_candidate].sequencerIndex > 0) {
-        //     return (_candidateInfosV2[_candidate][_index].candidateIndex > 0) ? 2 : 1; 
+        //     return (_candidateInfosV2[_candidate][_index].candidateIndex > 0) ? 2 : 1;
         //     // if(_candidateInfosV2[_candidate].candidateIndex > 0) {
         //     //     return 2;
         //     // } else {
