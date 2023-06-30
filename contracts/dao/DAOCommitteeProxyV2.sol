@@ -4,7 +4,8 @@ pragma abicoder v2;
 
 import "./StorageStateCommittee.sol";
 import "../../node_modules/@openzeppelin/contracts/access/Ownable.sol";
-import "../../node_modules/@openzeppelin/contracts/access/AccessControl.sol";
+// import "../../node_modules/@openzeppelin/contracts/access/AccessControl.sol";
+import {AccessControl} from "../AccessControl/AccessControl.sol";
 import {ERC165A}  from "../AccessControl/ERC165A.sol";
 import {BaseProxyStorageV2} from "../proxy/BaseProxyStorageV2.sol";
 
@@ -12,11 +13,17 @@ import "../interfaces/IProxyEvent.sol";
 
 import "@openzeppelin/contracts/utils/Address.sol";
 
+import "hardhat/console.sol";
+
+
 contract DAOCommitteeProxyV2 is StorageStateCommittee, AccessControl, ERC165A, BaseProxyStorageV2, IProxyEvent {
     address internal _implementation;
     bool public pauseProxy;
 
     modifier onlyOwner2() {
+        // console.log("msg.sedner :", msg.sender);
+        // console.logBytes32(DEFAULT_ADMIN_ROLE);
+        // console.logBool(hasRole(DEFAULT_ADMIN_ROLE, msg.sender));
         require(hasRole(DEFAULT_ADMIN_ROLE, msg.sender), "DAOCommitteeProxyV2: msg.sender is not an admin");
         _;
     }
@@ -43,7 +50,10 @@ contract DAOCommitteeProxyV2 is StorageStateCommittee, AccessControl, ERC165A, B
     function setSelectorImplementations2(
         bytes4[] calldata _selectors,
         address _imp
-    ) public  onlyOwner2 {
+    ) 
+        public  
+        onlyOwner2 
+    {
         require(
             _selectors.length > 0,
             "Proxy: _selectors's size is zero"
