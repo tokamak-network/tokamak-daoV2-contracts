@@ -8,17 +8,13 @@ import "../../node_modules/@openzeppelin/contracts/access/AccessControl.sol";
 import {ERC165A}  from "../AccessControl/ERC165A.sol";
 import {BaseProxyStorageV2} from "../proxy/BaseProxyStorageV2.sol";
 
-// import "../interfaces/IProxyEvent.sol";
+import "../interfaces/IProxyEvent.sol";
 
 import "@openzeppelin/contracts/utils/Address.sol";
 
-contract DAOCommitteeProxyV2 is StorageStateCommittee, AccessControl, ERC165A, BaseProxyStorageV2 {
+contract DAOCommitteeProxyV2 is StorageStateCommittee, AccessControl, ERC165A, BaseProxyStorageV2, IProxyEvent {
     address internal _implementation;
     bool public pauseProxy;
-
-    event Upgraded(address indexed implementation);
-    event SetAliveImplementation(address indexed impl, bool alive);
-    event SetSelectorImplementation(bytes4 indexed selector, address indexed impl);
 
     modifier onlyOwner2() {
         require(hasRole(DEFAULT_ADMIN_ROLE, msg.sender), "DAOCommitteeProxyV2: msg.sender is not an admin");
