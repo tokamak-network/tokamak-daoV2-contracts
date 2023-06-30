@@ -13,7 +13,7 @@ contract StorageStateCommitteeV2 {
     address internal _implementation;
     bool public pauseProxy;
 
-    address public logicAddress;  //0x3949c97925e5Aa13e34ddb18EAbf0B70ABB0C7d4 (CommitteeV2 logicAddress)
+    // address public logicAddress;  //0x3949c97925e5Aa13e34ddb18EAbf0B70ABB0C7d4 (CommitteeV2 logicAddress)
 
     // ILayer2Manager public layer2Manager;
     address public layer2Manager;
