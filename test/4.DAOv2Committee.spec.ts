@@ -1826,13 +1826,13 @@ describe('DAOv2Committee', () => {
         describe('Claim activity reward', function () {
             it("Candidates who were not members will not receive any rewards.", async () => {
                 expect(await DAOProxyLogicV2.isMemberV2(candidate4.address,sequencerIndexSave)).to.be.equal(false)
-                let claimableAmount = await DAOProxyLogicV2.getClaimableActivityReward(candidate4.address,sequencerIndexSave);
+                let claimableAmount = await DAOProxyLogicV2.getClaimableActivityRewardV2(candidate4.address,sequencerIndexSave);
                 expect(claimableAmount).to.be.equal(0)
             })
 
             it("Candidates who were members even if they are not current members can receive rewards.", async () => {
                 expect(await DAOProxyLogicV2.isMemberV2(candidate1.address,sequencerIndexSave)).to.be.equal(false)
-                let claimableAmount = await DAOProxyLogicV2.getClaimableActivityReward(candidate1.address,sequencerIndexSave);
+                let claimableAmount = await DAOProxyLogicV2.getClaimableActivityRewardV2(candidate1.address,sequencerIndexSave);
                 expect(claimableAmount).to.be.gt(0)
             })
 
@@ -1840,15 +1840,15 @@ describe('DAOv2Committee', () => {
                 expect(await DAOProxyLogicV2.isMemberV2(sequencer1.address,sequencerIndexSave)).to.be.equal(true)
                 expect(await DAOProxyLogicV2.isMemberV2(candidate2.address,sequencerIndexSave)).to.be.equal(true)
                 expect(await DAOProxyLogicV2.isMemberV2(candidate3.address,sequencerIndexSave)).to.be.equal(true)
-                expect(await DAOProxyLogicV2.getClaimableActivityReward(sequencer1.address,sequencerIndexSave)).to.be.gt(0)
-                expect(await DAOProxyLogicV2.getClaimableActivityReward(candidate2.address,sequencerIndexSave)).to.be.gt(0)
-                expect(await DAOProxyLogicV2.getClaimableActivityReward(candidate3.address,sequencerIndexSave)).to.be.gt(0)
+                expect(await DAOProxyLogicV2.getClaimableActivityRewardV2(sequencer1.address,sequencerIndexSave)).to.be.gt(0)
+                expect(await DAOProxyLogicV2.getClaimableActivityRewardV2(candidate2.address,sequencerIndexSave)).to.be.gt(0)
+                expect(await DAOProxyLogicV2.getClaimableActivityRewardV2(candidate3.address,sequencerIndexSave)).to.be.gt(0)
             })
 
             it("Anyone who has a claimReward can receive a claim.", async () => {
                 const beforeBalance = await deployed.ton.balanceOf(candidate1.address);
 
-                const claimableAmount = await DAOProxyLogicV2.getClaimableActivityReward(candidate1.address,sequencerIndexSave);
+                const claimableAmount = await DAOProxyLogicV2.getClaimableActivityRewardV2(candidate1.address,sequencerIndexSave);
                 expect(claimableAmount).to.be.gt(0)
 
                 await DAOProxyLogicV2.connect(candidate1).claimActivityReward(candidate1.address, sequencerIndexSave);
@@ -1862,7 +1862,7 @@ describe('DAOv2Committee', () => {
                 const beforeBalance = await deployed.ton.balanceOf(sequencer1.address);
                 // console.log(beforeBalance)
 
-                const claimableAmount = await DAOProxyLogicV2.getClaimableActivityReward(sequencer1.address,sequencerIndexSave);
+                const claimableAmount = await DAOProxyLogicV2.getClaimableActivityRewardV2(sequencer1.address,sequencerIndexSave);
                 // console.log(claimableAmount)
                 expect(claimableAmount).to.be.gt(0)
 
@@ -1878,7 +1878,7 @@ describe('DAOv2Committee', () => {
 
                 const beforeBalance2 = await deployed.ton.balanceOf(candidate2.address);
 
-                const claimableAmount2 = await DAOProxyLogicV2.getClaimableActivityReward(candidate2.address,sequencerIndexSave);
+                const claimableAmount2 = await DAOProxyLogicV2.getClaimableActivityRewardV2(candidate2.address,sequencerIndexSave);
                 expect(claimableAmount2).to.be.gt(0)
 
                 await DAOProxyLogicV2.connect(candidate2).claimActivityReward(candidate2.address, sequencerIndexSave);
@@ -1890,7 +1890,7 @@ describe('DAOv2Committee', () => {
 
                 const beforeBalance3 = await deployed.ton.balanceOf(candidate3.address);
 
-                const claimableAmount3 = await DAOProxyLogicV2.getClaimableActivityReward(candidate3.address,sequencerIndexSave);
+                const claimableAmount3 = await DAOProxyLogicV2.getClaimableActivityRewardV2(candidate3.address,sequencerIndexSave);
                 expect(claimableAmount3).to.be.gt(0)
 
                 await DAOProxyLogicV2.connect(candidate3).claimActivityReward(candidate3.address, sequencerIndexSave);

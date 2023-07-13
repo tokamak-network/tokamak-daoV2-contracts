@@ -972,7 +972,7 @@ contract DAOv2CommitteeV2 is
     function claimActivityReward(address _receiver, uint32 _sqIndex) external {        
         uint256 amount;
         if(_sqIndex == 0) {
-            amount = getClaimableActivityRewardV1(msg.sender);
+            amount = getClaimableActivityReward(msg.sender);
             require(amount > 0, "DAO: TZ");
             address candidate = ICandidate(msg.sender).candidate();
             CandidateInfo storage candidateInfo = _candidateInfos[candidate];
@@ -984,7 +984,7 @@ contract DAOv2CommitteeV2 is
             candidateInfo.claimedTimestamp = uint128(block.timestamp);
             candidateInfo.rewardPeriod = 0;  
         } else {
-            amount = getClaimableActivityReward(msg.sender,_sqIndex);
+            amount = getClaimableActivityRewardV2(msg.sender,_sqIndex);
             require(amount > 0, "DAO: TZ");
             require(isExistCandidateV2(msg.sender,_sqIndex), "DAO: not registerd");
             LibDaoV2.CandidateInfoV2 storage candidateInfoV2 = _candidateInfosV2[msg.sender][_sqIndex];    
@@ -1123,73 +1123,73 @@ contract DAOv2CommitteeV2 is
     //////////////////////////////////////////////////////////////////////
     // view
 
-    function isCandidate(address _candidate) external view returns (bool) {
-        CandidateInfo storage info = _candidateInfos[_candidate];
+    // function isCandidate(address _candidate) external view returns (bool) {
+    //     CandidateInfo storage info = _candidateInfos[_candidate];
 
-        if (info.candidateContract == address(0)) {
-            return false;
-        }
+    //     if (info.candidateContract == address(0)) {
+    //         return false;
+    //     }
 
-        bool supportIsCandidateContract = ERC165Checker.supportsInterface(
-            info.candidateContract,
-            ICandidate(info.candidateContract).isCandidateContract.selector
-        );
+    //     bool supportIsCandidateContract = ERC165Checker.supportsInterface(
+    //         info.candidateContract,
+    //         ICandidate(info.candidateContract).isCandidateContract.selector
+    //     );
 
-        if (supportIsCandidateContract == false) {
-            return false;
-        }
+    //     if (supportIsCandidateContract == false) {
+    //         return false;
+    //     }
 
-        return ICandidate(info.candidateContract).isCandidateContract();
-    }
+    //     return ICandidate(info.candidateContract).isCandidateContract();
+    // }
 
-    function totalSupplyOnCandidate(
-        address _candidate
-    )
-        external
-        view
-        returns (uint256 totalsupply)
-    {
-        address candidateContract = candidateContract(_candidate);
-        return totalSupplyOnCandidateContract(candidateContract);
-    }
+    // function totalSupplyOnCandidate(
+    //     address _candidate
+    // )
+    //     external
+    //     view
+    //     returns (uint256 totalsupply)
+    // {
+    //     address candidateContract = candidateContract(_candidate);
+    //     return totalSupplyOnCandidateContract(candidateContract);
+    // }
 
-    function balanceOfOnCandidate(
-        address _candidate,
-        address _account
-    )
-        external
-        view
-        returns (uint256 amount)
-    {
-        address candidateContract = candidateContract(_candidate);
-        return balanceOfOnCandidateContract(candidateContract, _account);
-    }
+    // function balanceOfOnCandidate(
+    //     address _candidate,
+    //     address _account
+    // )
+    //     external
+    //     view
+    //     returns (uint256 amount)
+    // {
+    //     address candidateContract = candidateContract(_candidate);
+    //     return balanceOfOnCandidateContract(candidateContract, _account);
+    // }
 
         
-    function totalSupplyOnCandidateContract(
-        address _candidateContract
-    )
-        public
-        view
-        returns (uint256 totalsupply)
-    {
-        require(_candidateContract != address(0), "not a candidate");
+    // function totalSupplyOnCandidateContract(
+    //     address _candidateContract
+    // )
+    //     public
+    //     view
+    //     returns (uint256 totalsupply)
+    // {
+    //     require(_candidateContract != address(0), "not a candidate");
 
-        return ICandidate(_candidateContract).totalStaked();
-    }
+    //     return ICandidate(_candidateContract).totalStaked();
+    // }
 
-    function balanceOfOnCandidateContract(
-        address _candidateContract,
-        address _account
-    )
-        public
-        view
-        returns (uint256 amount)
-    {
-        require(_candidateContract != address(0), "not a candidate");
+    // function balanceOfOnCandidateContract(
+    //     address _candidateContract,
+    //     address _account
+    // )
+    //     public
+    //     view
+    //     returns (uint256 amount)
+    // {
+    //     require(_candidateContract != address(0), "not a candidate");
 
-        return ICandidate(_candidateContract).stakedOf(_account);
-    }
+    //     return ICandidate(_candidateContract).stakedOf(_account);
+    // }
 
     function totalSupplyOnCandidateV2(
         uint32 _index
@@ -1251,7 +1251,18 @@ contract DAOv2CommitteeV2 is
         return _candidateInfosV2[_candidate][_sqIndex].sequencerIndex != 0;
     }
 
-    function getClaimableActivityReward(address _candidate, uint32 _sqIndex) public view returns (uint256) {
+    function getClaimableActivityReward(address _candidate) public view returns (uint256) {
+        CandidateInfo storage info = _candidateInfos[_candidate];
+        uint256 period = info.rewardPeriod;
+
+        if (info.memberJoinedTime > 0) {
+            period = (info.memberJoinedTime > info.claimedTimestamp) ? period.add(block.timestamp.sub(info.memberJoinedTime)) : period.add(block.timestamp.sub(info.claimedTimestamp));
+        }
+
+        return period.mul(activityRewardPerSecond);
+    }
+
+    function getClaimableActivityRewardV2(address _candidate, uint32 _sqIndex) public view returns (uint256) {
         LibDaoV2.CandidateInfoV2 storage info = _candidateInfosV2[_candidate][_sqIndex];    
 
         uint256 period = info.rewardPeriod;
@@ -1268,19 +1279,19 @@ contract DAOv2CommitteeV2 is
         return period.mul(activityRewardPerSecond);
     }
 
-    function getClaimableActivityRewardV1(address _candidate) public view returns (uint256) {
-        CandidateInfo storage info = _candidateInfos[_candidate];
-        uint256 period = info.rewardPeriod;
+    // function getClaimableActivityRewardV1(address _candidate) public view returns (uint256) {
+    //     CandidateInfo storage info = _candidateInfos[_candidate];
+    //     uint256 period = info.rewardPeriod;
 
-        if (info.memberJoinedTime > 0) {
-            period = (info.memberJoinedTime > info.claimedTimestamp) ? period.add(block.timestamp.sub(info.memberJoinedTime)) : period.add(block.timestamp.sub(info.claimedTimestamp));
-            // if (info.memberJoinedTime > info.claimedTimestamp) {
-            //     period = period.add(block.timestamp.sub(info.memberJoinedTime));
-            // } else {
-            //     period = period.add(block.timestamp.sub(info.claimedTimestamp));
-            // }
-        }
+    //     if (info.memberJoinedTime > 0) {
+    //         period = (info.memberJoinedTime > info.claimedTimestamp) ? period.add(block.timestamp.sub(info.memberJoinedTime)) : period.add(block.timestamp.sub(info.claimedTimestamp));
+    //         // if (info.memberJoinedTime > info.claimedTimestamp) {
+    //         //     period = period.add(block.timestamp.sub(info.memberJoinedTime));
+    //         // } else {
+    //         //     period = period.add(block.timestamp.sub(info.claimedTimestamp));
+    //         // }
+    //     }
 
-        return period.mul(activityRewardPerSecond);
-    }
+    //     return period.mul(activityRewardPerSecond);
+    // }
 }

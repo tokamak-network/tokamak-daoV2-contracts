@@ -541,7 +541,89 @@ contract DAOv2CommitteeV1 is
     //////////////////////////////////////////////////////////////////////
     // view
 
+    function isCandidate(address _candidate) external view returns (bool) {
+        CandidateInfo storage info = _candidateInfos[_candidate];
+
+        if (info.candidateContract == address(0)) {
+            return false;
+        }
+
+        bool supportIsCandidateContract = ERC165Checker.supportsInterface(
+            info.candidateContract,
+            ICandidate(info.candidateContract).isCandidateContract.selector
+        );
+
+        if (supportIsCandidateContract == false) {
+            return false;
+        }
+
+        return ICandidate(info.candidateContract).isCandidateContract();
+    }
+
+    function totalSupplyOnCandidate(
+        address _candidate
+    )
+        external
+        view
+        returns (uint256 totalsupply)
+    {
+        address candidateContract = candidateContract(_candidate);
+        return totalSupplyOnCandidateContract(candidateContract);
+    }
+
+    function balanceOfOnCandidate(
+        address _candidate,
+        address _account
+    )
+        external
+        view
+        returns (uint256 amount)
+    {
+        address candidateContract = candidateContract(_candidate);
+        return balanceOfOnCandidateContract(candidateContract, _account);
+    }
+
+    function totalSupplyOnCandidateContract(
+        address _candidateContract
+    )
+        public
+        view
+        returns (uint256 totalsupply)
+    {
+        require(_candidateContract != address(0), "not a candidate");
+
+        return ICandidate(_candidateContract).totalStaked();
+    }
+
+    function balanceOfOnCandidateContract(
+        address _candidateContract,
+        address _account
+    )
+        public
+        view
+        returns (uint256 amount)
+    {
+        require(_candidateContract != address(0), "not a candidate");
+
+        return ICandidate(_candidateContract).stakedOf(_account);
+    }
+
+    function candidatesLength() external view returns (uint256) {
+        return candidates.length;
+    }
+
     function isExistCandidate(address _candidate) public view returns (bool isExist) {
         return _candidateInfos[_candidate].candidateContract != address(0);
+    }
+
+    function getClaimableActivityReward(address _candidate) public view returns (uint256) {
+        CandidateInfo storage info = _candidateInfos[_candidate];
+        uint256 period = info.rewardPeriod;
+
+        if (info.memberJoinedTime > 0) {
+            period = (info.memberJoinedTime > info.claimedTimestamp) ? period.add(block.timestamp.sub(info.memberJoinedTime)) : period.add(block.timestamp.sub(info.claimedTimestamp));
+        }
+
+        return period.mul(activityRewardPerSecond);
     }
 }
