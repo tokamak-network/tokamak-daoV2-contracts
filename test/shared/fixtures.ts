@@ -153,7 +153,7 @@ export const daostakingV2Fixtures = async function (): Promise<DAOStakingV2Fixtu
     const TestERC20 = await ethers.getContractFactory('TestERC20')
     const l2ton = (await TestERC20.connect(deployer).deploy()) as TestERC20
 
-    const daov2comLogic_ = await ethers.getContractFactory('DAOv2Committee');
+    const daov2comLogic_ = await ethers.getContractFactory('DAOv2CommitteeV1');
     const daov2comLogic = (await daov2comLogic_.connect(deployer).deploy()) as DAOv2Committee
 
     const daov2comLogicV2_ = await ethers.getContractFactory('DAOv2CommitteeV2');

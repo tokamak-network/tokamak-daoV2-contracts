@@ -33,26 +33,9 @@ contract DAOv2CommitteeV1 is
     using SafeMath for uint256;
     using LibAgenda for *;
 
-    event ActivityRewardChanged(
-        uint256 newReward
-    );
-
-    event CandidateContractCreated(
-        address indexed candidate,
-        address indexed candidateContract,
-        string memo
-    );
-
-    event ChangedMemo(
-        address candidate,
-        string newMemo
-    );
-
-    event Layer2Registered(
-        address indexed candidate,
-        address indexed candidateContract,
-        string memo
-    );
+    //////////////////////////////
+    // Events
+    //////////////////////////////
 
     event AgendaCreated(
         address indexed from,
@@ -68,6 +51,26 @@ contract DAOv2CommitteeV1 is
         address[] target
     );
 
+    event CandidateContractCreated(
+        address indexed candidate,
+        address indexed candidateContract,
+        string memo
+    );
+
+    event Layer2Registered(
+        address indexed candidate,
+        address indexed candidateContract,
+        string memo
+    );
+
+    event ChangedMemo(
+        address candidate,
+        string newMemo
+    );
+
+    event ActivityRewardChanged(
+        uint256 newReward
+    );
 
     modifier onlyOwner() {
         require(hasRole(DEFAULT_ADMIN_ROLE, msg.sender), "DAO: NA");
@@ -83,6 +86,9 @@ contract DAOv2CommitteeV1 is
         require(_addr != address(0), "DAO: ZA");
         _;
     }
+
+    //////////////////////////////////////////////////////////////////////
+    // V1 Owner
 
     /// @notice Set SeigManager contract address
     /// @param _seigManager New SeigManager contract address
@@ -134,18 +140,17 @@ contract DAOv2CommitteeV1 is
         layer2Registry = ILayer2Registry(_layer2Registry);
     }
 
-    /// @notice Set CandidateFactory contract address
-    /// @param _candidateFactory New CandidateFactory contract address
-    function setCandidateFactory(address _candidateFactory) external onlyOwner nonZero(_candidateFactory) {
-        candidateFactory = ICandidateFactory(_candidateFactory);
-    }
-
     /// @notice Set DAOAgendaManager contract address
     /// @param _agendaManager New DAOAgendaManager contract address
     function setAgendaManager(address _agendaManager) external onlyOwner nonZero(_agendaManager) {
         agendaManager = IDAOAgendaManager(_agendaManager);
     }
 
+    /// @notice Set CandidateFactory contract address
+    /// @param _candidateFactory New CandidateFactory contract address
+    function setCandidateFactory(address _candidateFactory) external onlyOwner nonZero(_candidateFactory) {
+        candidateFactory = ICandidateFactory(_candidateFactory);
+    }
 
     /// @notice Set TON contract address
     /// @param _ton New TON contract address
