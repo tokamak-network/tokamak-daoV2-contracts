@@ -217,6 +217,9 @@ contract DAOv2CommitteeV2 is
             rewardPeriod: 0,
             claimedTimestamp: 0
         });
+        console.log("senderAddress :", senderAddress);
+        console.log("_candidateIndex :", _candidateIndex);
+
 
         candidatesV2.push(senderAddress);
 
@@ -385,14 +388,16 @@ contract DAOv2CommitteeV2 is
             candidateInfo.indexMembers = _memberIndex;
 
             prevMember = members[_memberIndex];
+            uint32 preSqIndex = seqIndex[_memberIndex];
+            seqIndex[_memberIndex] = 0;
 
             if (prevMember == address(0)) {
+                members[_memberIndex] = newMember;
                 emit ChangedMember(_memberIndex, prevMember, newMember);
                 return true;
             }
-            uint32 preSqIndex = seqIndex[_memberIndex];
+
             uint8 checkPreMember = isCandidateV2(prevMember, preSqIndex);
-            seqIndex[_memberIndex] = 0;
             if(checkPreMember == 0) {
                 //V1끼리 비교
                 address prevMemberContract = candidateContract(prevMember);
@@ -448,11 +453,15 @@ contract DAOv2CommitteeV2 is
             prevMember = members[_memberIndex];
             if (prevMember == address(0)) {
                 seqIndex[_memberIndex] = _sequencerIndex;
+                members[_memberIndex] = newMember;
                 emit ChangedMember(_memberIndex, prevMember, newMember);
                 return true;
             }
             uint32 preSqIndex = seqIndex[_memberIndex];
+            console.log("preSqIndex :", preSqIndex);
             uint8 checkPreMember = isCandidateV2(prevMember, preSqIndex);
+            console.log("checkPreMember :", checkPreMember);
+            console.log("prevMember :", prevMember);
             if(checkSender == 1) {
                 //newMebemr가 V2의 sequencer일때
                 if (checkPreMember == 0) {
@@ -471,9 +480,11 @@ contract DAOv2CommitteeV2 is
                     prevCandidateInfo.rewardPeriod = uint128(uint256(prevCandidateInfo.rewardPeriod).add(block.timestamp.sub(prevCandidateInfo.memberJoinedTime)));
                     prevCandidateInfo.memberJoinedTime = 0;
                 } else {
-                    LibDaoV2.CandidateInfoV2 storage prevCandidateInfo = _candidateInfosV2[prevMember][_sequencerIndex];
+                    LibDaoV2.CandidateInfoV2 storage prevCandidateInfo = _candidateInfosV2[prevMember][preSqIndex];
+                    console.log(prevCandidateInfo.candidateIndex);
                     if(checkPreMember == 1) {
                         //newMember는 V2의 sequencer, prevMember는 V2의 sequencerCandidate
+                        console.log("sequencerV2");
                         compareAddr = sequencer;
                         compareIndex = prevCandidateInfo.sequencerIndex;    
                         // require(
@@ -482,6 +493,7 @@ contract DAOv2CommitteeV2 is
                         // );
                     } else {
                         //newMember는 V2의 sequencer, prevMember는 V2의 candidate    
+                        console.log("candidateV2");
                         compareAddr = candidate;
                         compareIndex = prevCandidateInfo.candidateIndex;
                         // require(
@@ -493,8 +505,11 @@ contract DAOv2CommitteeV2 is
                     //     IStaking(address(sequencer)).balanceOfLton(candidateInfo.sequencerIndex,newMember) > IStaking(address(compareAddr)).balanceOfLton(compareIndex,prevMember),
                     //     "not enough amount"
                     // );
+                    console.log("compareAddr :", compareAddr);
+                    console.log("prevTON :", IStaking(address(compareAddr)).balanceOfLton(compareIndex,prevMember));
+                    console.log("newTON :", IStaking(address(sequencer)).balanceOfLton(candidateInfo.sequencerIndex,newMember));
                     require(
-                        balanceOfOnSequencerV2(candidateInfo.sequencerIndex,newMember) > IStaking(address(compareAddr)).balanceOfLton(compareIndex,prevMember),
+                        IStaking(address(sequencer)).balanceOfLton(candidateInfo.sequencerIndex,newMember) > IStaking(address(compareAddr)).balanceOfLton(compareIndex,prevMember),
                         "not enough amount"
                     );
                     prevCandidateInfo.indexMembers = 0;
@@ -508,14 +523,14 @@ contract DAOv2CommitteeV2 is
                     address prevMemberContract = candidateContract(prevMember);
                     console.log("prevAddr :", prevMemberContract);
                     console.log("prevTON :", ICandidate(prevMemberContract).totalStaked());
-                    console.log("newTON :", balanceOfOnCandidateV2(candidateInfo.sequencerIndex,newMember));
+                    console.log("newTON :", balanceOfOnCandidateV2(candidateInfo.candidateIndex,newMember));
                     // console.log("newTON :", IStaking(address(candidate)).balanceOfLton(candidateInfo.sequencerIndex,newMember));
                     // require(
                     //     IStaking(address(candidate)).balanceOfLton(candidateInfo.sequencerIndex,newMember) > ICandidate(prevMemberContract).totalStaked(),
                     //     "not enough amount"
                     // );
                     require(
-                        balanceOfOnCandidateV2(candidateInfo.sequencerIndex,newMember) > ICandidate(prevMemberContract).totalStaked(),
+                        balanceOfOnCandidateV2(candidateInfo.candidateIndex,newMember) > ICandidate(prevMemberContract).totalStaked(),
                         "not enough amount"
                     );
                     CandidateInfo storage prevCandidateInfo = _candidateInfos[prevMember];
@@ -546,7 +561,7 @@ contract DAOv2CommitteeV2 is
                     //     "not enough amount"
                     // );
                     require(
-                        balanceOfOnCandidateV2(candidateInfo.sequencerIndex,newMember) > IStaking(address(compareAddr)).balanceOfLton(compareIndex,prevMember),
+                        IStaking(address(candidate)).balanceOfLton(candidateInfo.sequencerIndex,newMember) > IStaking(address(compareAddr)).balanceOfLton(compareIndex,prevMember),
                         "not enough amount"
                     );
                     prevCandidateInfo.indexMembers = 0;
@@ -556,6 +571,7 @@ contract DAOv2CommitteeV2 is
             }
             seqIndex[_memberIndex] = _sequencerIndex;
         }
+        members[_memberIndex] = newMember;
 
         emit ChangedMember(_memberIndex, prevMember, newMember);
         return true;

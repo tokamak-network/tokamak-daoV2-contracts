@@ -184,10 +184,10 @@ describe('DAOv2Committee', () => {
     // }
 
     let candidateInfo = {
-        tonAmount1: ethers.utils.parseEther("5500000"),         //초반 member였다가 뺏김
-        tonAmount2: ethers.utils.parseEther("10100000"),         //member
+        tonAmount1: ethers.utils.parseEther("5500000"),        //초반 member였다가 뺏김
+        tonAmount2: ethers.utils.parseEther("10100000"),       //member
         tonAmount3: ethers.utils.parseEther("450000"),         //member
-        tonAmount4: ethers.utils.parseEther("100"),         //그냥 candidate의 역할만함
+        tonAmount4: ethers.utils.parseEther("100"),            //그냥 candidate의 역할만함
     }
 
     // let sequencerInfo = {
@@ -196,14 +196,14 @@ describe('DAOv2Committee', () => {
 
     let sequencerInfo = {
         deposit1: ethers.utils.parseEther("300"),                //deposit amount
-        tonAmount1: ethers.utils.parseEther("5600000")          //member staking amount
+        tonAmount1: ethers.utils.parseEther("5500000")          //member staking amount
     }
 
     let mainnetDAOstaking = {
         candidate1: ethers.utils.parseEther("5500000"),       //candidate1 amount
         candidate2: ethers.utils.parseEther("10100000"),      //candidate2 amount
         candidate3: ethers.utils.parseEther("450000"),        //candidate3 amount
-        sequencer1: ethers.utils.parseEther("5600000"),        //sequencer amount
+        sequencer1: ethers.utils.parseEther("5500000"),        //sequencer amount
     }
 
 
@@ -1340,10 +1340,10 @@ describe('DAOv2Committee', () => {
                     getAllLayersAfter.optimismSequencerIndexes_.length-1
                 )
 
-                let tx = await DAOProxyLogicV2.balanceOfOnSequencerV2(sequencerIndex,sequencer1.address);
-                console.log("sequencerIndex :", sequencerIndex)
-                console.log("sequencer1 amount : ", tx);
-                console.log("sequencer1 input Amount : ", sequencerInfo.deposit1);
+                // let tx = await DAOProxyLogicV2.balanceOfOnSequencerV2(sequencerIndex,sequencer1.address);
+                // console.log("sequencerIndex :", sequencerIndex)
+                // console.log("sequencer1 amount : ", tx);
+                // console.log("sequencer1 input Amount : ", sequencerInfo.deposit1);
             })
 
             it("DAOContract check candidate", async () => {
@@ -1389,12 +1389,12 @@ describe('DAOv2Committee', () => {
                 expect(await deployed.optimismSequencer.balanceOf(layerIndex, sequencer1.address))
                     .to.eq(balanceOf.add(sequencerInfo.tonAmount1))
 
-                let totalLayers = await deployed.layer2Manager.totalLayers()
-                let sequencerIndex = await deployed.layer2Manager.optimismSequencerIndexes(totalLayers.sub(ethers.constants.One))
-                let tx = await DAOProxyLogicV2.balanceOfOnSequencerV2(sequencerIndex,sequencer1.address);
-                console.log("sequencerIndex :", sequencerIndex)
-                console.log("sequencer1 amount2 : ", tx);
-                console.log("sequencer1 input Amount2 : ", sequencerInfo.tonAmount1);
+                // let totalLayers = await deployed.layer2Manager.totalLayers()
+                // let sequencerIndex = await deployed.layer2Manager.optimismSequencerIndexes(totalLayers.sub(ethers.constants.One))
+                // let tx = await DAOProxyLogicV2.balanceOfOnSequencerV2(sequencerIndex,sequencer1.address);
+                // console.log("sequencerIndex :", sequencerIndex)
+                // console.log("sequencer1 amount2 : ", tx);
+                // console.log("sequencer1 input Amount2 : ", sequencerInfo.tonAmount1);
             })
         })
 
@@ -1433,7 +1433,10 @@ describe('DAOv2Committee', () => {
                 expect(getAllCandidatesBefore.candidateNamesIndexes_.length).to.eq(
                     getAllCandidatesAfter.candidateNamesIndexes_.length-1
                 )
-                let tx = await DAOProxyLogicV2.balanceOfOnCandidateV2(sequencerIndex,candidate1.address);
+
+                let candidateIndex = await deployed.layer2Manager.indexCandidates();
+                let tx = await DAOProxyLogicV2.balanceOfOnCandidateV2(candidateIndex,candidate1.address);
+                console.log("candidateIndex : ", candidateIndex);
                 console.log("candidate1 amount : ", tx);
                 console.log("candidate1 input Amount : ", candidateInfo.tonAmount1);
             })
@@ -1455,14 +1458,16 @@ describe('DAOv2Committee', () => {
     
                 let amount = await deployed.layer2Manager.minimumDepositForCandidate();
 
-                if(candidateInfo.tonAmount2 < amount) {
-                    candidateInfo.tonAmount2 = amount;
-                }
+                // if(candidateInfo.tonAmount2 < amount) {
+                //     console.log("amount : ", amount);
+                //     console.log("candidateInfo.tonAmount2 : ", candidateInfo.tonAmount2);
+                //     candidateInfo.tonAmount2 = amount;
+                // }
     
-                if (amount.gt(await deployed.ton.balanceOf(candidate2.address)))
+                if (candidateInfo.tonAmount2.gt(await deployed.ton.balanceOf(candidate2.address)))
                     await (await deployed.ton.connect(deployed.tonAdmin).mint(candidate2.address, candidateInfo.tonAmount2)).wait();
     
-                if (amount.gte(await deployed.ton.allowance(candidate2.address, deployed.layer2Manager.address)))
+                if (candidateInfo.tonAmount2.gte(await deployed.ton.allowance(candidate2.address, deployed.layer2Manager.address)))
                     await (await deployed.ton.connect(candidate2).approve(deployed.layer2Manager.address, candidateInfo.tonAmount2)).wait();
     
                 const commission = 500;
@@ -1479,7 +1484,9 @@ describe('DAOv2Committee', () => {
                     getAllCandidatesAfter.candidateNamesIndexes_.length-1
                 )
 
-                let tx = await DAOProxyLogicV2.balanceOfOnCandidateV2(sequencerIndex,candidate2.address);
+                let candidateIndex = await deployed.layer2Manager.indexCandidates();
+                let tx = await DAOProxyLogicV2.balanceOfOnCandidateV2(candidateIndex,candidate2.address);
+                console.log("candidateIndex : ", candidateIndex);
                 console.log("candidate2 amount : ", tx);
                 console.log("candidate2 input Amount : ", candidateInfo.tonAmount2);
             })
@@ -1505,10 +1512,10 @@ describe('DAOv2Committee', () => {
                     candidateInfo.tonAmount3 = amount;
                 }
     
-                if (amount.gt(await deployed.ton.balanceOf(candidate3.address)))
+                if (candidateInfo.tonAmount3.gt(await deployed.ton.balanceOf(candidate3.address)))
                     await (await deployed.ton.connect(deployed.tonAdmin).mint(candidate3.address, candidateInfo.tonAmount3)).wait();
     
-                if (amount.gte(await deployed.ton.allowance(candidate3.address, deployed.layer2Manager.address)))
+                if (candidateInfo.tonAmount3.gte(await deployed.ton.allowance(candidate3.address, deployed.layer2Manager.address)))
                     await (await deployed.ton.connect(candidate3).approve(deployed.layer2Manager.address, candidateInfo.tonAmount3)).wait();
     
                 const commission = 500;
@@ -1524,8 +1531,10 @@ describe('DAOv2Committee', () => {
                 expect(getAllCandidatesBefore.candidateNamesIndexes_.length).to.eq(
                     getAllCandidatesAfter.candidateNamesIndexes_.length-1
                 )
-
-                let tx = await DAOProxyLogicV2.balanceOfOnCandidateV2(sequencerIndex,candidate3.address);
+                
+                let candidateIndex = await deployed.layer2Manager.indexCandidates();
+                let tx = await DAOProxyLogicV2.balanceOfOnCandidateV2(candidateIndex,candidate3.address);
+                console.log("candidateIndex : ", candidateIndex);
                 console.log("candidate3 amount : ", tx);
                 console.log("candidate3 input Amount : ", candidateInfo.tonAmount3);
             })
@@ -1551,10 +1560,10 @@ describe('DAOv2Committee', () => {
                     candidateInfo.tonAmount4 = amount;
                 }
     
-                if (amount.gt(await deployed.ton.balanceOf(candidate4.address)))
+                if (candidateInfo.tonAmount4.gt(await deployed.ton.balanceOf(candidate4.address)))
                     await (await deployed.ton.connect(deployed.tonAdmin).mint(candidate4.address, candidateInfo.tonAmount4)).wait();
     
-                if (amount.gte(await deployed.ton.allowance(candidate4.address, deployed.layer2Manager.address)))
+                if (candidateInfo.tonAmount4.gte(await deployed.ton.allowance(candidate4.address, deployed.layer2Manager.address)))
                     await (await deployed.ton.connect(candidate4).approve(deployed.layer2Manager.address, candidateInfo.tonAmount4)).wait();
     
                 const commission = 500;
@@ -1571,7 +1580,9 @@ describe('DAOv2Committee', () => {
                     getAllCandidatesAfter.candidateNamesIndexes_.length-1
                 )
 
-                let tx = await DAOProxyLogicV2.balanceOfOnCandidateV2(sequencerIndex,candidate4.address);
+                let candidateIndex = await deployed.layer2Manager.indexCandidates();
+                let tx = await DAOProxyLogicV2.balanceOfOnCandidateV2(candidateIndex,candidate4.address);
+                console.log("candidateIndex : ", candidateIndex);
                 console.log("candidate4 amount : ", tx);
                 console.log("candidate4 input Amount : ", candidateInfo.tonAmount4);
             })
@@ -1728,8 +1739,9 @@ describe('DAOv2Committee', () => {
             it("If the deposit amount is less, the challenge fails.", async () => {
                 // console.log(await deployed.optimismSequencer["balanceOfLton(uint32,address)"](1, sequencer1.address))
                 // console.log(await deployed.candidate["balanceOfLton(uint32,address)"](3, candidate3.address))
+                console.log("sequencerIndexSave :", sequencerIndexSave);
                 await expect(
-                    DAOProxyLogicV2.connect(sequencer1).changeMember(2,sequencerIndexSave)
+                    DAOProxyLogicV2.connect(sequencer1).changeMember(1,sequencerIndexSave)
                 ).to.be.revertedWith("not enough amount") 
             })
 
@@ -1737,12 +1749,12 @@ describe('DAOv2Committee', () => {
                 // console.log(await deployed.optimismSequencer["balanceOfLton(uint32,address)"](1, sequencer1.address))
                 // console.log(await deployed.candidate["balanceOfLton(uint32,address)"](2, candidate2.address))
                 await expect(
-                    DAOProxyLogicV2.connect(sequencer1).changeMember(1,sequencerIndexSave)
+                    DAOProxyLogicV2.connect(sequencer1).changeMember(0,sequencerIndexSave)
                 ).to.be.revertedWith("not enough amount") 
             })
 
             it("If the deposit amount is greater, the challenge succeeds.", async () => {
-                let changeIndex = 0;
+                let changeIndex = 2;
                 let beforeMember = await DAOProxyLogicV2.members(changeIndex)
                 const topic = deployed.daov2committeeV2.interface.getEventTopic('ChangedMember');
                 const receipt = await(await DAOProxyLogicV2.connect(sequencer1).changeMember(changeIndex,sequencerIndexSave)).wait();
@@ -1751,7 +1763,7 @@ describe('DAOv2Committee', () => {
                 
                 expect(deployedEvent.args.slotIndex).to.eq(changeIndex);
                 expect(deployedEvent.args.prevMember).to.eq(beforeMember);
-                expect(deployedEvent.args.prevMember).to.eq(candidate1.address);
+                expect(deployedEvent.args.prevMember).to.eq(candidate3.address);
                 expect(deployedEvent.args.newMember).to.eq(sequencer1.address);
             })
 
