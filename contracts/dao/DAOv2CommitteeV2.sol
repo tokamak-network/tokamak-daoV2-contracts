@@ -458,8 +458,12 @@ contract DAOv2CommitteeV2 is
                 if (checkPreMember == 0) {
                     //prevMember가 V1일때
                     address prevMemberContract = candidateContract(prevMember);
+                    // require(
+                    //     IStaking(address(sequencer)).balanceOfLton(candidateInfo.sequencerIndex,newMember) > ICandidate(prevMemberContract).totalStaked(),
+                    //     "not enough amount"
+                    // );
                     require(
-                        IStaking(address(sequencer)).balanceOfLton(candidateInfo.sequencerIndex,newMember) > ICandidate(prevMemberContract).totalStaked(),
+                        balanceOfOnSequencerV2(candidateInfo.sequencerIndex,newMember) > ICandidate(prevMemberContract).totalStaked(),
                         "not enough amount"
                     );
                     CandidateInfo storage prevCandidateInfo = _candidateInfos[prevMember];
@@ -485,8 +489,12 @@ contract DAOv2CommitteeV2 is
                         //     "not enough amount"
                         // );
                     }
+                    // require(
+                    //     IStaking(address(sequencer)).balanceOfLton(candidateInfo.sequencerIndex,newMember) > IStaking(address(compareAddr)).balanceOfLton(compareIndex,prevMember),
+                    //     "not enough amount"
+                    // );
                     require(
-                        IStaking(address(sequencer)).balanceOfLton(candidateInfo.sequencerIndex,newMember) > IStaking(address(compareAddr)).balanceOfLton(compareIndex,prevMember),
+                        balanceOfOnSequencerV2(candidateInfo.sequencerIndex,newMember) > IStaking(address(compareAddr)).balanceOfLton(compareIndex,prevMember),
                         "not enough amount"
                     );
                     prevCandidateInfo.indexMembers = 0;
@@ -500,14 +508,14 @@ contract DAOv2CommitteeV2 is
                     address prevMemberContract = candidateContract(prevMember);
                     console.log("prevAddr :", prevMemberContract);
                     console.log("prevTON :", ICandidate(prevMemberContract).totalStaked());
-                    console.log("newTON :", totalSupplyOnCandidateV2(candidateInfo.sequencerIndex));
+                    console.log("newTON :", balanceOfOnCandidateV2(candidateInfo.sequencerIndex,newMember));
                     // console.log("newTON :", IStaking(address(candidate)).balanceOfLton(candidateInfo.sequencerIndex,newMember));
                     // require(
                     //     IStaking(address(candidate)).balanceOfLton(candidateInfo.sequencerIndex,newMember) > ICandidate(prevMemberContract).totalStaked(),
                     //     "not enough amount"
                     // );
                     require(
-                        totalSupplyOnCandidateV2(candidateInfo.sequencerIndex) > ICandidate(prevMemberContract).totalStaked(),
+                        balanceOfOnCandidateV2(candidateInfo.sequencerIndex,newMember) > ICandidate(prevMemberContract).totalStaked(),
                         "not enough amount"
                     );
                     CandidateInfo storage prevCandidateInfo = _candidateInfos[prevMember];
@@ -533,8 +541,12 @@ contract DAOv2CommitteeV2 is
                         //     "not enough amount"
                         // );
                     }
+                    // require(
+                    //     IStaking(address(candidate)).balanceOfLton(candidateInfo.sequencerIndex,newMember) > IStaking(address(compareAddr)).balanceOfLton(compareIndex,prevMember),
+                    //     "not enough amount"
+                    // );
                     require(
-                        IStaking(address(candidate)).balanceOfLton(candidateInfo.sequencerIndex,newMember) > IStaking(address(compareAddr)).balanceOfLton(compareIndex,prevMember),
+                        balanceOfOnCandidateV2(candidateInfo.sequencerIndex,newMember) > IStaking(address(compareAddr)).balanceOfLton(compareIndex,prevMember),
                         "not enough amount"
                     );
                     prevCandidateInfo.indexMembers = 0;
@@ -688,22 +700,22 @@ contract DAOv2CommitteeV2 is
         uint32 _index,
         address _account
     )
-        external
+        public
         view
         returns (uint256 amount)
     {
-        return IStaking(address(candidate)).balanceOfLton(_index,_account);
+        return _toRAY(IStaking(address(candidate)).balanceOfLton(_index,_account));
     }
 
     function balanceOfOnSequencerV2(
         uint32 _index,
         address _account
     )
-        external
+        public
         view
         returns (uint256 amount)
     {
-        return IStaking(address(sequencer)).balanceOfLton(_index,_account);
+        return _toRAY(IStaking(address(sequencer)).balanceOfLton(_index,_account));
     }
 
 
