@@ -55,6 +55,15 @@ const {
 // DAOVault(메인넷에 있는 것 사용)
 // DAOAgendaManager(메인넷에 있는 것 사용)는 메인넷 Contract에서 Owner를 변경하는 방식으로 사용
 // 기존 Proxy에 새로운 V2로직을 연동하여서 V2에 대한 새로운 DAO를 테스트
+// DAO Challenge 시나리오
+// 1. 시퀀서는 현재 1개(1명), 해당 시퀀서에 대한 후보자는 4명으로 challenge가능한 인원은 총 5명이다.
+// 2. candidate1이 0번 member로 들어감
+// 3. candidate2가 1번 member로 들어감
+// 4. candidate3가 2번 member로 들어감
+// 5. sequencer가 member보다 더작은 양을 challenge하면 실패
+// 6. sequencer가 memeber랑 같은 양을 challenge하면 실패
+// 7. seqeuncer가 memeber보다 더 많은 양을 가지고 Challenge하면 성공
+// 최종 멤버 sequencer1, candidate2, candidate3
 describe('DAOv2Committee', () => {
     let deployer: Signer, addr1: Signer, sequencer1: Signer, daoPrivateOwner: Signer
 
@@ -74,6 +83,8 @@ describe('DAOv2Committee', () => {
     let layer2RegistryAddress = "0x0b3E174A2170083e770D5d4Cf56774D221b7063e";
     let addr0 = "0x0000000000000000000000000000000000000000"
 
+    let richTONuser = "0x59facEd23b5100BD8729CF32ef7B59c49908eD15";
+
     let adminBytes = "0x0000000000000000000000000000000000000000000000000000000000000000"
 
     let deployAddress = "0xf0B595d10a92A5a9BC3fFeA7e79f5d266b6035Ea"
@@ -89,6 +100,7 @@ describe('DAOv2Committee', () => {
     let DAOOwner: any
     
     let daoAdmin: Signer
+    let richUser: Signer
 
     let agendaID: any
     let beforeAgendaID: any
@@ -164,16 +176,35 @@ describe('DAOv2Committee', () => {
         executingPeriodSeconds: 200
     }
 
+    // let candidateInfo = {
+    //     tonAmount1: ethers.utils.parseEther("200"),         //초반 member였다가 뺏김
+    //     tonAmount2: ethers.utils.parseEther("300"),         //member
+    //     tonAmount3: ethers.utils.parseEther("400"),         //member
+    //     tonAmount4: ethers.utils.parseEther("100"),         //그냥 candidate의 역할만함
+    // }
+
     let candidateInfo = {
-        tonAmount1: ethers.utils.parseEther("200"),
-        tonAmount2: ethers.utils.parseEther("300"),
-        tonAmount3: ethers.utils.parseEther("400"),
-        tonAmount4: ethers.utils.parseEther("100"),
+        tonAmount1: ethers.utils.parseEther("5500000"),         //초반 member였다가 뺏김
+        tonAmount2: ethers.utils.parseEther("10100000"),         //member
+        tonAmount3: ethers.utils.parseEther("450000"),         //member
+        tonAmount4: ethers.utils.parseEther("100"),         //그냥 candidate의 역할만함
     }
 
+    // let sequencerInfo = {
+    //     tonAmount1: ethers.utils.parseEther("300")          //member
+    // }
+
     let sequencerInfo = {
-        tonAmount1: ethers.utils.parseEther("300")
+        tonAmount1: ethers.utils.parseEther("5600000")          //member
     }
+
+    let mainnetDAOstaking = {
+        candidate1: ethers.utils.parseEther("5500000"),       //candidate1 amount
+        candidate2: ethers.utils.parseEther("10100000"),      //candidate2 amount
+        candidate3: ethers.utils.parseEther("450000"),        //candidate3 amount
+        sequencer1: ethers.utils.parseEther("5600000"),        //sequencer amount
+    }
+
 
     async function isVoter(_agendaID: any, voter: any, _index: any) {
         const agenda = await deployed.daoagendaManager.agendas(_agendaID);
@@ -193,7 +224,7 @@ describe('DAOv2Committee', () => {
         const beforeCountingNo = agenda1[AGENDA_INDEX_COUNTING_NO];
         const beforeCountingAbstain = agenda1[AGENDA_INDEX_COUNTING_ABSTAIN];
         expect(await isVoter(_agendaID, voter.address,_index)).to.be.equal(true);
-        await expect(DAOProxyLogicV2.connect(voter).endAgendaVoting(_agendaID)).to.be.reverted;
+        await expect(DAOProxyLogicV1.connect(voter).endAgendaVoting(_agendaID)).to.be.reverted;
         // await DAOProxyLogicV2.castVote(_agendaID, _vote, "test comment", {from: voter});
         await DAOProxyLogicV2.connect(voter).castVote(_agendaID, _vote, "test comment", _index);
 
@@ -260,6 +291,12 @@ describe('DAOv2Committee', () => {
             "0x8ac7230489e80000",
         ]);
 
+        richUser = await ethers.getSigner(richTONuser)
+        await ethers.provider.send("hardhat_impersonateAccount",[richTONuser]);
+        await ethers.provider.send("hardhat_setBalance", [
+            richTONuser,
+            "0x8ac7230489e80000",
+        ]);
     })
 
     describe("#0. setting DAOProxy and daov2Committe", () => {
@@ -669,1066 +706,1076 @@ describe('DAOv2Committee', () => {
         })
     })
 
-    // describe("#1. SeigManagerV2 set", () => {
-    //     describe("#1-1. initialize", () => {
-    //         it("initialize can be excuted by owner", async () => {
-    //             await deployed.seigManagerV2Proxy.connect(deployer).initialize(
-    //                     seigManagerInfo.ton,
-    //                     seigManagerInfo.wton,
-    //                     seigManagerInfo.tot,
-    //                     [
-    //                         seigManagerInfo.seigManagerV1,
-    //                         deployed.layer2ManagerProxy.address,
-    //                         deployed.optimismSequencerProxy.address,
-    //                         deployed.candidateProxy.address
-    //                     ],
-    //                     seigManagerInfo.seigPerBlock,
-    //                     seigManagerInfo.minimumBlocksForUpdateSeig,
-    //                     [
-    //                         seigManagerInfo.ratesTonStakers,
-    //                         seigManagerInfo.ratesDao,
-    //                         seigManagerInfo.ratesStosHolders,
-    //                         seigManagerInfo.ratesUnits,
-    //                     ]
-    //             );
+    describe("#1. SeigManagerV2 set", () => {
+        describe("#1-1. initialize", () => {
+            it("initialize can be excuted by owner", async () => {
+                await deployed.seigManagerV2Proxy.connect(deployer).initialize(
+                        seigManagerInfo.ton,
+                        seigManagerInfo.wton,
+                        seigManagerInfo.tot,
+                        [
+                            seigManagerInfo.seigManagerV1,
+                            deployed.layer2ManagerProxy.address,
+                            deployed.optimismSequencerProxy.address,
+                            deployed.candidateProxy.address
+                        ],
+                        seigManagerInfo.seigPerBlock,
+                        seigManagerInfo.minimumBlocksForUpdateSeig,
+                        [
+                            seigManagerInfo.ratesTonStakers,
+                            seigManagerInfo.ratesDao,
+                            seigManagerInfo.ratesStosHolders,
+                            seigManagerInfo.ratesUnits,
+                        ]
+                );
                 
     
-    //             expect(await deployed.seigManagerV2Proxy.ton()).to.eq(seigManagerInfo.ton)
-    //             expect(await deployed.seigManagerV2Proxy.wton()).to.eq(seigManagerInfo.wton)
-    //             expect(await deployed.seigManagerV2Proxy.tot()).to.eq(seigManagerInfo.tot)
-    //             expect(await deployed.seigManagerV2Proxy.seigManagerV1()).to.eq(seigManagerInfo.seigManagerV1)
-    //             expect(await deployed.seigManagerV2Proxy.layer2Manager()).to.eq(deployed.layer2ManagerProxy.address)
-    //             expect(await deployed.seigManagerV2Proxy.optimismSequencer()).to.eq(deployed.optimismSequencerProxy.address)
-    //             expect(await deployed.seigManagerV2Proxy.candidate()).to.eq(deployed.candidateProxy.address)
+                expect(await deployed.seigManagerV2Proxy.ton()).to.eq(seigManagerInfo.ton)
+                expect(await deployed.seigManagerV2Proxy.wton()).to.eq(seigManagerInfo.wton)
+                expect(await deployed.seigManagerV2Proxy.tot()).to.eq(seigManagerInfo.tot)
+                expect(await deployed.seigManagerV2Proxy.seigManagerV1()).to.eq(seigManagerInfo.seigManagerV1)
+                expect(await deployed.seigManagerV2Proxy.layer2Manager()).to.eq(deployed.layer2ManagerProxy.address)
+                expect(await deployed.seigManagerV2Proxy.optimismSequencer()).to.eq(deployed.optimismSequencerProxy.address)
+                expect(await deployed.seigManagerV2Proxy.candidate()).to.eq(deployed.candidateProxy.address)
     
-    //             expect(await deployed.seigManagerV2Proxy.seigPerBlock()).to.eq(seigManagerInfo.seigPerBlock)
-    //             expect(await deployed.seigManagerV2Proxy.minimumBlocksForUpdateSeig()).to.eq(seigManagerInfo.minimumBlocksForUpdateSeig)
-    //         })
-    //     })
+                expect(await deployed.seigManagerV2Proxy.seigPerBlock()).to.eq(seigManagerInfo.seigPerBlock)
+                expect(await deployed.seigManagerV2Proxy.minimumBlocksForUpdateSeig()).to.eq(seigManagerInfo.minimumBlocksForUpdateSeig)
+            })
+        })
 
-    //     describe("#1-2. setSeigPerBlock", () => {
-    //         it('setSeigPerBlock can be executed by only owner ', async () => {
-    //             const seigPerBlock = ethers.BigNumber.from("3920000000000000001");
+        describe("#1-2. setSeigPerBlock", () => {
+            it('setSeigPerBlock can be executed by only owner ', async () => {
+                const seigPerBlock = ethers.BigNumber.from("3920000000000000001");
     
-    //             await deployed.seigManagerV2.connect(deployer).setSeigPerBlock(seigPerBlock)
+                await deployed.seigManagerV2.connect(deployer).setSeigPerBlock(seigPerBlock)
                 
-    //             expect(await deployed.seigManagerV2.seigPerBlock()).to.eq(seigPerBlock)
+                expect(await deployed.seigManagerV2.seigPerBlock()).to.eq(seigPerBlock)
     
-    //             await deployed.seigManagerV2.connect(deployer).setSeigPerBlock(seigManagerInfo.seigPerBlock)
-    //             expect(await deployed.seigManagerV2.seigPerBlock()).to.eq(seigManagerInfo.seigPerBlock)
-    //         })
-    //     })
+                await deployed.seigManagerV2.connect(deployer).setSeigPerBlock(seigManagerInfo.seigPerBlock)
+                expect(await deployed.seigManagerV2.seigPerBlock()).to.eq(seigManagerInfo.seigPerBlock)
+            })
+        })
 
-    //     describe("#1-3. setMinimumBlocksForUpdateSeig", () => {
-    //         it('setMinimumBlocksForUpdateSeig can be executed by only owner ', async () => {
-    //             const minimumBlocksForUpdateSeig = 100;
-    //             await deployed.seigManagerV2.connect(deployer).setMinimumBlocksForUpdateSeig(minimumBlocksForUpdateSeig);
+        describe("#1-3. setMinimumBlocksForUpdateSeig", () => {
+            it('setMinimumBlocksForUpdateSeig can be executed by only owner ', async () => {
+                const minimumBlocksForUpdateSeig = 100;
+                await deployed.seigManagerV2.connect(deployer).setMinimumBlocksForUpdateSeig(minimumBlocksForUpdateSeig);
                 
-    //             expect(await deployed.seigManagerV2.minimumBlocksForUpdateSeig()).to.eq(minimumBlocksForUpdateSeig);
-    //         })
-    //     })
+                expect(await deployed.seigManagerV2.minimumBlocksForUpdateSeig()).to.eq(minimumBlocksForUpdateSeig);
+            })
+        })
 
-    //     describe("#1-4. setLastSeigBlock", () => {
-    //         it('LastSeigBlock can be executed by only owner ', async () => {
-    //             const block = await ethers.provider.getBlock('latest')
-    //             await deployed.seigManagerV2.connect(deployer).setLastSeigBlock(block.number)
-    //             expect(await deployed.seigManagerV2.lastSeigBlock()).to.eq(block.number)
+        describe("#1-4. setLastSeigBlock", () => {
+            it('LastSeigBlock can be executed by only owner ', async () => {
+                const block = await ethers.provider.getBlock('latest')
+                await deployed.seigManagerV2.connect(deployer).setLastSeigBlock(block.number)
+                expect(await deployed.seigManagerV2.lastSeigBlock()).to.eq(block.number)
     
-    //             await expect(
-    //                 deployed.seigManagerV2.connect(deployer).setLastSeigBlock(block.number)
-    //                 ).to.be.revertedWith("same")
-    //         })
-    //     })
+                await expect(
+                    deployed.seigManagerV2.connect(deployer).setLastSeigBlock(block.number)
+                    ).to.be.revertedWith("same")
+            })
+        })
 
-    //     describe("#1-5. setDividendRates", () => {
-    //         it('setDividendRates can be executed by only owner ', async () => {
-    //             await deployed.seigManagerV2.connect(deployer).setDividendRates(
-    //                 rates.ratesDao,
-    //                 rates.ratesStosHolders,
-    //                 rates.ratesTonStakers,
-    //                 rates.ratesUnits
-    //             )
+        describe("#1-5. setDividendRates", () => {
+            it('setDividendRates can be executed by only owner ', async () => {
+                await deployed.seigManagerV2.connect(deployer).setDividendRates(
+                    rates.ratesDao,
+                    rates.ratesStosHolders,
+                    rates.ratesTonStakers,
+                    rates.ratesUnits
+                )
             
-    //             expect(await deployed.seigManagerV2.ratesDao()).to.eq(rates.ratesDao)
-    //             expect(await deployed.seigManagerV2.ratesStosHolders()).to.eq(rates.ratesStosHolders)
-    //             expect(await deployed.seigManagerV2.ratesTonStakers()).to.eq(rates.ratesTonStakers)
-    //             expect(await deployed.seigManagerV2.ratesUnits()).to.eq(rates.ratesUnits)
-    //         })    
-    //     })
+                expect(await deployed.seigManagerV2.ratesDao()).to.eq(rates.ratesDao)
+                expect(await deployed.seigManagerV2.ratesStosHolders()).to.eq(rates.ratesStosHolders)
+                expect(await deployed.seigManagerV2.ratesTonStakers()).to.eq(rates.ratesTonStakers)
+                expect(await deployed.seigManagerV2.ratesUnits()).to.eq(rates.ratesUnits)
+            })    
+        })
 
-    //     describe("#1-6. setAddress", () => {
-    //         it('setAddress can be executed by only owner ', async () => {
+        describe("#1-6. setAddress", () => {
+            it('setAddress can be executed by only owner ', async () => {
 
-    //             await deployed.seigManagerV2.connect(deployer).setAddress(
-    //                 daoValutAddress,
-    //                 deployed.stosDistribute.address
-    //             )
+                await deployed.seigManagerV2.connect(deployer).setAddress(
+                    daoValutAddress,
+                    deployed.stosDistribute.address
+                )
             
-    //             expect(await deployed.seigManagerV2.dao()).to.eq(daoValutAddress)
-    //             expect(await deployed.seigManagerV2.stosDistribute()).to.eq(deployed.stosDistribute.address)
+                expect(await deployed.seigManagerV2.dao()).to.eq(daoValutAddress)
+                expect(await deployed.seigManagerV2.stosDistribute()).to.eq(deployed.stosDistribute.address)
     
-    //         })
-    //     })
-    // })
+            })
+        })
+    })
 
-    // describe("#2. Layer2Manger set", () => {
-    //     describe("#2-1. initialize", async () => {
-    //         it('initialize can be executed by only owner', async () => {
-    //             await deployed.layer2ManagerProxy.connect(deployer).initialize(
-    //                 seigManagerInfo.ton,
-    //                 deployed.seigManagerV2Proxy.address,
-    //                 deployed.optimismSequencerProxy.address,
-    //                 deployed.candidateProxy.address,
-    //                 layer2ManagerInfo.minimumDepositForSequencer,
-    //                 layer2ManagerInfo.minimumDepositForCandidate,
-    //                 layer2ManagerInfo.delayBlocksForWithdraw
-    //             )
+    describe("#2. Layer2Manger set", () => {
+        describe("#2-1. initialize", async () => {
+            it('initialize can be executed by only owner', async () => {
+                await deployed.layer2ManagerProxy.connect(deployer).initialize(
+                    seigManagerInfo.ton,
+                    deployed.seigManagerV2Proxy.address,
+                    deployed.optimismSequencerProxy.address,
+                    deployed.candidateProxy.address,
+                    layer2ManagerInfo.minimumDepositForSequencer,
+                    layer2ManagerInfo.minimumDepositForCandidate,
+                    layer2ManagerInfo.delayBlocksForWithdraw
+                )
     
-    //             expect(await deployed.layer2ManagerProxy.ton()).to.eq(seigManagerInfo.ton)
-    //             expect(await deployed.layer2ManagerProxy.seigManagerV2()).to.eq(deployed.seigManagerV2Proxy.address)
-    //             expect(await deployed.layer2ManagerProxy.optimismSequencer()).to.eq(deployed.optimismSequencerProxy.address)
-    //             expect(await deployed.layer2ManagerProxy.candidate()).to.eq(deployed.candidateProxy.address)
+                expect(await deployed.layer2ManagerProxy.ton()).to.eq(seigManagerInfo.ton)
+                expect(await deployed.layer2ManagerProxy.seigManagerV2()).to.eq(deployed.seigManagerV2Proxy.address)
+                expect(await deployed.layer2ManagerProxy.optimismSequencer()).to.eq(deployed.optimismSequencerProxy.address)
+                expect(await deployed.layer2ManagerProxy.candidate()).to.eq(deployed.candidateProxy.address)
     
-    //             expect(await deployed.layer2ManagerProxy.minimumDepositForSequencer()).to.eq(layer2ManagerInfo.minimumDepositForSequencer)
-    //             expect(await deployed.layer2ManagerProxy.minimumDepositForCandidate()).to.eq(layer2ManagerInfo.minimumDepositForCandidate)
+                expect(await deployed.layer2ManagerProxy.minimumDepositForSequencer()).to.eq(layer2ManagerInfo.minimumDepositForSequencer)
+                expect(await deployed.layer2ManagerProxy.minimumDepositForCandidate()).to.eq(layer2ManagerInfo.minimumDepositForCandidate)
     
-    //             expect(await deployed.layer2ManagerProxy.delayBlocksForWithdraw()).to.eq(layer2ManagerInfo.delayBlocksForWithdraw)
-    //         })
-    //     })
+                expect(await deployed.layer2ManagerProxy.delayBlocksForWithdraw()).to.eq(layer2ManagerInfo.delayBlocksForWithdraw)
+            })
+        })
 
-    //     describe("#2-2. setMaxLayer2Count", async () => {
-    //         it('setMaxLayer2Count can be executed by only owner ', async () => {
-    //             const maxLayer2Count = ethers.BigNumber.from("3");
-    //             await deployed.layer2Manager.connect(deployer).setMaxLayer2Count(maxLayer2Count)
-    //             expect(await deployed.layer2Manager.maxLayer2Count()).to.eq(maxLayer2Count)
-    //         })
-    //     })
+        describe("#2-2. setMaxLayer2Count", async () => {
+            it('setMaxLayer2Count can be executed by only owner ', async () => {
+                const maxLayer2Count = ethers.BigNumber.from("3");
+                await deployed.layer2Manager.connect(deployer).setMaxLayer2Count(maxLayer2Count)
+                expect(await deployed.layer2Manager.maxLayer2Count()).to.eq(maxLayer2Count)
+            })
+        })
 
-    //     describe("#2-3. setMinimumDepositForSequencer", async () => {
-    //         it('setMinimumDepositForSequencer can be executed by only owner ', async () => {
-    //             const minimumDepositForSequencer = ethers.utils.parseEther("200");
-    //             await deployed.layer2Manager.connect(deployer).setMinimumDepositForSequencer(minimumDepositForSequencer)
-    //             expect(await deployed.layer2Manager.minimumDepositForSequencer()).to.eq(minimumDepositForSequencer)
+        describe("#2-3. setMinimumDepositForSequencer", async () => {
+            it('setMinimumDepositForSequencer can be executed by only owner ', async () => {
+                const minimumDepositForSequencer = ethers.utils.parseEther("200");
+                await deployed.layer2Manager.connect(deployer).setMinimumDepositForSequencer(minimumDepositForSequencer)
+                expect(await deployed.layer2Manager.minimumDepositForSequencer()).to.eq(minimumDepositForSequencer)
     
-    //             await deployed.layer2Manager.connect(deployer).setMinimumDepositForSequencer(layer2ManagerInfo.minimumDepositForSequencer)
-    //             expect(await deployed.layer2Manager.minimumDepositForSequencer()).to.eq(layer2ManagerInfo.minimumDepositForSequencer)
-    //         })
-    //     })
+                await deployed.layer2Manager.connect(deployer).setMinimumDepositForSequencer(layer2ManagerInfo.minimumDepositForSequencer)
+                expect(await deployed.layer2Manager.minimumDepositForSequencer()).to.eq(layer2ManagerInfo.minimumDepositForSequencer)
+            })
+        })
 
-    //     describe("#2-4. setRatioSecurityDepositOfTvl", async () => {
-    //         it('setRatioSecurityDepositOfTvl can be executed by only owner ', async () => {
-    //             const ratioSecurityDepositOfTvl = 1000;
-    //             await deployed.layer2Manager.connect(deployer).setRatioSecurityDepositOfTvl(ratioSecurityDepositOfTvl)
-    //             expect(await deployed.layer2Manager.ratioSecurityDepositOfTvl()).to.eq(ratioSecurityDepositOfTvl)
+        describe("#2-4. setRatioSecurityDepositOfTvl", async () => {
+            it('setRatioSecurityDepositOfTvl can be executed by only owner ', async () => {
+                const ratioSecurityDepositOfTvl = 1000;
+                await deployed.layer2Manager.connect(deployer).setRatioSecurityDepositOfTvl(ratioSecurityDepositOfTvl)
+                expect(await deployed.layer2Manager.ratioSecurityDepositOfTvl()).to.eq(ratioSecurityDepositOfTvl)
     
-    //             await deployed.layer2Manager.connect(deployer).setRatioSecurityDepositOfTvl(layer2ManagerInfo.ratioSecurityDepositOfTvl)
-    //             expect(await deployed.layer2Manager.ratioSecurityDepositOfTvl()).to.eq(layer2ManagerInfo.ratioSecurityDepositOfTvl)
-    //         })
-    //     })
+                await deployed.layer2Manager.connect(deployer).setRatioSecurityDepositOfTvl(layer2ManagerInfo.ratioSecurityDepositOfTvl)
+                expect(await deployed.layer2Manager.ratioSecurityDepositOfTvl()).to.eq(layer2ManagerInfo.ratioSecurityDepositOfTvl)
+            })
+        })
 
-    //     describe("#2-5. setMinimumDepositForCandidate", async () => {
-    //         it('setMinimumDepositForSequencer can be executed by only owner ', async () => {
-    //             const minimumDepositForCandidate = ethers.utils.parseEther("100");
-    //             await deployed.layer2Manager.connect(deployer).setMinimumDepositForCandidate(minimumDepositForCandidate)
-    //             expect(await deployed.layer2Manager.minimumDepositForCandidate()).to.eq(minimumDepositForCandidate)
+        describe("#2-5. setMinimumDepositForCandidate", async () => {
+            it('setMinimumDepositForSequencer can be executed by only owner ', async () => {
+                const minimumDepositForCandidate = ethers.utils.parseEther("100");
+                await deployed.layer2Manager.connect(deployer).setMinimumDepositForCandidate(minimumDepositForCandidate)
+                expect(await deployed.layer2Manager.minimumDepositForCandidate()).to.eq(minimumDepositForCandidate)
     
-    //             await deployed.layer2Manager.connect(deployer).setMinimumDepositForCandidate(layer2ManagerInfo.minimumDepositForCandidate)
-    //             expect(await deployed.layer2Manager.minimumDepositForCandidate()).to.eq(layer2ManagerInfo.minimumDepositForCandidate)
-    //         })
-    //     })
+                await deployed.layer2Manager.connect(deployer).setMinimumDepositForCandidate(layer2ManagerInfo.minimumDepositForCandidate)
+                expect(await deployed.layer2Manager.minimumDepositForCandidate()).to.eq(layer2ManagerInfo.minimumDepositForCandidate)
+            })
+        })
 
-    //     describe("#2-6. setDelayBlocksForWithdraw", async () => {
-    //         it('setDelayBlocksForWithdraw can be executed by only owner ', async () => {
-    //             const delayBlocksForWithdraw = ethers.BigNumber.from("100");
-    //             await deployed.layer2Manager.connect(deployer).setDelayBlocksForWithdraw(delayBlocksForWithdraw)
-    //             expect(await deployed.layer2Manager.delayBlocksForWithdraw()).to.eq(delayBlocksForWithdraw)
+        describe("#2-6. setDelayBlocksForWithdraw", async () => {
+            it('setDelayBlocksForWithdraw can be executed by only owner ', async () => {
+                const delayBlocksForWithdraw = ethers.BigNumber.from("100");
+                await deployed.layer2Manager.connect(deployer).setDelayBlocksForWithdraw(delayBlocksForWithdraw)
+                expect(await deployed.layer2Manager.delayBlocksForWithdraw()).to.eq(delayBlocksForWithdraw)
     
     
-    //             await deployed.layer2Manager.connect(deployer).setDelayBlocksForWithdraw(layer2ManagerInfo.delayBlocksForWithdraw)
-    //             expect(await deployed.layer2Manager.delayBlocksForWithdraw()).to.eq(layer2ManagerInfo.delayBlocksForWithdraw)
-    //         })
-    //     })
+                await deployed.layer2Manager.connect(deployer).setDelayBlocksForWithdraw(layer2ManagerInfo.delayBlocksForWithdraw)
+                expect(await deployed.layer2Manager.delayBlocksForWithdraw()).to.eq(layer2ManagerInfo.delayBlocksForWithdraw)
+            })
+        })
 
-    //     describe("#2-7. setDAOCommittee", async () => {
-    //         it('setDAOCommittee can be executed by only owner', async () => {
-    //             await deployed.layer2Manager.connect(deployer).setDAOCommittee(DAOProxy.address)
-    //             expect(await deployed.layer2Manager.DAOCommittee()).to.eq(DAOProxy.address)
-    //         })
-    //     })
-    // })
+        describe("#2-7. setDAOCommittee", async () => {
+            it('setDAOCommittee can be executed by only owner', async () => {
+                await deployed.layer2Manager.connect(deployer).setDAOCommittee(DAOProxy.address)
+                expect(await deployed.layer2Manager.DAOCommittee()).to.eq(DAOProxy.address)
+            })
+        })
+    })
 
-    // describe("#3. OptimismSequencer set", () => {
-    //     describe("#3-1. initialize", async () => {
-    //         it('initialize can be executed by only owner', async () => {
-    //             await deployed.optimismSequencerProxy.connect(deployer).initialize(
-    //                 seigManagerInfo.ton,
-    //                 deployed.seigManagerV2Proxy.address,
-    //                 deployed.layer2ManagerProxy.address,
-    //                 addr1.address
-    //             )
+    describe("#3. OptimismSequencer set", () => {
+        describe("#3-1. initialize", async () => {
+            it('initialize can be executed by only owner', async () => {
+                await deployed.optimismSequencerProxy.connect(deployer).initialize(
+                    seigManagerInfo.ton,
+                    deployed.seigManagerV2Proxy.address,
+                    deployed.layer2ManagerProxy.address,
+                    addr1.address
+                )
     
-    //             expect(await deployed.optimismSequencerProxy.ton()).to.eq(seigManagerInfo.ton)
-    //             expect(await deployed.optimismSequencerProxy.seigManagerV2()).to.eq(deployed.seigManagerV2Proxy.address)
-    //             expect(await deployed.optimismSequencerProxy.layer2Manager()).to.eq(deployed.layer2ManagerProxy.address)
-    //         })
-    //     })
-    // })
+                expect(await deployed.optimismSequencerProxy.ton()).to.eq(seigManagerInfo.ton)
+                expect(await deployed.optimismSequencerProxy.seigManagerV2()).to.eq(deployed.seigManagerV2Proxy.address)
+                expect(await deployed.optimismSequencerProxy.layer2Manager()).to.eq(deployed.layer2ManagerProxy.address)
+            })
+        })
+    })
 
-    // describe("#4. Candidate set", () => {
-    //     describe("#4-1. initialize", () => {
-    //         it('initialize can be executed by only owner', async () => {
-    //             await deployed.candidateProxy.connect(deployer).initialize(
-    //                 seigManagerInfo.ton,
-    //                 deployed.seigManagerV2Proxy.address,
-    //                 deployed.layer2ManagerProxy.address,
-    //                 addr1.address
-    //             )
+    describe("#4. Candidate set", () => {
+        describe("#4-1. initialize", () => {
+            it('initialize can be executed by only owner', async () => {
+                await deployed.candidateProxy.connect(deployer).initialize(
+                    seigManagerInfo.ton,
+                    deployed.seigManagerV2Proxy.address,
+                    deployed.layer2ManagerProxy.address,
+                    addr1.address
+                )
 
-    //             expect(await deployed.candidateProxy.ton()).to.eq(seigManagerInfo.ton)
-    //             expect(await deployed.candidateProxy.seigManagerV2()).to.eq(deployed.seigManagerV2Proxy.address)
-    //             expect(await deployed.candidateProxy.layer2Manager()).to.eq(deployed.layer2ManagerProxy.address)
-    //             expect(await deployed.candidateProxy.fwReceipt()).to.eq(addr1.address)
-    //         })
-    //     })
-    // })
+                expect(await deployed.candidateProxy.ton()).to.eq(seigManagerInfo.ton)
+                expect(await deployed.candidateProxy.seigManagerV2()).to.eq(deployed.seigManagerV2Proxy.address)
+                expect(await deployed.candidateProxy.layer2Manager()).to.eq(deployed.layer2ManagerProxy.address)
+                expect(await deployed.candidateProxy.fwReceipt()).to.eq(addr1.address)
+            })
+        })
+    })
 
-    // describe("#7. DAOv2Committee set", () => {
-    //     describe("#7-0. Role Test", () => {
-    //         it("hasRole", async () => {
-    //             let tx = await DAOProxyLogicV2.connect(DAOOwner).hasRole(
-    //                 "0x0000000000000000000000000000000000000000000000000000000000000000",
-    //                 deployer.address
-    //             )
-    //             expect(tx).to.be.eq(false);
-    //             let tx2 = await DAOProxyLogicV2.connect(DAOOwner).hasRole(
-    //                 "0x0000000000000000000000000000000000000000000000000000000000000000",
-    //                 DAOOwner.address
-    //             )
-    //             expect(tx2).to.be.eq(true);
-    //         })
-    //         it("grantRole can not by not owner", async () => {
-    //             await expect(
-    //                 DAOProxyLogicV2.connect(addr1).grantRole(
-    //                     deployed.seigManagerV2Proxy.address,
-    //                 )
-    //             ).to.be.revertedWith("") 
-    //         })
+    describe("#7. DAOv2Committee set", () => {
+        describe("#7-0. Role Test", () => {
+            it("hasRole", async () => {
+                let tx = await DAOProxyLogicV2.connect(DAOOwner).hasRole(
+                    "0x0000000000000000000000000000000000000000000000000000000000000000",
+                    deployer.address
+                )
+                expect(tx).to.be.eq(false);
+                let tx2 = await DAOProxyLogicV2.connect(DAOOwner).hasRole(
+                    "0x0000000000000000000000000000000000000000000000000000000000000000",
+                    DAOOwner.address
+                )
+                expect(tx2).to.be.eq(true);
+            })
+            it("grantRole can not by not owner", async () => {
+                await expect(
+                    DAOProxyLogicV2.connect(addr1).grantRole(
+                        deployed.seigManagerV2Proxy.address,
+                    )
+                ).to.be.revertedWith("") 
+            })
 
-    //         it("grantRole can by only owner", async () => {
-    //             await DAOProxyLogicV2.connect(daoAdmin).grantRole(
-    //                 "0x0000000000000000000000000000000000000000000000000000000000000000",
-    //                 deployer.address
-    //             )
-    //             expect(await DAOProxyLogicV2.connect(daoAdmin).hasRole(
-    //                 "0x0000000000000000000000000000000000000000000000000000000000000000",
-    //                 deployer.address
-    //             )).to.be.eq(true)
-    //         })
+            it("grantRole can by only owner", async () => {
+                await DAOProxyLogicV2.connect(daoAdmin).grantRole(
+                    "0x0000000000000000000000000000000000000000000000000000000000000000",
+                    deployer.address
+                )
+                expect(await DAOProxyLogicV2.connect(daoAdmin).hasRole(
+                    "0x0000000000000000000000000000000000000000000000000000000000000000",
+                    deployer.address
+                )).to.be.eq(true)
+            })
 
-    //         it("DEFAULT_ADMIN_ROLE", async () => {
-    //             let tx = await DAOProxyLogicV2.connect(DAOOwner).DEFAULT_ADMIN_ROLE()
-    //             expect(tx).to.be.equal("0x0000000000000000000000000000000000000000000000000000000000000000")
-    //         })
+            it("DEFAULT_ADMIN_ROLE", async () => {
+                let tx = await DAOProxyLogicV2.connect(DAOOwner).DEFAULT_ADMIN_ROLE()
+                expect(tx).to.be.equal("0x0000000000000000000000000000000000000000000000000000000000000000")
+            })
 
-    //         it("revokeRole can not by owner", async () => {
-    //             await expect(
-    //                 DAOProxyLogicV2.connect(addr1).revokeRole(
-    //                     deployed.seigManagerV2Proxy.address,
-    //                 )
-    //             ).to.be.revertedWith("") 
-    //         })
+            it("revokeRole can not by owner", async () => {
+                await expect(
+                    DAOProxyLogicV2.connect(addr1).revokeRole(
+                        deployed.seigManagerV2Proxy.address,
+                    )
+                ).to.be.revertedWith("") 
+            })
 
-    //         it("revokeRole can by only owner", async () => {
-    //             await DAOProxyLogicV2.connect(daoAdmin).revokeRole(
-    //                 "0x0000000000000000000000000000000000000000000000000000000000000000",
-    //                 deployer.address
-    //             )
-    //             expect(await DAOProxyLogicV2.connect(daoAdmin).hasRole(
-    //                 "0x0000000000000000000000000000000000000000000000000000000000000000",
-    //                 deployer.address
-    //             )).to.be.eq(false)
-    //         })
+            it("revokeRole can by only owner", async () => {
+                await DAOProxyLogicV2.connect(daoAdmin).revokeRole(
+                    "0x0000000000000000000000000000000000000000000000000000000000000000",
+                    deployer.address
+                )
+                expect(await DAOProxyLogicV2.connect(daoAdmin).hasRole(
+                    "0x0000000000000000000000000000000000000000000000000000000000000000",
+                    deployer.address
+                )).to.be.eq(false)
+            })
 
-    //     })
+        })
 
-    //     describe("#7-1. initialize setting", () => {
-    //         it("setSeigManagerV2 can not by not owner", async () => {
-    //             await expect(
-    //                 DAOProxyLogicV2.connect(addr1).setSeigManagerV2(
-    //                     deployed.seigManagerV2Proxy.address,
-    //                 )
-    //             ).to.be.revertedWith("DAO: NA") 
-    //         })
+        describe("#7-1. initialize setting", () => {
+            it("setSeigManagerV2 can not by not owner", async () => {
+                await expect(
+                    DAOProxyLogicV2.connect(addr1).setSeigManagerV2(
+                        deployed.seigManagerV2Proxy.address,
+                    )
+                ).to.be.revertedWith("DAO: NA") 
+            })
 
-    //         it("setSeigManagerV2 can by only owner", async () => {
-    //             await DAOProxyLogicV2.connect(daoAdmin).setSeigManagerV2(
-    //                 deployed.seigManagerV2Proxy.address,
-    //             );
-    //             expect(await DAOProxyLogicV2.ton()).to.be.eq(deployed.ton.address);
-    //             expect(await DAOProxyLogicV2.seigManagerV2()).to.be.eq(deployed.seigManagerV2Proxy.address);
-    //             expect(await DAOProxyLogicV2.daoVault()).to.be.eq(deployed.daovault.address);
-    //             expect(await DAOProxyLogicV2.agendaManager()).to.be.eq(deployed.daoagendaManager.address);
-    //             expect(await DAOProxyLogicV2.layer2Registry()).to.be.eq(layer2RegistryAddress);
-    //             // console.log("layer2Manger : ",await DAOProxyLogicV2.layer2Manager());
-    //             // console.log("candidate : ",await DAOProxyLogicV2.candidate());
-    //             // console.log("sequencer : ",await DAOProxyLogicV2.sequencer());
-    //             // console.log("pauseProxy : ",await DAOProxyLogicV2.pauseProxy());
-    //         })
+            it("setSeigManagerV2 can by only owner", async () => {
+                await DAOProxyLogicV2.connect(daoAdmin).setSeigManagerV2(
+                    deployed.seigManagerV2Proxy.address,
+                );
+                expect(await DAOProxyLogicV2.ton()).to.be.eq(deployed.ton.address);
+                expect(await DAOProxyLogicV2.seigManagerV2()).to.be.eq(deployed.seigManagerV2Proxy.address);
+                expect(await DAOProxyLogicV2.daoVault()).to.be.eq(deployed.daovault.address);
+                expect(await DAOProxyLogicV2.agendaManager()).to.be.eq(deployed.daoagendaManager.address);
+                expect(await DAOProxyLogicV2.layer2Registry()).to.be.eq(layer2RegistryAddress);
+                // console.log("layer2Manger : ",await DAOProxyLogicV2.layer2Manager());
+                // console.log("candidate : ",await DAOProxyLogicV2.candidate());
+                // console.log("sequencer : ",await DAOProxyLogicV2.sequencer());
+                // console.log("pauseProxy : ",await DAOProxyLogicV2.pauseProxy());
+            })
 
-    //         it("setDaoVault can not by not owner", async () => {
-    //             await expect(
-    //                 DAOProxyLogicV2.connect(addr1).setDaoVault(
-    //                     sequencer1.address,
-    //                 )
-    //             ).to.be.revertedWith("DAO: NA") 
-    //         })
+            it("setDaoVault can not by not owner", async () => {
+                await expect(
+                    DAOProxyLogicV1.connect(addr1).setDaoVault(
+                        sequencer1.address,
+                    )
+                ).to.be.revertedWith("DAO: NA") 
+            })
 
-    //         it("setDaoVault can by only owner", async () => {
-    //             await DAOProxyLogicV2.connect(daoAdmin).setDaoVault(
-    //                 sequencer1.address,
-    //             );
-    //             expect(await DAOProxyLogicV2.daoVault()).to.be.eq(sequencer1.address);
-    //             await DAOProxyLogicV2.connect(daoAdmin).setDaoVault(
-    //                 deployed.daovault.address,
-    //             );
-    //             expect(await DAOProxyLogicV2.daoVault()).to.be.eq(deployed.daovault.address);
-    //         })
+            it("setDaoVault can by only owner", async () => {
+                await DAOProxyLogicV1.connect(daoAdmin).setDaoVault(
+                    sequencer1.address,
+                );
+                expect(await DAOProxyLogicV1.daoVault()).to.be.eq(sequencer1.address);
+                await DAOProxyLogicV1.connect(daoAdmin).setDaoVault(
+                    deployed.daovault.address,
+                );
+                expect(await DAOProxyLogicV1.daoVault()).to.be.eq(deployed.daovault.address);
+            })
 
-    //         it("setLayer2Manager can not by not owner", async () => {
-    //             await expect(
-    //                 DAOProxyLogicV2.connect(addr1).setLayer2Manager(
-    //                     sequencer1.address,
-    //                 )
-    //             ).to.be.revertedWith("DAO: NA") 
-    //         })
+            it("setLayer2Manager can not by not owner", async () => {
+                await expect(
+                    DAOProxyLogicV2.connect(addr1).setLayer2Manager(
+                        sequencer1.address,
+                    )
+                ).to.be.revertedWith("DAO: NA") 
+            })
 
-    //         it("setLayer2Manager can by only owner", async () => {
-    //             await DAOProxyLogicV2.connect(daoAdmin).setLayer2Manager(
-    //                 deployed.layer2ManagerProxy.address,
-    //             );
-    //             expect(await DAOProxyLogicV2.layer2Manager()).to.be.eq(deployed.layer2ManagerProxy.address);
-    //         })
+            it("setLayer2Manager can by only owner", async () => {
+                await DAOProxyLogicV2.connect(daoAdmin).setLayer2Manager(
+                    deployed.layer2ManagerProxy.address,
+                );
+                expect(await DAOProxyLogicV2.layer2Manager()).to.be.eq(deployed.layer2ManagerProxy.address);
+            })
 
-    //         it("setAgendaManager can not by not owner", async () => {
-    //             await expect(
-    //                 DAOProxyLogicV2.connect(addr1).setAgendaManager(
-    //                     sequencer1.address,
-    //                 )
-    //             ).to.be.revertedWith("DAO: NA") 
-    //         })
+            it("setAgendaManager can not by not owner", async () => {
+                await expect(
+                    DAOProxyLogicV1.connect(addr1).setAgendaManager(
+                        sequencer1.address,
+                    )
+                ).to.be.revertedWith("DAO: NA") 
+            })
 
-    //         it("setAgendaManager can by only owner", async () => {
-    //             await DAOProxyLogicV2.connect(daoAdmin).setAgendaManager(
-    //                 sequencer1.address,
-    //             );
-    //             expect(await DAOProxyLogicV2.agendaManager()).to.be.eq(sequencer1.address);
-    //             await DAOProxyLogicV2.connect(daoAdmin).setAgendaManager(
-    //                 deployed.daoagendaManager.address,
-    //             );
-    //             expect(await DAOProxyLogicV2.agendaManager()).to.be.eq(deployed.daoagendaManager.address);
-    //         })
+            it("setAgendaManager can by only owner", async () => {
+                await DAOProxyLogicV1.connect(daoAdmin).setAgendaManager(
+                    sequencer1.address,
+                );
+                expect(await DAOProxyLogicV1.agendaManager()).to.be.eq(sequencer1.address);
+                await DAOProxyLogicV1.connect(daoAdmin).setAgendaManager(
+                    deployed.daoagendaManager.address,
+                );
+                expect(await DAOProxyLogicV1.agendaManager()).to.be.eq(deployed.daoagendaManager.address);
+            })
 
-    //         it("setCandidates can not by not owner", async () => {
-    //             await expect(
-    //                 DAOProxyLogicV2.connect(addr1).setCandidates(
-    //                     sequencer1.address
-    //                 )
-    //             ).to.be.revertedWith("DAO: NA") 
-    //         })
+            it("setCandidates can not by not owner", async () => {
+                await expect(
+                    DAOProxyLogicV2.connect(addr1).setCandidates(
+                        sequencer1.address
+                    )
+                ).to.be.revertedWith("DAO: NA") 
+            })
 
-    //         it("setCandidates can by only owner", async () => {
-    //             await DAOProxyLogicV2.connect(daoAdmin).setCandidates(
-    //                 deployed.candidateProxy.address
-    //             );
-    //             expect(await DAOProxyLogicV2.candidate()).to.be.eq(deployed.candidateProxy.address);
-    //             // expect(await deployed.daov2committeeProxy.candidate()).to.be.eq(deployed.candidateProxy.address);
-    //             // expect(await deployed.daov2committeeProxy.sequencer()).to.be.eq(deployed.optimismSequencerProxy.address);
-    //         })
+            it("setCandidates can by only owner", async () => {
+                await DAOProxyLogicV2.connect(daoAdmin).setCandidates(
+                    deployed.candidateProxy.address
+                );
+                expect(await DAOProxyLogicV2.candidate()).to.be.eq(deployed.candidateProxy.address);
+                // expect(await deployed.daov2committeeProxy.candidate()).to.be.eq(deployed.candidateProxy.address);
+                // expect(await deployed.daov2committeeProxy.sequencer()).to.be.eq(deployed.optimismSequencerProxy.address);
+            })
 
-    //         it("setOptimismSequencer can not by not owner", async () => {
-    //             await expect(
-    //                 DAOProxyLogicV2.connect(addr1).setOptimismSequencer(
-    //                     sequencer1.address
-    //                 )
-    //             ).to.be.revertedWith("DAO: NA") 
-    //         })
+            it("setOptimismSequencer can not by not owner", async () => {
+                await expect(
+                    DAOProxyLogicV2.connect(addr1).setOptimismSequencer(
+                        sequencer1.address
+                    )
+                ).to.be.revertedWith("DAO: NA") 
+            })
 
-    //         it("setOptimismSequencer can by only owner", async () => {
-    //             await DAOProxyLogicV2.connect(daoAdmin).setOptimismSequencer(
-    //                 deployed.optimismSequencerProxy.address
-    //             );
-    //             expect(await DAOProxyLogicV2.sequencer()).to.be.eq(deployed.optimismSequencerProxy.address);
-    //         })
+            it("setOptimismSequencer can by only owner", async () => {
+                await DAOProxyLogicV2.connect(daoAdmin).setOptimismSequencer(
+                    deployed.optimismSequencerProxy.address
+                );
+                expect(await DAOProxyLogicV2.sequencer()).to.be.eq(deployed.optimismSequencerProxy.address);
+            })
 
-    //         it("setTon can not by not owner", async () => {
-    //             await expect(
-    //                 DAOProxyLogicV2.connect(addr1).setTon(
-    //                     sequencer1.address
-    //                 )
-    //             ).to.be.revertedWith("DAO: NA") 
-    //         })
+            it("setTon can not by not owner", async () => {
+                await expect(
+                    DAOProxyLogicV1.connect(addr1).setTon(
+                        sequencer1.address
+                    )
+                ).to.be.revertedWith("DAO: NA") 
+            })
 
-    //         it("setTon can by only owner", async () => {
-    //             await DAOProxyLogicV2.connect(daoAdmin).setTon(
-    //                 deployed.ton.address
-    //             );
-    //             expect(await DAOProxyLogicV2.ton()).to.be.eq(deployed.ton.address);
-    //         })
+            it("setTon can by only owner", async () => {
+                await DAOProxyLogicV1.connect(daoAdmin).setTon(
+                    deployed.ton.address
+                );
+                expect(await DAOProxyLogicV1.ton()).to.be.eq(deployed.ton.address);
+            })
 
-    //         it("setActivityRewardPerSecond can not by not owner", async () => {
-    //             await expect(
-    //                 DAOProxyLogicV2.connect(addr1).setActivityRewardPerSecond(
-    //                     123
-    //                 )
-    //             ).to.be.revertedWith("DAO: NA") 
-    //         })
+            it("setActivityRewardPerSecond can not by not owner", async () => {
+                await expect(
+                    DAOProxyLogicV1.connect(addr1).setActivityRewardPerSecond(
+                        123
+                    )
+                ).to.be.revertedWith("DAO: NA") 
+            })
 
-    //         it("setActivityRewardPerSecond can by only owner", async () => {
-    //             await DAOProxyLogicV2.connect(daoAdmin).setActivityRewardPerSecond(
-    //                 123
-    //             );
-    //             expect(await DAOProxyLogicV2.activityRewardPerSecond()).to.be.eq(123);
-    //             await DAOProxyLogicV2.connect(daoAdmin).setActivityRewardPerSecond(
-    //                 31709791983764
-    //             );
-    //             expect(await DAOProxyLogicV2.activityRewardPerSecond()).to.be.eq(31709791983764);
-    //         })
-    //     })
+            it("setActivityRewardPerSecond can by only owner", async () => {
+                await DAOProxyLogicV1.connect(daoAdmin).setActivityRewardPerSecond(
+                    123
+                );
+                expect(await DAOProxyLogicV1.activityRewardPerSecond()).to.be.eq(123);
+                await DAOProxyLogicV1.connect(daoAdmin).setActivityRewardPerSecond(
+                    31709791983764
+                );
+                expect(await DAOProxyLogicV1.activityRewardPerSecond()).to.be.eq(31709791983764);
+            })
+        })
 
-    //     describe("#7-2. DAO Agenda Policy setting", () => {
-    //         it("setQuorum can not by not owner", async () => {
-    //             await expect(
-    //                 DAOProxyLogicV2.connect(addr1).setQuorum(
-    //                     3
-    //                 )
-    //             ).to.be.revertedWith("DAO: NA") 
-    //         })
+        describe("#7-2. DAO Agenda Policy setting", () => {
+            it("setQuorum can not by not owner", async () => {
+                await expect(
+                    DAOProxyLogicV2.connect(addr1).setQuorum(
+                        3
+                    )
+                ).to.be.revertedWith("DAO: NA") 
+            })
 
-    //         it("setQuorum can by only owner", async () => {
-    //             await DAOProxyLogicV2.connect(daoAdmin).setQuorum(
-    //                 3
-    //             );
-    //             expect(await DAOProxyLogicV2.quorum()).to.be.eq(3);
+            it("setQuorum can by only owner", async () => {
+                await DAOProxyLogicV2.connect(daoAdmin).setQuorum(
+                    3
+                );
+                expect(await DAOProxyLogicV2.quorum()).to.be.eq(3);
 
-    //             await DAOProxyLogicV2.connect(daoAdmin).setQuorum(
-    //                 2
-    //             );
-    //             expect(await DAOProxyLogicV2.quorum()).to.be.eq(2);
-    //         })
+                await DAOProxyLogicV2.connect(daoAdmin).setQuorum(
+                    2
+                );
+                expect(await DAOProxyLogicV2.quorum()).to.be.eq(2);
+            })
 
-    //         it("setCreateAgendaFees can not by not owner", async () => {
-    //             await expect(
-    //                 DAOProxyLogicV2.connect(addr1).setCreateAgendaFees(
-    //                     daoAgendaInfo.agendaFee
-    //                 )
-    //             ).to.be.revertedWith("DAO: NA") 
-    //         })
+            it("setCreateAgendaFees can not by not owner", async () => {
+                await expect(
+                    DAOProxyLogicV1.connect(addr1).setCreateAgendaFees(
+                        daoAgendaInfo.agendaFee
+                    )
+                ).to.be.revertedWith("DAO: NA") 
+            })
 
-    //         it("setCreateAgendaFees can by only owner", async () => {
-    //             await DAOProxyLogicV2.connect(daoAdmin).setCreateAgendaFees(
-    //                 daoAgendaInfo.agendaFee2
-    //             );
-    //             expect(await deployed.daoagendaManager.createAgendaFees()).to.be.eq(daoAgendaInfo.agendaFee2);
+            it("setCreateAgendaFees can by only owner", async () => {
+                await DAOProxyLogicV1.connect(daoAdmin).setCreateAgendaFees(
+                    daoAgendaInfo.agendaFee2
+                );
+                expect(await deployed.daoagendaManager.createAgendaFees()).to.be.eq(daoAgendaInfo.agendaFee2);
 
-    //             await DAOProxyLogicV2.connect(daoAdmin).setCreateAgendaFees(
-    //                 daoAgendaInfo.agendaFee
-    //             );
-    //             expect(await deployed.daoagendaManager.createAgendaFees()).to.be.eq(daoAgendaInfo.agendaFee);
-    //         })
+                await DAOProxyLogicV1.connect(daoAdmin).setCreateAgendaFees(
+                    daoAgendaInfo.agendaFee
+                );
+                expect(await deployed.daoagendaManager.createAgendaFees()).to.be.eq(daoAgendaInfo.agendaFee);
+            })
 
-    //         it("setMinimumNoticePeriodSeconds can not by not owner", async () => {
-    //             await expect(
-    //                 DAOProxyLogicV2.connect(addr1).setMinimumNoticePeriodSeconds(
-    //                     daoAgendaInfo.minimumNoticePeriodSeconds
-    //                 )
-    //             ).to.be.revertedWith("DAO: NA") 
-    //         })
+            it("setMinimumNoticePeriodSeconds can not by not owner", async () => {
+                await expect(
+                    DAOProxyLogicV1.connect(addr1).setMinimumNoticePeriodSeconds(
+                        daoAgendaInfo.minimumNoticePeriodSeconds
+                    )
+                ).to.be.revertedWith("DAO: NA") 
+            })
 
-    //         it("setMinimumNoticePeriodSeconds can by only owner", async () => {
-    //             await DAOProxyLogicV2.connect(daoAdmin).setMinimumNoticePeriodSeconds(
-    //                 daoAgendaInfo.minimumNoticePeriodSeconds
-    //             );
-    //             expect(await deployed.daoagendaManager.minimumNoticePeriodSeconds()).to.be.eq(daoAgendaInfo.minimumNoticePeriodSeconds)
-    //         })
+            it("setMinimumNoticePeriodSeconds can by only owner", async () => {
+                await DAOProxyLogicV1.connect(daoAdmin).setMinimumNoticePeriodSeconds(
+                    daoAgendaInfo.minimumNoticePeriodSeconds
+                );
+                expect(await deployed.daoagendaManager.minimumNoticePeriodSeconds()).to.be.eq(daoAgendaInfo.minimumNoticePeriodSeconds)
+            })
 
-    //         it("setMinimumVotingPeriodSeconds can not by not owner", async () => {
-    //             await expect(
-    //                 DAOProxyLogicV2.connect(addr1).setMinimumVotingPeriodSeconds(
-    //                     daoAgendaInfo.minimumVotingPeriodSeconds
-    //                 )
-    //             ).to.be.revertedWith("DAO: NA") 
-    //         })
+            it("setMinimumVotingPeriodSeconds can not by not owner", async () => {
+                await expect(
+                    DAOProxyLogicV1.connect(addr1).setMinimumVotingPeriodSeconds(
+                        daoAgendaInfo.minimumVotingPeriodSeconds
+                    )
+                ).to.be.revertedWith("DAO: NA") 
+            })
 
-    //         it("setMinimumVotingPeriodSeconds can by only owner", async () => {
-    //             await DAOProxyLogicV2.connect(daoAdmin).setMinimumVotingPeriodSeconds(
-    //                 daoAgendaInfo.minimumVotingPeriodSeconds
-    //             );
-    //             expect(await deployed.daoagendaManager.minimumVotingPeriodSeconds()).to.be.eq(daoAgendaInfo.minimumVotingPeriodSeconds)
-    //         })
+            it("setMinimumVotingPeriodSeconds can by only owner", async () => {
+                await DAOProxyLogicV1.connect(daoAdmin).setMinimumVotingPeriodSeconds(
+                    daoAgendaInfo.minimumVotingPeriodSeconds
+                );
+                expect(await deployed.daoagendaManager.minimumVotingPeriodSeconds()).to.be.eq(daoAgendaInfo.minimumVotingPeriodSeconds)
+            })
 
-    //         it("setExecutingPeriodSeconds can not by not owner", async () => {
-    //             await expect(
-    //                 DAOProxyLogicV2.connect(addr1).setExecutingPeriodSeconds(
-    //                     daoAgendaInfo.executingPeriodSeconds
-    //                 )
-    //             ).to.be.revertedWith("DAO: NA") 
-    //         })
+            it("setExecutingPeriodSeconds can not by not owner", async () => {
+                await expect(
+                    DAOProxyLogicV1.connect(addr1).setExecutingPeriodSeconds(
+                        daoAgendaInfo.executingPeriodSeconds
+                    )
+                ).to.be.revertedWith("DAO: NA") 
+            })
 
-    //         it("setExecutingPeriodSeconds can by only owner", async () => {
-    //             await DAOProxyLogicV2.connect(daoAdmin).setExecutingPeriodSeconds(
-    //                 daoAgendaInfo.executingPeriodSeconds
-    //             );
-    //             expect(await deployed.daoagendaManager.executingPeriodSeconds()).to.be.eq(daoAgendaInfo.executingPeriodSeconds)
-    //         })
-    //     })
+            it("setExecutingPeriodSeconds can by only owner", async () => {
+                await DAOProxyLogicV1.connect(daoAdmin).setExecutingPeriodSeconds(
+                    daoAgendaInfo.executingPeriodSeconds
+                );
+                expect(await deployed.daoagendaManager.executingPeriodSeconds()).to.be.eq(daoAgendaInfo.executingPeriodSeconds)
+            })
+        })
 
-    //     describe("#7-3. createSequencerCandidate", () => {
-    //         it('Cannot be created unless the caller is the layer\'s sequencer.', async () => {
-    //             expect(await deployed.addressManager.getAddress("OVM_Sequencer")).to.not.eq(addr1.address)
-    //             let name = "Tokamak Optimism";
-    //             let amount = ethers.utils.parseEther("100");
+        describe("#7-3. createSequencerCandidate", () => {
+            it('Cannot be created unless the caller is the layer\'s sequencer.', async () => {
+                expect(await deployed.addressManager.getAddress("OVM_Sequencer")).to.not.eq(addr1.address)
+                let name = "Tokamak Optimism";
+                let amount = ethers.utils.parseEther("100");
     
-    //             await expect(
-    //                 deployed.layer2Manager.connect(addr1).createOptimismSequencer(
-    //                     ethers.utils.formatBytes32String(name),
-    //                     deployed.addressManager.address,
-    //                     deployed.l1Bridge.address,
-    //                     deployed.l2Bridge.address,
-    //                     deployed.l2ton.address,
-    //                     amount
-    //                 )
-    //                 ).to.be.revertedWith("NOT Sequencer")
-    //         })
+                await expect(
+                    deployed.layer2Manager.connect(addr1).createOptimismSequencer(
+                        ethers.utils.formatBytes32String(name),
+                        deployed.addressManager.address,
+                        deployed.l1Bridge.address,
+                        deployed.l2Bridge.address,
+                        deployed.l2ton.address,
+                        amount
+                    )
+                    ).to.be.revertedWith("NOT Sequencer")
+            })
     
-    //         it('If the minimum security deposit is not provided, it cannot be created.', async () => {
-    //             let name = "Tokamak Optimism";
-    //             let amount = ethers.utils.parseEther("100");
+            it('If the minimum security deposit is not provided, it cannot be created.', async () => {
+                let name = "Tokamak Optimism";
+                let amount = ethers.utils.parseEther("100");
     
-    //             expect(await deployed.addressManager.getAddress("OVM_Sequencer")).to.eq(sequencer1.address)
-    //             await expect(
-    //                 deployed.layer2Manager.connect(sequencer1).createOptimismSequencer(
-    //                     ethers.utils.formatBytes32String(name),
-    //                     deployed.addressManager.address,
-    //                     deployed.l1Bridge.address,
-    //                     deployed.l2Bridge.address,
-    //                     deployed.l2ton.address,
-    //                     amount
-    //                 )).to.be.reverted;
-    //         })
+                expect(await deployed.addressManager.getAddress("OVM_Sequencer")).to.eq(sequencer1.address)
+                await expect(
+                    deployed.layer2Manager.connect(sequencer1).createOptimismSequencer(
+                        ethers.utils.formatBytes32String(name),
+                        deployed.addressManager.address,
+                        deployed.l1Bridge.address,
+                        deployed.l2Bridge.address,
+                        deployed.l2ton.address,
+                        amount
+                    )).to.be.reverted;
+            })
             
-    //         it('Approve the minimum security deposit and create.', async () => {
-    //             expect(await DAOProxyLogicV2.candidatesLengthV2()).to.be.eq(0)
-    //             let name = "Tokamak Optimism";
+            it('Approve the minimum security deposit and create.', async () => {
+                expect(await DAOProxyLogicV2.candidatesLengthV2()).to.be.eq(0)
+                let name = "Tokamak Optimism";
     
-    //             let totalLayers = await deployed.layer2Manager.totalLayers()
-    //             let getAllLayersBefore = await deployed.layer2Manager.getAllLayers();
-    //             expect(await deployed.addressManager.getAddress("OVM_Sequencer")).to.eq(sequencer1.address)
-    //             let totalSecurityDeposit = await deployed.layer2Manager.totalSecurityDeposit();
-    //             let amount = await deployed.layer2Manager.minimumDepositForSequencer();
+                let totalLayers = await deployed.layer2Manager.totalLayers()
+                let getAllLayersBefore = await deployed.layer2Manager.getAllLayers();
+                expect(await deployed.addressManager.getAddress("OVM_Sequencer")).to.eq(sequencer1.address)
+                let totalSecurityDeposit = await deployed.layer2Manager.totalSecurityDeposit();
+                let amount = await deployed.layer2Manager.minimumDepositForSequencer();
 
-    //             if(sequencerInfo.tonAmount1 < amount) {
-    //                 sequencerInfo.tonAmount1 = amount;
-    //             }
-    
-    //             if (sequencerInfo.tonAmount1.gt(await deployed.ton.balanceOf(sequencer1.address)))
-    //                 await (await deployed.ton.connect(deployed.tonAdmin).mint(sequencer1.address, sequencerInfo.tonAmount1)).wait();
-    
-    //             if (sequencerInfo.tonAmount1.gte(await deployed.ton.allowance(sequencer1.address, deployed.layer2Manager.address)))
-    //                 await (await deployed.ton.connect(sequencer1).approve(deployed.layer2Manager.address, sequencerInfo.tonAmount1)).wait();
-    
-    //             const topic = deployed.layer2Manager.interface.getEventTopic('CreatedOptimismSequencer');
-    
-    //             const receipt = await (await snapshotGasCost(deployed.layer2Manager.connect(sequencer1).createOptimismSequencer(
-    //                     ethers.utils.formatBytes32String(name),
-    //                     deployed.addressManager.address,
-    //                     deployed.l1Bridge.address,
-    //                     deployed.l2Bridge.address,
-    //                     deployed.l2ton.address,
-    //                     sequencerInfo.tonAmount1
-    //                 ))).wait();
-    
-    //             const log = receipt.logs.find(x => x.topics.indexOf(topic) >= 0);
-    //             const deployedEvent = deployed.layer2Manager.interface.parseLog(log);
-    
-    //             let sequencerIndex = deployedEvent.args._index;
-    //             sequencerIndexSave = deployedEvent.args._index;
-    
-    //             expect(deployedEvent.args._sequencer).to.eq(sequencer1.address);
-    //             expect(deployedEvent.args._name).to.eq(ethers.utils.formatBytes32String(name));
-    //             expect(deployedEvent.args.addressManager).to.eq(deployed.addressManager.address);
-    //             expect(deployedEvent.args.l1Bridge).to.eq(deployed.l1Bridge.address);
-    //             expect(deployedEvent.args.l2Bridge).to.eq(deployed.l2Bridge.address);
-    
-    //             expect(deployedEvent.args.l2ton).to.eq(deployed.l2ton.address);
-    
-    //             expect(await deployed.layer2Manager.totalLayers()).to.eq(totalLayers.add(1))
-    //             expect(await deployed.layer2Manager.totalSecurityDeposit()).to.eq(totalSecurityDeposit.add(sequencerInfo.tonAmount1))
-    
-    //             let layerKey = await getLayerKey({
-    //                     addressManager: deployed.addressManager.address,
-    //                     l1Messenger: ethers.constants.AddressZero,
-    //                     l2Messenger: ethers.constants.AddressZero,
-    //                     l1Bridge: deployed.l1Bridge.address,
-    //                     l2Bridge: deployed.l2Bridge.address,
-    //                     l2ton: deployed.l2ton.address
-    //                 }
-    //             );
-    
-    //             expect(await deployed.optimismSequencer.getLayerKey(sequencerIndex)).to.eq(layerKey)
-    
-    //             let layer = await deployed.optimismSequencer.getLayerInfo(sequencerIndex);
-    
-    //             expect(layer.addressManager).to.eq(deployed.addressManager.address)
-    //             expect(layer.l1Bridge).to.eq(deployed.l1Bridge.address)
-    //             expect(layer.l2Bridge).to.eq(deployed.l2Bridge.address)
-    //             expect(layer.l2ton).to.eq(deployed.l2ton.address)
-    
-    //             expect(await deployed.layer2Manager.layerKeys(layerKey)).to.eq(true)
-    //             expect(await deployed.layer2Manager.indexSequencers()).to.eq(sequencerIndex)
-    
-    //             let getAllLayersAfter = await deployed.layer2Manager.getAllLayers();
-    
-    //             expect(getAllLayersBefore.optimismSequencerIndexes_.length).to.eq(
-    //                 getAllLayersAfter.optimismSequencerIndexes_.length-1
-    //             )
-    //         })
+                if(sequencerInfo.tonAmount1 < amount) {
+                    sequencerInfo.tonAmount1 = amount;
+                }
 
-    //         it("DAOContract check candidate", async () => {
-    //             expect(await DAOProxyLogicV2.candidatesLengthV2()).to.be.eq(1)
-    //             expect(await DAOProxyLogicV2.candidatesV2(0)).to.be.eq(sequencer1.address)
-    //             expect(await DAOProxyLogicV2.isExistCandidateV2(sequencer1.address,sequencerIndexSave)).to.be.eq(true);
-    //         })
-
-    //         it("You can stake without approval before staking", async () => {
-    //             let layerIndex = await deployed.layer2Manager.indexSequencers();
-    //             let balanceOf = await deployed.optimismSequencer.balanceOf(layerIndex, sequencer1.address);
-    //             let balanceOfLton = await deployed.optimismSequencer["balanceOfLton(uint32,address)"](layerIndex, sequencer1.address);
-
-    //             let totalStakedLton = await deployed.optimismSequencer.totalStakedLton()
-    //             let totalStakeAccountList = await deployed.optimismSequencer.totalStakeAccountList()
-
-    //             if (sequencerInfo.tonAmount1.gt(await deployed.ton.balanceOf(sequencer1.address)))
-    //                 await (await deployed.ton.connect(deployed.tonAdmin).mint(sequencer1.address, sequencerInfo.tonAmount1)).wait();
-
-    //             const data = ethers.utils.solidityPack(
-    //                 ["uint32"],
-    //                 [layerIndex]
-    //             );
-
-    //             await deployed.ton.connect(sequencer1).approveAndCall(
-    //                 deployed.optimismSequencer.address,
-    //                 sequencerInfo.tonAmount1,
-    //                 data
-    //             );
-
-    //             expect(await deployed.optimismSequencer.totalStakedLton()).to.gt(totalStakedLton)
-
-    //             let getLayerStakes = await deployed.optimismSequencer.getLayerStakes(layerIndex, sequencer1.address);
-
-    //             if (!getLayerStakes.stake) {
-    //                 expect(await deployed.optimismSequencer.totalStakeAccountList()).to.eq(totalStakeAccountList.add(1))
-    //                 expect(await deployed.optimismSequencer.stakeAccountList(totalStakeAccountList)).to.eq(sequencer1.address)
-    //             }
-
-    //             let lton = await deployed.seigManagerV2.getTonToLton(sequencerInfo.tonAmount1);
-    //             expect(await deployed.optimismSequencer["balanceOfLton(uint32,address)"](layerIndex, sequencer1.address))
-    //                 .to.eq(balanceOfLton.add(lton))
-    //             expect(await deployed.optimismSequencer.balanceOf(layerIndex, sequencer1.address))
-    //                 .to.eq(balanceOf.add(sequencerInfo.tonAmount1))
-    //         })
-    //     })
-
-    //     describe("#7-4. createCandidate", () => {
-    //         it('Approve the minimum deposit and create candidate1.', async () => {
-    //             let name = "Tokamak Candidate #1";
-    //             let getAllCandidatesBefore = await deployed.layer2Manager.getAllCandidates();
+                // if(mainnetDAOstaking.sequencer1 < amount) {
+                //     mainnetDAOstaking.sequencer1 = amount;
+                // }
     
-    //             let totalLayers = await deployed.layer2Manager.totalLayers()
-    //             let totalCandidates = await deployed.layer2Manager.totalCandidates()
-    
-    //             let sequencerIndex = await deployed.layer2Manager.optimismSequencerIndexes(totalLayers.sub(ethers.constants.One))
-    
-    //             let amount = await deployed.layer2Manager.minimumDepositForCandidate();
+                if (sequencerInfo.tonAmount1.gt(await deployed.ton.balanceOf(sequencer1.address)))
+                    await (await deployed.ton.connect(deployed.tonAdmin).mint(sequencer1.address, sequencerInfo.tonAmount1)).wait();
 
-    //             if(candidateInfo.tonAmount1 < amount) {
-    //                 candidateInfo.tonAmount1 = amount;
-    //             }
+                // if (mainnetDAOstaking.sequencer1.gt(await deployed.ton.balanceOf(sequencer1.address)))
+                //     await (await deployed.ton.connect(deployed.tonAdmin).mint(sequencer1.address, mainnetDAOstaking.sequencer1)).wait();
     
-    //             if (candidateInfo.tonAmount1.gt(await deployed.ton.balanceOf(candidate1.address)))
-    //                 await (await deployed.ton.connect(deployed.tonAdmin).mint(candidate1.address, candidateInfo.tonAmount1)).wait();
-    
-    //             if (candidateInfo.tonAmount1.gte(await deployed.ton.allowance(candidate1.address, deployed.layer2Manager.address)))
-    //                 await (await deployed.ton.connect(candidate1).approve(deployed.layer2Manager.address, candidateInfo.tonAmount1)).wait();
-    
-    //             const commission = 500;
-    //             await snapshotGasCost(deployed.layer2Manager.connect(candidate1).createCandidate(
-    //                 sequencerIndex,
-    //                 ethers.utils.formatBytes32String(name),
-    //                 commission,
-    //                 candidateInfo.tonAmount1
-    //             ))
+                if (sequencerInfo.tonAmount1.gte(await deployed.ton.allowance(sequencer1.address, deployed.layer2Manager.address)))
+                    await (await deployed.ton.connect(sequencer1).approve(deployed.layer2Manager.address, sequencerInfo.tonAmount1)).wait();
 
-    //             expect(await deployed.layer2Manager.totalCandidates()).to.eq(totalCandidates.add(1))
-    //             let getAllCandidatesAfter = await deployed.layer2Manager.getAllCandidates();
-    //             expect(getAllCandidatesBefore.candidateNamesIndexes_.length).to.eq(
-    //                 getAllCandidatesAfter.candidateNamesIndexes_.length-1
-    //             )
-    //         })
+                // if (sequencerInfo.tonAmount1.gte(await deployed.ton.allowance(sequencer1.address, deployed.layer2Manager.address)))
+                //     await (await deployed.ton.connect(sequencer1).approve(deployed.layer2Manager.address, mainnetDAOstaking.sequencer1)).wait();
+    
+                const topic = deployed.layer2Manager.interface.getEventTopic('CreatedOptimismSequencer');
+    
+                const receipt = await (await snapshotGasCost(deployed.layer2Manager.connect(sequencer1).createOptimismSequencer(
+                        ethers.utils.formatBytes32String(name),
+                        deployed.addressManager.address,
+                        deployed.l1Bridge.address,
+                        deployed.l2Bridge.address,
+                        deployed.l2ton.address,
+                        sequencerInfo.tonAmount1
+                    ))).wait();
+    
+                const log = receipt.logs.find(x => x.topics.indexOf(topic) >= 0);
+                const deployedEvent = deployed.layer2Manager.interface.parseLog(log);
+    
+                let sequencerIndex = deployedEvent.args._index;
+                sequencerIndexSave = deployedEvent.args._index;
+    
+                expect(deployedEvent.args._sequencer).to.eq(sequencer1.address);
+                expect(deployedEvent.args._name).to.eq(ethers.utils.formatBytes32String(name));
+                expect(deployedEvent.args.addressManager).to.eq(deployed.addressManager.address);
+                expect(deployedEvent.args.l1Bridge).to.eq(deployed.l1Bridge.address);
+                expect(deployedEvent.args.l2Bridge).to.eq(deployed.l2Bridge.address);
+    
+                expect(deployedEvent.args.l2ton).to.eq(deployed.l2ton.address);
+    
+                expect(await deployed.layer2Manager.totalLayers()).to.eq(totalLayers.add(1))
+                expect(await deployed.layer2Manager.totalSecurityDeposit()).to.eq(totalSecurityDeposit.add(sequencerInfo.tonAmount1))
+    
+                let layerKey = await getLayerKey({
+                        addressManager: deployed.addressManager.address,
+                        l1Messenger: ethers.constants.AddressZero,
+                        l2Messenger: ethers.constants.AddressZero,
+                        l1Bridge: deployed.l1Bridge.address,
+                        l2Bridge: deployed.l2Bridge.address,
+                        l2ton: deployed.l2ton.address
+                    }
+                );
+    
+                expect(await deployed.optimismSequencer.getLayerKey(sequencerIndex)).to.eq(layerKey)
+    
+                let layer = await deployed.optimismSequencer.getLayerInfo(sequencerIndex);
+    
+                expect(layer.addressManager).to.eq(deployed.addressManager.address)
+                expect(layer.l1Bridge).to.eq(deployed.l1Bridge.address)
+                expect(layer.l2Bridge).to.eq(deployed.l2Bridge.address)
+                expect(layer.l2ton).to.eq(deployed.l2ton.address)
+    
+                expect(await deployed.layer2Manager.layerKeys(layerKey)).to.eq(true)
+                expect(await deployed.layer2Manager.indexSequencers()).to.eq(sequencerIndex)
+    
+                let getAllLayersAfter = await deployed.layer2Manager.getAllLayers();
+    
+                expect(getAllLayersBefore.optimismSequencerIndexes_.length).to.eq(
+                    getAllLayersAfter.optimismSequencerIndexes_.length-1
+                )
+            })
+
+            it("DAOContract check candidate", async () => {
+                expect(await DAOProxyLogicV2.candidatesLengthV2()).to.be.eq(1)
+                expect(await DAOProxyLogicV2.candidatesV2(0)).to.be.eq(sequencer1.address)
+                expect(await DAOProxyLogicV2.isExistCandidateV2(sequencer1.address,sequencerIndexSave)).to.be.eq(true);
+            })
+
+            it("You can stake without approval before staking", async () => {
+                let layerIndex = await deployed.layer2Manager.indexSequencers();
+                let balanceOf = await deployed.optimismSequencer.balanceOf(layerIndex, sequencer1.address);
+                let balanceOfLton = await deployed.optimismSequencer["balanceOfLton(uint32,address)"](layerIndex, sequencer1.address);
+
+                let totalStakedLton = await deployed.optimismSequencer.totalStakedLton()
+                let totalStakeAccountList = await deployed.optimismSequencer.totalStakeAccountList()
+
+                if (sequencerInfo.tonAmount1.gt(await deployed.ton.balanceOf(sequencer1.address)))
+                    await (await deployed.ton.connect(deployed.tonAdmin).mint(sequencer1.address, sequencerInfo.tonAmount1)).wait();
+
+                const data = ethers.utils.solidityPack(
+                    ["uint32"],
+                    [layerIndex]
+                );
+
+                await deployed.ton.connect(sequencer1).approveAndCall(
+                    deployed.optimismSequencer.address,
+                    sequencerInfo.tonAmount1,
+                    data
+                );
+
+                expect(await deployed.optimismSequencer.totalStakedLton()).to.gt(totalStakedLton)
+
+                let getLayerStakes = await deployed.optimismSequencer.getLayerStakes(layerIndex, sequencer1.address);
+
+                if (!getLayerStakes.stake) {
+                    expect(await deployed.optimismSequencer.totalStakeAccountList()).to.eq(totalStakeAccountList.add(1))
+                    expect(await deployed.optimismSequencer.stakeAccountList(totalStakeAccountList)).to.eq(sequencer1.address)
+                }
+
+                let lton = await deployed.seigManagerV2.getTonToLton(sequencerInfo.tonAmount1);
+                expect(await deployed.optimismSequencer["balanceOfLton(uint32,address)"](layerIndex, sequencer1.address))
+                    .to.eq(balanceOfLton.add(lton))
+                expect(await deployed.optimismSequencer.balanceOf(layerIndex, sequencer1.address))
+                    .to.eq(balanceOf.add(sequencerInfo.tonAmount1))
+            })
+        })
+
+        describe("#7-4. createCandidate", () => {
+            it('Approve the minimum deposit and create candidate1.', async () => {
+                let name = "Tokamak Candidate #1";
+                let getAllCandidatesBefore = await deployed.layer2Manager.getAllCandidates();
+    
+                let totalLayers = await deployed.layer2Manager.totalLayers()
+                let totalCandidates = await deployed.layer2Manager.totalCandidates()
+    
+                let sequencerIndex = await deployed.layer2Manager.optimismSequencerIndexes(totalLayers.sub(ethers.constants.One))
+    
+                let amount = await deployed.layer2Manager.minimumDepositForCandidate();
+
+                if(candidateInfo.tonAmount1 < amount) {
+                    candidateInfo.tonAmount1 = amount;
+                }
+    
+                if (candidateInfo.tonAmount1.gt(await deployed.ton.balanceOf(candidate1.address)))
+                    await (await deployed.ton.connect(deployed.tonAdmin).mint(candidate1.address, candidateInfo.tonAmount1)).wait();
+    
+                if (candidateInfo.tonAmount1.gte(await deployed.ton.allowance(candidate1.address, deployed.layer2Manager.address)))
+                    await (await deployed.ton.connect(candidate1).approve(deployed.layer2Manager.address, candidateInfo.tonAmount1)).wait();
+    
+                const commission = 500;
+                await snapshotGasCost(deployed.layer2Manager.connect(candidate1).createCandidate(
+                    sequencerIndex,
+                    ethers.utils.formatBytes32String(name),
+                    commission,
+                    candidateInfo.tonAmount1
+                ))
+
+                expect(await deployed.layer2Manager.totalCandidates()).to.eq(totalCandidates.add(1))
+                let getAllCandidatesAfter = await deployed.layer2Manager.getAllCandidates();
+                expect(getAllCandidatesBefore.candidateNamesIndexes_.length).to.eq(
+                    getAllCandidatesAfter.candidateNamesIndexes_.length-1
+                )
+            })
             
-    //         it("DAOContract check candidate1", async () => {
-    //             expect(await DAOProxyLogicV2.candidatesLengthV2()).to.be.eq(2)
-    //             expect(await DAOProxyLogicV2.candidatesV2(1)).to.be.eq(candidate1.address)
-    //             expect(await DAOProxyLogicV2.isExistCandidateV2(candidate1.address,sequencerIndexSave)).to.be.eq(true);
-    //         })
+            it("DAOContract check candidate1", async () => {
+                expect(await DAOProxyLogicV2.candidatesLengthV2()).to.be.eq(2)
+                expect(await DAOProxyLogicV2.candidatesV2(1)).to.be.eq(candidate1.address)
+                expect(await DAOProxyLogicV2.isExistCandidateV2(candidate1.address,sequencerIndexSave)).to.be.eq(true);
+            })
 
-    //         it('Approve the minimum deposit and create candidate2.', async () => {
-    //             let name = "Tokamak Candidate #2";
-    //             let getAllCandidatesBefore = await deployed.layer2Manager.getAllCandidates();
+            it('Approve the minimum deposit and create candidate2.', async () => {
+                let name = "Tokamak Candidate #2";
+                let getAllCandidatesBefore = await deployed.layer2Manager.getAllCandidates();
     
-    //             let totalLayers = await deployed.layer2Manager.totalLayers()
-    //             let totalCandidates = await deployed.layer2Manager.totalCandidates()
+                let totalLayers = await deployed.layer2Manager.totalLayers()
+                let totalCandidates = await deployed.layer2Manager.totalCandidates()
     
-    //             let sequencerIndex = await deployed.layer2Manager.optimismSequencerIndexes(totalLayers.sub(ethers.constants.One))
+                let sequencerIndex = await deployed.layer2Manager.optimismSequencerIndexes(totalLayers.sub(ethers.constants.One))
     
-    //             let amount = await deployed.layer2Manager.minimumDepositForCandidate();
+                let amount = await deployed.layer2Manager.minimumDepositForCandidate();
 
-    //             if(candidateInfo.tonAmount2 < amount) {
-    //                 candidateInfo.tonAmount2 = amount;
-    //             }
+                if(candidateInfo.tonAmount2 < amount) {
+                    candidateInfo.tonAmount2 = amount;
+                }
     
-    //             if (amount.gt(await deployed.ton.balanceOf(candidate2.address)))
-    //                 await (await deployed.ton.connect(deployed.tonAdmin).mint(candidate2.address, candidateInfo.tonAmount2)).wait();
+                if (amount.gt(await deployed.ton.balanceOf(candidate2.address)))
+                    await (await deployed.ton.connect(deployed.tonAdmin).mint(candidate2.address, candidateInfo.tonAmount2)).wait();
     
-    //             if (amount.gte(await deployed.ton.allowance(candidate2.address, deployed.layer2Manager.address)))
-    //                 await (await deployed.ton.connect(candidate2).approve(deployed.layer2Manager.address, candidateInfo.tonAmount2)).wait();
+                if (amount.gte(await deployed.ton.allowance(candidate2.address, deployed.layer2Manager.address)))
+                    await (await deployed.ton.connect(candidate2).approve(deployed.layer2Manager.address, candidateInfo.tonAmount2)).wait();
     
-    //             const commission = 500;
-    //             await snapshotGasCost(deployed.layer2Manager.connect(candidate2).createCandidate(
-    //                 sequencerIndex,
-    //                 ethers.utils.formatBytes32String(name),
-    //                 commission,
-    //                 candidateInfo.tonAmount2
-    //             ))
+                const commission = 500;
+                await snapshotGasCost(deployed.layer2Manager.connect(candidate2).createCandidate(
+                    sequencerIndex,
+                    ethers.utils.formatBytes32String(name),
+                    commission,
+                    candidateInfo.tonAmount2
+                ))
 
-    //             expect(await deployed.layer2Manager.totalCandidates()).to.eq(totalCandidates.add(1))
-    //             let getAllCandidatesAfter = await deployed.layer2Manager.getAllCandidates();
-    //             expect(getAllCandidatesBefore.candidateNamesIndexes_.length).to.eq(
-    //                 getAllCandidatesAfter.candidateNamesIndexes_.length-1
-    //             )
-    //         })
+                expect(await deployed.layer2Manager.totalCandidates()).to.eq(totalCandidates.add(1))
+                let getAllCandidatesAfter = await deployed.layer2Manager.getAllCandidates();
+                expect(getAllCandidatesBefore.candidateNamesIndexes_.length).to.eq(
+                    getAllCandidatesAfter.candidateNamesIndexes_.length-1
+                )
+            })
             
-    //         it("DAOContract check candidate2", async () => {
-    //             expect(await DAOProxyLogicV2.candidatesLengthV2()).to.be.eq(3)
-    //             expect(await DAOProxyLogicV2.candidatesV2(2)).to.be.eq(candidate2.address)
-    //             expect(await DAOProxyLogicV2.isExistCandidateV2(candidate2.address,sequencerIndexSave)).to.be.eq(true);
-    //         })
+            it("DAOContract check candidate2", async () => {
+                expect(await DAOProxyLogicV2.candidatesLengthV2()).to.be.eq(3)
+                expect(await DAOProxyLogicV2.candidatesV2(2)).to.be.eq(candidate2.address)
+                expect(await DAOProxyLogicV2.isExistCandidateV2(candidate2.address,sequencerIndexSave)).to.be.eq(true);
+            })
 
-    //         it('Approve the minimum deposit and create candidate3.', async () => {
-    //             let name = "Tokamak Candidate #3";
-    //             let getAllCandidatesBefore = await deployed.layer2Manager.getAllCandidates();
+            it('Approve the minimum deposit and create candidate3.', async () => {
+                let name = "Tokamak Candidate #3";
+                let getAllCandidatesBefore = await deployed.layer2Manager.getAllCandidates();
     
-    //             let totalLayers = await deployed.layer2Manager.totalLayers()
-    //             let totalCandidates = await deployed.layer2Manager.totalCandidates()
+                let totalLayers = await deployed.layer2Manager.totalLayers()
+                let totalCandidates = await deployed.layer2Manager.totalCandidates()
     
-    //             let sequencerIndex = await deployed.layer2Manager.optimismSequencerIndexes(totalLayers.sub(ethers.constants.One))
+                let sequencerIndex = await deployed.layer2Manager.optimismSequencerIndexes(totalLayers.sub(ethers.constants.One))
     
-    //             let amount = await deployed.layer2Manager.minimumDepositForCandidate();
+                let amount = await deployed.layer2Manager.minimumDepositForCandidate();
 
-    //             if(candidateInfo.tonAmount3 < amount) {
-    //                 candidateInfo.tonAmount3 = amount;
-    //             }
+                if(candidateInfo.tonAmount3 < amount) {
+                    candidateInfo.tonAmount3 = amount;
+                }
     
-    //             if (amount.gt(await deployed.ton.balanceOf(candidate3.address)))
-    //                 await (await deployed.ton.connect(deployed.tonAdmin).mint(candidate3.address, candidateInfo.tonAmount3)).wait();
+                if (amount.gt(await deployed.ton.balanceOf(candidate3.address)))
+                    await (await deployed.ton.connect(deployed.tonAdmin).mint(candidate3.address, candidateInfo.tonAmount3)).wait();
     
-    //             if (amount.gte(await deployed.ton.allowance(candidate3.address, deployed.layer2Manager.address)))
-    //                 await (await deployed.ton.connect(candidate3).approve(deployed.layer2Manager.address, candidateInfo.tonAmount3)).wait();
+                if (amount.gte(await deployed.ton.allowance(candidate3.address, deployed.layer2Manager.address)))
+                    await (await deployed.ton.connect(candidate3).approve(deployed.layer2Manager.address, candidateInfo.tonAmount3)).wait();
     
-    //             const commission = 500;
-    //             await snapshotGasCost(deployed.layer2Manager.connect(candidate3).createCandidate(
-    //                 sequencerIndex,
-    //                 ethers.utils.formatBytes32String(name),
-    //                 commission,
-    //                 candidateInfo.tonAmount3
-    //             ))
+                const commission = 500;
+                await snapshotGasCost(deployed.layer2Manager.connect(candidate3).createCandidate(
+                    sequencerIndex,
+                    ethers.utils.formatBytes32String(name),
+                    commission,
+                    candidateInfo.tonAmount3
+                ))
 
-    //             expect(await deployed.layer2Manager.totalCandidates()).to.eq(totalCandidates.add(1))
-    //             let getAllCandidatesAfter = await deployed.layer2Manager.getAllCandidates();
-    //             expect(getAllCandidatesBefore.candidateNamesIndexes_.length).to.eq(
-    //                 getAllCandidatesAfter.candidateNamesIndexes_.length-1
-    //             )
-    //         })
+                expect(await deployed.layer2Manager.totalCandidates()).to.eq(totalCandidates.add(1))
+                let getAllCandidatesAfter = await deployed.layer2Manager.getAllCandidates();
+                expect(getAllCandidatesBefore.candidateNamesIndexes_.length).to.eq(
+                    getAllCandidatesAfter.candidateNamesIndexes_.length-1
+                )
+            })
             
-    //         it("DAOContract check candidate3", async () => {
-    //             expect(await DAOProxyLogicV2.candidatesLengthV2()).to.be.eq(4)
-    //             expect(await DAOProxyLogicV2.candidatesV2(3)).to.be.eq(candidate3.address)
-    //             expect(await DAOProxyLogicV2.isExistCandidateV2(candidate3.address,sequencerIndexSave)).to.be.eq(true);
-    //         })
+            it("DAOContract check candidate3", async () => {
+                expect(await DAOProxyLogicV2.candidatesLengthV2()).to.be.eq(4)
+                expect(await DAOProxyLogicV2.candidatesV2(3)).to.be.eq(candidate3.address)
+                expect(await DAOProxyLogicV2.isExistCandidateV2(candidate3.address,sequencerIndexSave)).to.be.eq(true);
+            })
 
-    //         it('Approve the minimum deposit and create candidate4.', async () => {
-    //             let name = "Tokamak Candidate #4";
-    //             let getAllCandidatesBefore = await deployed.layer2Manager.getAllCandidates();
+            it('Approve the minimum deposit and create candidate4.', async () => {
+                let name = "Tokamak Candidate #4";
+                let getAllCandidatesBefore = await deployed.layer2Manager.getAllCandidates();
     
-    //             let totalLayers = await deployed.layer2Manager.totalLayers()
-    //             let totalCandidates = await deployed.layer2Manager.totalCandidates()
+                let totalLayers = await deployed.layer2Manager.totalLayers()
+                let totalCandidates = await deployed.layer2Manager.totalCandidates()
     
-    //             let sequencerIndex = await deployed.layer2Manager.optimismSequencerIndexes(totalLayers.sub(ethers.constants.One))
+                let sequencerIndex = await deployed.layer2Manager.optimismSequencerIndexes(totalLayers.sub(ethers.constants.One))
     
-    //             let amount = await deployed.layer2Manager.minimumDepositForCandidate();
+                let amount = await deployed.layer2Manager.minimumDepositForCandidate();
 
-    //             if(candidateInfo.tonAmount4 < amount) {
-    //                 candidateInfo.tonAmount4 = amount;
-    //             }
+                if(candidateInfo.tonAmount4 < amount) {
+                    candidateInfo.tonAmount4 = amount;
+                }
     
-    //             if (amount.gt(await deployed.ton.balanceOf(candidate4.address)))
-    //                 await (await deployed.ton.connect(deployed.tonAdmin).mint(candidate4.address, candidateInfo.tonAmount4)).wait();
+                if (amount.gt(await deployed.ton.balanceOf(candidate4.address)))
+                    await (await deployed.ton.connect(deployed.tonAdmin).mint(candidate4.address, candidateInfo.tonAmount4)).wait();
     
-    //             if (amount.gte(await deployed.ton.allowance(candidate4.address, deployed.layer2Manager.address)))
-    //                 await (await deployed.ton.connect(candidate4).approve(deployed.layer2Manager.address, candidateInfo.tonAmount4)).wait();
+                if (amount.gte(await deployed.ton.allowance(candidate4.address, deployed.layer2Manager.address)))
+                    await (await deployed.ton.connect(candidate4).approve(deployed.layer2Manager.address, candidateInfo.tonAmount4)).wait();
     
-    //             const commission = 500;
-    //             await snapshotGasCost(deployed.layer2Manager.connect(candidate4).createCandidate(
-    //                 sequencerIndex,
-    //                 ethers.utils.formatBytes32String(name),
-    //                 commission,
-    //                 candidateInfo.tonAmount4
-    //             ))
+                const commission = 500;
+                await snapshotGasCost(deployed.layer2Manager.connect(candidate4).createCandidate(
+                    sequencerIndex,
+                    ethers.utils.formatBytes32String(name),
+                    commission,
+                    candidateInfo.tonAmount4
+                ))
 
-    //             expect(await deployed.layer2Manager.totalCandidates()).to.eq(totalCandidates.add(1))
-    //             let getAllCandidatesAfter = await deployed.layer2Manager.getAllCandidates();
-    //             expect(getAllCandidatesBefore.candidateNamesIndexes_.length).to.eq(
-    //                 getAllCandidatesAfter.candidateNamesIndexes_.length-1
-    //             )
-    //         })
+                expect(await deployed.layer2Manager.totalCandidates()).to.eq(totalCandidates.add(1))
+                let getAllCandidatesAfter = await deployed.layer2Manager.getAllCandidates();
+                expect(getAllCandidatesBefore.candidateNamesIndexes_.length).to.eq(
+                    getAllCandidatesAfter.candidateNamesIndexes_.length-1
+                )
+            })
             
-    //         it("DAOContract check candidate4", async () => {
-    //             expect(await DAOProxyLogicV2.candidatesLengthV2()).to.be.eq(5)
-    //             expect(await DAOProxyLogicV2.candidatesV2(4)).to.be.eq(candidate4.address)
-    //             expect(await DAOProxyLogicV2.isExistCandidateV2(candidate4.address,sequencerIndexSave)).to.be.eq(true);
-    //         })
-    //     })
+            it("DAOContract check candidate4", async () => {
+                expect(await DAOProxyLogicV2.candidatesLengthV2()).to.be.eq(5)
+                expect(await DAOProxyLogicV2.candidatesV2(4)).to.be.eq(candidate4.address)
+                expect(await DAOProxyLogicV2.isExistCandidateV2(candidate4.address,sequencerIndexSave)).to.be.eq(true);
+            })
+        })
 
-    //     describe("#7-5. updateSeigniorage", () => {
-    //         it('After the recent seignorage issuance, seignorage will not be issued unless the minimum block has passed.', async () => {
-    //             const lastSeigBlock = await deployed.seigManagerV2.lastSeigBlock()
-    //             const minimumBlocksForUpdateSeig = await deployed.seigManagerV2.minimumBlocksForUpdateSeig()
-    //             const block = await ethers.provider.getBlock('latest')
+        describe("#7-5. updateSeigniorage", () => {
+            it('After the recent seignorage issuance, seignorage will not be issued unless the minimum block has passed.', async () => {
+                const lastSeigBlock = await deployed.seigManagerV2.lastSeigBlock()
+                const minimumBlocksForUpdateSeig = await deployed.seigManagerV2.minimumBlocksForUpdateSeig()
+                const block = await ethers.provider.getBlock('latest')
     
-    //             await DAOProxyLogicV2.connect(candidate1).updateSeigniorageV2()
+                await DAOProxyLogicV2.connect(candidate1).updateSeigniorageV2()
     
-    //             if (block.number - lastSeigBlock.toNumber() < minimumBlocksForUpdateSeig ) {
-    //                 expect(await deployed.seigManagerV2.lastSeigBlock()).to.eq(lastSeigBlock)
-    //             } else {
-    //                 expect(await deployed.seigManagerV2.lastSeigBlock()).to.gt(lastSeigBlock)
-    //             }
-    //         })
+                if (block.number - lastSeigBlock.toNumber() < minimumBlocksForUpdateSeig ) {
+                    expect(await deployed.seigManagerV2.lastSeigBlock()).to.eq(lastSeigBlock)
+                } else {
+                    expect(await deployed.seigManagerV2.lastSeigBlock()).to.gt(lastSeigBlock)
+                }
+            })
 
-    //         it("pass blocks", async function () {
-    //             const minimumBlocksForUpdateSeig = await deployed.seigManagerV2.minimumBlocksForUpdateSeig()
-    //             let i
-    //             for (i = 0; i < minimumBlocksForUpdateSeig; i++){
-    //                 await ethers.provider.send('evm_mine');
-    //             }
-    //         });
+            it("pass blocks", async function () {
+                const minimumBlocksForUpdateSeig = await deployed.seigManagerV2.minimumBlocksForUpdateSeig()
+                let i
+                for (i = 0; i < minimumBlocksForUpdateSeig; i++){
+                    await ethers.provider.send('evm_mine');
+                }
+            });
     
-    //         it('If the staked amount is greater than 0, indexLton increase.', async () => {    
-    //             let prevBalanceOfCandidate = await deployed.candidate.balanceOf(1, candidate1.address);
-    //             let prevBalanceLtonOfCandidate =await deployed.candidate["balanceOfLton(uint32,address)"](1, candidate1.address)
-    //             // console.log("prevBalanceOfCandidate:", prevBalanceOfCandidate)
-    //             // console.log("prevBalanceLtonOfCandidate:", prevBalanceLtonOfCandidate)
+            it('If the staked amount is greater than 0, indexLton increase.', async () => {    
+                let prevBalanceOfCandidate = await deployed.candidate.balanceOf(1, candidate1.address);
+                let prevBalanceLtonOfCandidate =await deployed.candidate["balanceOfLton(uint32,address)"](1, candidate1.address)
+                // console.log("prevBalanceOfCandidate:", prevBalanceOfCandidate)
+                // console.log("prevBalanceLtonOfCandidate:", prevBalanceLtonOfCandidate)
 
-    //             expect(await deployed.seigManagerV2.ratesDao()).to.eq(rates.ratesDao)
-    //             expect(await deployed.seigManagerV2.ratesStosHolders()).to.eq(rates.ratesStosHolders)
-    //             expect(await deployed.seigManagerV2.getTotalLton()).to.gt(ethers.constants.Zero)
-    //             const indexLton = await deployed.seigManagerV2.indexLton();
-    //             await DAOProxyLogicV2.connect(candidate1).updateSeigniorageV2()
-    //             expect(await deployed.seigManagerV2.indexLton()).to.gt(indexLton)
+                expect(await deployed.seigManagerV2.ratesDao()).to.eq(rates.ratesDao)
+                expect(await deployed.seigManagerV2.ratesStosHolders()).to.eq(rates.ratesStosHolders)
+                expect(await deployed.seigManagerV2.getTotalLton()).to.gt(ethers.constants.Zero)
+                const indexLton = await deployed.seigManagerV2.indexLton();
+                await DAOProxyLogicV2.connect(candidate1).updateSeigniorageV2()
+                expect(await deployed.seigManagerV2.indexLton()).to.gt(indexLton)
                 
-    //             // console.log(await deployed.candidate["balanceOfLton(uint32,address)"](1, candidate1.address))
-    //             // console.log(await deployed.candidate.balanceOf(1, candidate1.address))
+                // console.log(await deployed.candidate["balanceOfLton(uint32,address)"](1, candidate1.address))
+                // console.log(await deployed.candidate.balanceOf(1, candidate1.address))
 
-    //             expect(await deployed.candidate["balanceOfLton(uint32,address)"](1, candidate1.address)).to.eq(prevBalanceLtonOfCandidate)
-    //             expect(await deployed.candidate.balanceOf(1, candidate1.address)).to.gt(prevBalanceOfCandidate)
-    //         });
-    //     })
+                expect(await deployed.candidate["balanceOfLton(uint32,address)"](1, candidate1.address)).to.eq(prevBalanceLtonOfCandidate)
+                expect(await deployed.candidate.balanceOf(1, candidate1.address)).to.gt(prevBalanceOfCandidate)
+            });
+        })
 
-    //     describe("#7-6. increaseMaxMember & decreaseMaxMember", () => {
-    //         it("now MaxMember is 3", async () => {
-    //             expect(await DAOProxyLogicV2.maxMember()).to.be.eq(3)
-    //         })
+        describe("#7-6. increaseMaxMember & decreaseMaxMember", () => {
+            it("now MaxMember is 3", async () => {
+                expect(await DAOProxyLogicV2.maxMember()).to.be.eq(3)
+            })
 
-    //         it("increaseMaxMember can not by not owner", async () => {
-    //             let maxMeber = Number(await DAOProxyLogicV2.maxMember())
-    //             await expect(
-    //                 DAOProxyLogicV2.connect(addr1).increaseMaxMember((maxMeber+1),(maxMeber))
-    //             ).to.be.revertedWith("DAO: NA") 
-    //         })
+            it("increaseMaxMember can not by not owner", async () => {
+                let maxMeber = Number(await DAOProxyLogicV2.maxMember())
+                await expect(
+                    DAOProxyLogicV2.connect(addr1).increaseMaxMember((maxMeber+1),(maxMeber))
+                ).to.be.revertedWith("DAO: NA") 
+            })
 
-    //         it("increaseMaxMember can not under nowMember", async () => {
-    //             let maxMeber = Number(await DAOProxyLogicV2.maxMember())
-    //             await expect(
-    //                 DAOProxyLogicV2.connect(daoAdmin).increaseMaxMember((maxMeber-1),(maxMeber-2))
-    //             ).to.be.revertedWith("DAO: ME") 
-    //         })
+            it("increaseMaxMember can not under nowMember", async () => {
+                let maxMeber = Number(await DAOProxyLogicV2.maxMember())
+                await expect(
+                    DAOProxyLogicV2.connect(daoAdmin).increaseMaxMember((maxMeber-1),(maxMeber-2))
+                ).to.be.revertedWith("DAO: ME") 
+            })
             
-    //         it("increaseMaxMember can by only owner", async () => {
-    //             let maxMeber = Number(await DAOProxyLogicV2.maxMember())
-    //             await DAOProxyLogicV2.connect(daoAdmin).increaseMaxMember((maxMeber+1),maxMeber)
-    //             expect(await DAOProxyLogicV2.maxMember()).to.be.eq((maxMeber+1))
-    //             expect(await DAOProxyLogicV2.quorum()).to.be.eq(maxMeber)
-    //         })
+            it("increaseMaxMember can by only owner", async () => {
+                let maxMeber = Number(await DAOProxyLogicV2.maxMember())
+                await DAOProxyLogicV2.connect(daoAdmin).increaseMaxMember((maxMeber+1),maxMeber)
+                expect(await DAOProxyLogicV2.maxMember()).to.be.eq((maxMeber+1))
+                expect(await DAOProxyLogicV2.quorum()).to.be.eq(maxMeber)
+            })
 
-    //         it("decreaseMaxMember can not by not owner", async () => {
-    //             let maxMeber = Number(await DAOProxyLogicV2.maxMember())
-    //             // let reducingMamber = await DAOProxyLogicV2.members((maxMeber-1))
-    //             // console.log("reducingMamber :", reducingMamber);
-    //             await expect(
-    //                 DAOProxyLogicV2.connect(addr1).decreaseMaxMember((maxMeber-1),(maxMeber-2))
-    //             ).to.be.revertedWith("DAO: NA") 
-    //         })
+            it("decreaseMaxMember can not by not owner", async () => {
+                let maxMeber = Number(await DAOProxyLogicV2.maxMember())
+                // let reducingMamber = await DAOProxyLogicV2.members((maxMeber-1))
+                // console.log("reducingMamber :", reducingMamber);
+                await expect(
+                    DAOProxyLogicV2.connect(addr1).decreaseMaxMember((maxMeber-1),(maxMeber-2))
+                ).to.be.revertedWith("DAO: NA") 
+            })
 
-    //         it("decreaseMaxMember can not invalid member index", async () => {
-    //             let maxMeber = Number(await DAOProxyLogicV2.maxMember())
-    //             await expect(
-    //                 DAOProxyLogicV2.connect(daoAdmin).decreaseMaxMember((maxMeber+1),(maxMeber))
-    //             ).to.be.revertedWith("DAO: VI") 
-    //         })
+            it("decreaseMaxMember can not invalid member index", async () => {
+                let maxMeber = Number(await DAOProxyLogicV2.maxMember())
+                await expect(
+                    DAOProxyLogicV2.connect(daoAdmin).decreaseMaxMember((maxMeber+1),(maxMeber))
+                ).to.be.revertedWith("DAO: VI") 
+            })
 
-    //         it("decreaseMaxMember can not invalid member index", async () => {
-    //             let maxMeber = Number(await DAOProxyLogicV2.maxMember())
-    //             await DAOProxyLogicV2.connect(daoAdmin).decreaseMaxMember((maxMeber-1),(maxMeber-2))
-    //             expect(await DAOProxyLogicV2.maxMember()).to.be.eq((maxMeber-1))
-    //             expect(await DAOProxyLogicV2.quorum()).to.be.eq(maxMeber-2)
-    //         })
-    //     })
+            it("decreaseMaxMember can not invalid member index", async () => {
+                let maxMeber = Number(await DAOProxyLogicV2.maxMember())
+                await DAOProxyLogicV2.connect(daoAdmin).decreaseMaxMember((maxMeber-1),(maxMeber-2))
+                expect(await DAOProxyLogicV2.maxMember()).to.be.eq((maxMeber-1))
+                expect(await DAOProxyLogicV2.quorum()).to.be.eq(maxMeber-2)
+            })
+        })
         
-    //     describe("#7-7. Member challenge", () => {
-    //         it("not candidate not challenge", async () => {
-    //             await expect(
-    //                 DAOProxyLogicV2.connect(addr1).changeMember(0,sequencerIndexSave)
-    //             ).to.be.revertedWith("DAO: not registerd") 
-    //         })
+        describe("#7-7. Member challenge", () => {
+            it("not candidate not challenge", async () => {
+                await expect(
+                    DAOProxyLogicV2.connect(addr1).changeMember(0,sequencerIndexSave)
+                ).to.be.revertedWith("DAO: NC") 
+            })
 
-    //         it("There is a member of V1, but a V2 candidate challenge", async () => {
-    //             let changeIndex = 0;
-    //             let beforeMember = await DAOProxyLogicV2.members(changeIndex)
-    //             const topic = deployed.daov2committeeV2.interface.getEventTopic('ChangedMember');
-    //             const receipt = await(await DAOProxyLogicV2.connect(candidate1).changeMember(changeIndex,sequencerIndexSave)).wait();
-    //             const log = receipt.logs.find(x => x.topics.indexOf(topic) >= 0);
-    //             const deployedEvent = deployed.daov2committeeV2.interface.parseLog(log);
+            it("There is a member of V1, but a V2 candidate challenge", async () => {
+                let changeIndex = 0;
+                let beforeMember = await DAOProxyLogicV2.members(changeIndex)
+                const topic = deployed.daov2committeeV2.interface.getEventTopic('ChangedMember');
+                const receipt = await(await DAOProxyLogicV2.connect(candidate1).changeMember(changeIndex,sequencerIndexSave)).wait();
+                const log = receipt.logs.find(x => x.topics.indexOf(topic) >= 0);
+                const deployedEvent = deployed.daov2committeeV2.interface.parseLog(log);
                 
-    //             expect(deployedEvent.args.slotIndex).to.eq(changeIndex);
-    //             expect(deployedEvent.args.prevMember).to.eq(beforeMember);
-    //             expect(deployedEvent.args.newMember).to.eq(candidate1.address);
-    //         })
+                expect(deployedEvent.args.slotIndex).to.eq(changeIndex);
+                expect(deployedEvent.args.prevMember).to.eq(beforeMember);
+                expect(deployedEvent.args.newMember).to.eq(candidate1.address);
+            })
 
-    //         it("everyMember change V2member", async () => {
-    //             let changeIndex = 1;
-    //             let beforeMember = await DAOProxyLogicV2.members(changeIndex)
-    //             const topic = deployed.daov2committeeV2.interface.getEventTopic('ChangedMember');
-    //             const receipt = await(await DAOProxyLogicV2.connect(candidate2).changeMember(changeIndex,sequencerIndexSave)).wait();
-    //             const log = receipt.logs.find(x => x.topics.indexOf(topic) >= 0);
-    //             const deployedEvent = deployed.daov2committeeV2.interface.parseLog(log);
+            it("everyMember change V2member", async () => {
+                let changeIndex = 1;
+                let beforeMember = await DAOProxyLogicV2.members(changeIndex)
+                const topic = deployed.daov2committeeV2.interface.getEventTopic('ChangedMember');
+                const receipt = await(await DAOProxyLogicV2.connect(candidate2).changeMember(changeIndex,sequencerIndexSave)).wait();
+                const log = receipt.logs.find(x => x.topics.indexOf(topic) >= 0);
+                const deployedEvent = deployed.daov2committeeV2.interface.parseLog(log);
                 
-    //             expect(deployedEvent.args.slotIndex).to.eq(changeIndex);
-    //             expect(deployedEvent.args.prevMember).to.eq(beforeMember);
-    //             expect(deployedEvent.args.newMember).to.eq(candidate2.address);
+                expect(deployedEvent.args.slotIndex).to.eq(changeIndex);
+                expect(deployedEvent.args.prevMember).to.eq(beforeMember);
+                expect(deployedEvent.args.newMember).to.eq(candidate2.address);
 
-    //             expect(await DAOProxyLogicV2.isMemberV2(candidate2.address,sequencerIndexSave)).to.be.equal(true)
+                expect(await DAOProxyLogicV2.isMemberV2(candidate2.address,sequencerIndexSave)).to.be.equal(true)
                 
-    //             let changeIndex2 = 2;
-    //             let beforeMember2 = await DAOProxyLogicV2.members(changeIndex2)
-    //             const topic2 = deployed.daov2committeeV2.interface.getEventTopic('ChangedMember');
-    //             const receipt2 = await(await DAOProxyLogicV2.connect(candidate3).changeMember(changeIndex2,sequencerIndexSave)).wait();
-    //             const log2 = receipt2.logs.find(x => x.topics.indexOf(topic2) >= 0);
-    //             const deployedEvent2 = deployed.daov2committeeV2.interface.parseLog(log2);
+                let changeIndex2 = 2;
+                let beforeMember2 = await DAOProxyLogicV2.members(changeIndex2)
+                const topic2 = deployed.daov2committeeV2.interface.getEventTopic('ChangedMember');
+                const receipt2 = await(await DAOProxyLogicV2.connect(candidate3).changeMember(changeIndex2,sequencerIndexSave)).wait();
+                const log2 = receipt2.logs.find(x => x.topics.indexOf(topic2) >= 0);
+                const deployedEvent2 = deployed.daov2committeeV2.interface.parseLog(log2);
                 
-    //             expect(deployedEvent2.args.slotIndex).to.eq(changeIndex2);
-    //             expect(deployedEvent2.args.prevMember).to.eq(beforeMember2);
-    //             expect(deployedEvent2.args.newMember).to.eq(candidate3.address);
+                expect(deployedEvent2.args.slotIndex).to.eq(changeIndex2);
+                expect(deployedEvent2.args.prevMember).to.eq(beforeMember2);
+                expect(deployedEvent2.args.newMember).to.eq(candidate3.address);
 
-    //             expect(await DAOProxyLogicV2.isMemberV2(candidate3.address,sequencerIndexSave)).to.be.equal(true)
-    //         })
+                expect(await DAOProxyLogicV2.isMemberV2(candidate3.address,sequencerIndexSave)).to.be.equal(true)
+            })
 
-    //         it("If the deposit amount is less, the challenge fails.", async () => {
-    //             // console.log(await deployed.optimismSequencer["balanceOfLton(uint32,address)"](1, sequencer1.address))
-    //             // console.log(await deployed.candidate["balanceOfLton(uint32,address)"](3, candidate3.address))
-    //             await expect(
-    //                 DAOProxyLogicV2.connect(sequencer1).changeMember(2,sequencerIndexSave)
-    //             ).to.be.revertedWith("not enough amount") 
-    //         })
+            it("If the deposit amount is less, the challenge fails.", async () => {
+                // console.log(await deployed.optimismSequencer["balanceOfLton(uint32,address)"](1, sequencer1.address))
+                // console.log(await deployed.candidate["balanceOfLton(uint32,address)"](3, candidate3.address))
+                await expect(
+                    DAOProxyLogicV2.connect(sequencer1).changeMember(2,sequencerIndexSave)
+                ).to.be.revertedWith("not enough amount") 
+            })
 
-    //         it("Even if the deposit amount is the same, the challenge fails.", async () => {
-    //             // console.log(await deployed.optimismSequencer["balanceOfLton(uint32,address)"](1, sequencer1.address))
-    //             // console.log(await deployed.candidate["balanceOfLton(uint32,address)"](2, candidate2.address))
-    //             await expect(
-    //                 DAOProxyLogicV2.connect(sequencer1).changeMember(1,sequencerIndexSave)
-    //             ).to.be.revertedWith("not enough amount") 
-    //         })
+            it("Even if the deposit amount is the same, the challenge fails.", async () => {
+                // console.log(await deployed.optimismSequencer["balanceOfLton(uint32,address)"](1, sequencer1.address))
+                // console.log(await deployed.candidate["balanceOfLton(uint32,address)"](2, candidate2.address))
+                await expect(
+                    DAOProxyLogicV2.connect(sequencer1).changeMember(1,sequencerIndexSave)
+                ).to.be.revertedWith("not enough amount") 
+            })
 
-    //         it("If the deposit amount is greater, the challenge succeeds.", async () => {
-    //             let changeIndex = 0;
-    //             let beforeMember = await DAOProxyLogicV2.members(changeIndex)
-    //             const topic = deployed.daov2committeeV2.interface.getEventTopic('ChangedMember');
-    //             const receipt = await(await DAOProxyLogicV2.connect(sequencer1).changeMember(changeIndex,sequencerIndexSave)).wait();
-    //             const log = receipt.logs.find(x => x.topics.indexOf(topic) >= 0);
-    //             const deployedEvent = deployed.daov2committeeV2.interface.parseLog(log);
+            it("If the deposit amount is greater, the challenge succeeds.", async () => {
+                let changeIndex = 0;
+                let beforeMember = await DAOProxyLogicV2.members(changeIndex)
+                const topic = deployed.daov2committeeV2.interface.getEventTopic('ChangedMember');
+                const receipt = await(await DAOProxyLogicV2.connect(sequencer1).changeMember(changeIndex,sequencerIndexSave)).wait();
+                const log = receipt.logs.find(x => x.topics.indexOf(topic) >= 0);
+                const deployedEvent = deployed.daov2committeeV2.interface.parseLog(log);
                 
-    //             expect(deployedEvent.args.slotIndex).to.eq(changeIndex);
-    //             expect(deployedEvent.args.prevMember).to.eq(beforeMember);
-    //             expect(deployedEvent.args.prevMember).to.eq(candidate1.address);
-    //             expect(deployedEvent.args.newMember).to.eq(sequencer1.address);
-    //         })
+                expect(deployedEvent.args.slotIndex).to.eq(changeIndex);
+                expect(deployedEvent.args.prevMember).to.eq(beforeMember);
+                expect(deployedEvent.args.prevMember).to.eq(candidate1.address);
+                expect(deployedEvent.args.newMember).to.eq(sequencer1.address);
+            })
 
-    //         it("cannot run retire if you are not a member.", async () => {
-    //             await expect(
-    //                 DAOProxyLogicV2.connect(addr1).retireMember(sequencerIndexSave)
-    //             ).to.be.revertedWith("DAO: NM") 
-    //         })
+            it("cannot run retire if you are not a member.", async () => {
+                await expect(
+                    DAOProxyLogicV2.connect(addr1).retireMember(sequencerIndexSave)
+                ).to.be.revertedWith("DAO: NM") 
+            })
 
-    //         it("Members can retire. The member retired at address0.", async () => {
-    //             let changeIndex = 2;
-    //             const topic = deployed.daov2committeeV2.interface.getEventTopic('ChangedMember');
-    //             const receipt = await(await DAOProxyLogicV2.connect(candidate3).retireMember(sequencerIndexSave)).wait();
-    //             const log = receipt.logs.find(x => x.topics.indexOf(topic) >= 0);
-    //             const deployedEvent = deployed.daov2committeeV2.interface.parseLog(log);
+            it("Members can retire. The member retired at address0.", async () => {
+                let changeIndex = 2;
+                const topic = deployed.daov2committeeV2.interface.getEventTopic('ChangedMember');
+                const receipt = await(await DAOProxyLogicV2.connect(candidate3).retireMember(sequencerIndexSave)).wait();
+                const log = receipt.logs.find(x => x.topics.indexOf(topic) >= 0);
+                const deployedEvent = deployed.daov2committeeV2.interface.parseLog(log);
                 
-    //             expect(deployedEvent.args.slotIndex).to.eq(changeIndex);
-    //             expect(deployedEvent.args.prevMember).to.eq(candidate3.address);
-    //             expect(deployedEvent.args.newMember).to.eq(addr0);
-    //         })
+                expect(deployedEvent.args.slotIndex).to.eq(changeIndex);
+                expect(deployedEvent.args.prevMember).to.eq(candidate3.address);
+                expect(deployedEvent.args.newMember).to.eq(addr0);
+            })
 
-    //         it("Even after retirement, you can register as a member again.", async () => {
-    //             expect(await DAOProxyLogicV2.isMemberV2(candidate3.address,sequencerIndexSave)).to.be.equal(false)
+            it("Even after retirement, you can register as a member again.", async () => {
+                expect(await DAOProxyLogicV2.isMemberV2(candidate3.address,sequencerIndexSave)).to.be.equal(false)
 
-    //             let changeIndex2 = 2;
-    //             let beforeMember2 = await DAOProxyLogicV2.members(changeIndex2)
-    //             const topic2 = deployed.daov2committeeV2.interface.getEventTopic('ChangedMember');
-    //             const receipt2 = await(await DAOProxyLogicV2.connect(candidate3).changeMember(changeIndex2,sequencerIndexSave)).wait();
-    //             const log2 = receipt2.logs.find(x => x.topics.indexOf(topic2) >= 0);
-    //             const deployedEvent2 = deployed.daov2committeeV2.interface.parseLog(log2);
+                let changeIndex2 = 2;
+                let beforeMember2 = await DAOProxyLogicV2.members(changeIndex2)
+                const topic2 = deployed.daov2committeeV2.interface.getEventTopic('ChangedMember');
+                const receipt2 = await(await DAOProxyLogicV2.connect(candidate3).changeMember(changeIndex2,sequencerIndexSave)).wait();
+                const log2 = receipt2.logs.find(x => x.topics.indexOf(topic2) >= 0);
+                const deployedEvent2 = deployed.daov2committeeV2.interface.parseLog(log2);
                 
-    //             expect(deployedEvent2.args.slotIndex).to.be.eq(changeIndex2);
-    //             expect(deployedEvent2.args.prevMember).to.be.eq(beforeMember2);
-    //             expect(deployedEvent2.args.newMember).to.be.eq(candidate3.address);
+                expect(deployedEvent2.args.slotIndex).to.be.eq(changeIndex2);
+                expect(deployedEvent2.args.prevMember).to.be.eq(beforeMember2);
+                expect(deployedEvent2.args.newMember).to.be.eq(candidate3.address);
 
-    //             expect(await DAOProxyLogicV2.isMemberV2(candidate3.address,sequencerIndexSave)).to.be.equal(true)
-    //         })
+                expect(await DAOProxyLogicV2.isMemberV2(candidate3.address,sequencerIndexSave)).to.be.equal(true)
+            })
 
-    //         it("fill all slots", async () => {
-    //             expect(await DAOProxyLogicV2.members(0)).to.be.equal(sequencer1.address);
-    //             expect(await DAOProxyLogicV2.members(1)).to.be.equal(candidate2.address);
-    //             expect(await DAOProxyLogicV2.members(2)).to.be.equal(candidate3.address);
-    //         })
+            it("fill all slots", async () => {
+                expect(await DAOProxyLogicV2.members(0)).to.be.equal(sequencer1.address);
+                expect(await DAOProxyLogicV2.members(1)).to.be.equal(candidate2.address);
+                expect(await DAOProxyLogicV2.members(2)).to.be.equal(candidate3.address);
+            })
 
-    //         it("can not exceed maximum", async () => {
-    //             expect(await DAOProxyLogicV2.maxMember()).to.be.equal(3);
-    //             await expect(
-    //                 DAOProxyLogicV2.connect(candidate1).changeMember(3,sequencerIndexSave)
-    //             ).to.be.revertedWith("DAO: VI") 
-    //         })
-    //     })
-    // })
+            it("can not exceed maximum", async () => {
+                expect(await DAOProxyLogicV2.maxMember()).to.be.equal(3);
+                await expect(
+                    DAOProxyLogicV2.connect(candidate1).changeMember(3,sequencerIndexSave)
+                ).to.be.revertedWith("DAO: VI") 
+            })
+        })
+    })
 
     // describe("#8. DAO Agenda Test", () => {
     //     describe("check the beforeAgenda", () => {
@@ -1821,7 +1868,7 @@ describe('DAOv2Committee', () => {
             
     //                     if (agenda[AGENDA_INDEX_STATUS] == AGENDA_STATUS_WAITING_EXEC) {
     //                         const beforeValue = await deployed.daoagendaManager.minimumNoticePeriodSeconds();
-    //                         await DAOProxyLogicV2.executeAgenda(agendaID);
+    //                         await DAOProxyLogicV1.executeAgenda(agendaID);
     //                         const afterValue = await deployed.daoagendaManager.minimumNoticePeriodSeconds();
     //                         console.log("beforeValue :", beforeValue)
     //                         console.log("afterValue :", afterValue)
@@ -1908,7 +1955,7 @@ describe('DAOv2Committee', () => {
     //         });
     
     //         it("end agenda voting", async function () {
-    //             await DAOProxyLogicV2.endAgendaVoting(agendaID);
+    //             await DAOProxyLogicV1.endAgendaVoting(agendaID);
     //         });
     
     //         it("check vote result/status", async function () {
@@ -2003,7 +2050,7 @@ describe('DAOv2Committee', () => {
     //           const beforeAgenda = await deployed.daoagendaManager.agendas(agendaID); 
     //           const beforeValue = await deployed.daoagendaManager.minimumNoticePeriodSeconds();
     //           expect(beforeAgenda[AGENDA_INDEX_EXECUTED]).to.be.equal(false);
-    //           const executeTx = await DAOProxyLogicV2.executeAgenda(agendaID);
+    //           const executeTx = await DAOProxyLogicV1.executeAgenda(agendaID);
     //           const afterValue = await deployed.daoagendaManager.minimumNoticePeriodSeconds();
     //           expect(beforeValue).to.be.not.equal(afterValue);
     
@@ -2108,7 +2155,7 @@ describe('DAOv2Committee', () => {
     //           expect(await time.latest()).to.be.gt(agenda[AGENDA_INDEX_EXECUTABLE_LIMIT_TIMESTAMP]);
     //           expect(await deployed.daoagendaManager.canExecuteAgenda(agendaID)).to.be.equal(false);
     //           await expect(
-    //             DAOProxyLogicV2.executeAgenda(agendaID)
+    //             DAOProxyLogicV1.executeAgenda(agendaID)
     //           ).to.be.revertedWith("DAO: CA"); 
     //         });
     //     });
@@ -2336,7 +2383,7 @@ describe('DAOv2Committee', () => {
     //             const beforeValue2 = await deployed.daoagendaManager.createAgendaFees();
     //             const beforeValue3 = await deployed.daoagendaManager.executingPeriodSeconds();
     
-    //             const executeTx = await DAOProxyLogicV2.executeAgenda(agendaID);
+    //             const executeTx = await DAOProxyLogicV1.executeAgenda(agendaID);
     
     //             const afterValue = await deployed.daoagendaManager.minimumNoticePeriodSeconds();
     //             const afterValue2 = await deployed.daoagendaManager.createAgendaFees();

@@ -27,7 +27,7 @@ const config: HardhatUserConfig = {
     hardhat: {
       forking: {
         url: `https://mainnet.infura.io/v3/${process.env.INFURA_API_KEY}`,
-        blockNumber: 16823556
+        blockNumber: 17523556
       },
       // mining: {
       //   auto: false,
