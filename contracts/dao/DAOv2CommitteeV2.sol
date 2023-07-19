@@ -592,10 +592,10 @@ contract DAOv2CommitteeV2 is
         require((isExistCandidate(msg.sender) || isExistCandidateV2(msg.sender,_index)), "DAO: not registerd");
         // address candidate = ICandidate(msg.sender).candidate();
         LibDaoV2.CandidateInfoV2 storage candidateInfo = _candidateInfosV2[msg.sender][_index];
-        require(
-            candidateInfo.indexMembers != 0,
-            "DAO: NM"
-        );
+        // require(
+        //     candidateInfo.indexMembers != 0,
+        //     "DAO: NM"
+        // );
 
         members[candidateInfo.indexMembers] = address(0);
         candidateInfo.rewardPeriod = uint128(uint256(candidateInfo.rewardPeriod).add(block.timestamp.sub(candidateInfo.memberJoinedTime)));

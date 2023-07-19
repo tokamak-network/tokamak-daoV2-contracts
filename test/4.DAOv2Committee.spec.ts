@@ -244,7 +244,6 @@ describe('DAOv2Committee', () => {
         expect(result[1]).to.be.equal(_vote);
     } 
     
-
     async function castVote2(_agendaID: any, voter: any, _vote: any) {
         const agenda1 = await deployed.daoagendaManager.agendas(_agendaID);
         const beforeCountingYes = agenda1[AGENDA_INDEX_COUNTING_YES];
@@ -1774,38 +1773,38 @@ describe('DAOv2Committee', () => {
             })
 
             it("Members can retire. The member retired at address0.", async () => {
-                let changeIndex = 2;
+                let changeIndex = 0;
                 const topic = deployed.daov2committeeV2.interface.getEventTopic('ChangedMember');
-                const receipt = await(await DAOProxyLogicV2.connect(candidate3).retireMember(sequencerIndexSave)).wait();
+                const receipt = await(await DAOProxyLogicV2.connect(candidate1).retireMember(sequencerIndexSave)).wait();
                 const log = receipt.logs.find(x => x.topics.indexOf(topic) >= 0);
                 const deployedEvent = deployed.daov2committeeV2.interface.parseLog(log);
                 
                 expect(deployedEvent.args.slotIndex).to.eq(changeIndex);
-                expect(deployedEvent.args.prevMember).to.eq(candidate3.address);
+                expect(deployedEvent.args.prevMember).to.eq(candidate1.address);
                 expect(deployedEvent.args.newMember).to.eq(addr0);
             })
 
             it("Even after retirement, you can register as a member again.", async () => {
                 expect(await DAOProxyLogicV2.isMemberV2(candidate3.address,sequencerIndexSave)).to.be.equal(false)
 
-                let changeIndex2 = 2;
+                let changeIndex2 = 0;
                 let beforeMember2 = await DAOProxyLogicV2.members(changeIndex2)
                 const topic2 = deployed.daov2committeeV2.interface.getEventTopic('ChangedMember');
-                const receipt2 = await(await DAOProxyLogicV2.connect(candidate3).changeMember(changeIndex2,sequencerIndexSave)).wait();
+                const receipt2 = await(await DAOProxyLogicV2.connect(candidate1).changeMember(changeIndex2,sequencerIndexSave)).wait();
                 const log2 = receipt2.logs.find(x => x.topics.indexOf(topic2) >= 0);
                 const deployedEvent2 = deployed.daov2committeeV2.interface.parseLog(log2);
                 
                 expect(deployedEvent2.args.slotIndex).to.be.eq(changeIndex2);
                 expect(deployedEvent2.args.prevMember).to.be.eq(beforeMember2);
-                expect(deployedEvent2.args.newMember).to.be.eq(candidate3.address);
+                expect(deployedEvent2.args.newMember).to.be.eq(candidate1.address);
 
-                expect(await DAOProxyLogicV2.isMemberV2(candidate3.address,sequencerIndexSave)).to.be.equal(true)
+                expect(await DAOProxyLogicV2.isMemberV2(candidate1.address,sequencerIndexSave)).to.be.equal(true)
             })
 
             it("fill all slots", async () => {
-                expect(await DAOProxyLogicV2.members(0)).to.be.equal(sequencer1.address);
+                expect(await DAOProxyLogicV2.members(0)).to.be.equal(candidate1.address);
                 expect(await DAOProxyLogicV2.members(1)).to.be.equal(candidate2.address);
-                expect(await DAOProxyLogicV2.members(2)).to.be.equal(candidate3.address);
+                expect(await DAOProxyLogicV2.members(2)).to.be.equal(sequencer1.address);
             })
 
             it("can not exceed maximum", async () => {
