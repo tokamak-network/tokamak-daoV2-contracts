@@ -7,31 +7,31 @@ import "../AccessControl/AccessControl.sol";
 import "./StorageStateCommittee.sol";
 import "./StorageStateCommitteeV2.sol";
 
-// import { SafeMath } from "../AccessControl/SafeMath.sol";
-// import { IERC20 } from  "../AccessControl/IERC20.sol";
 import { SafeMath } from "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import { IERC20 } from  "../../node_modules/@openzeppelin/contracts/token/ERC20/IERC20.sol";
-// import { IDAOCommittee } from "../interfaces/IDAOCommittee.sol";
-// import { ICandidate } from "../interfaces/ICandidate.sol";
 import { ILayer2 } from "../interfaces/ILayer2.sol";
 // import { IDAOAgendaManager } from "../interfaces/IDAOAgendaManager.sol";
 import { LibAgenda } from "../lib/Agenda.sol";
 import { ERC165Checker } from "../../node_modules/@openzeppelin/contracts/utils/introspection/ERC165Checker.sol";
-// import { ERC165Checker } from "../AccessControl/ERC165Checker.sol";
 
 import { ILayer2Manager } from "../interfaces/ILayer2Manager.sol";
 import { ISeigManagerV2 } from "../interfaces/ISeigManagerV2.sol";
 import { ICandidateV2 } from "../interfaces/ICandidateV2.sol";
 import { IOptimismSequencer } from "../interfaces/IOptimismSequencer.sol";
-// import { IDAOv2Committee } from "../interfaces/IDAOv2Committee.sol";
-// import "../storages/DAOv2CommitteeStorage.sol";
-import {BaseProxyStorageV2} from "../proxy/BaseProxyStorageV2.sol";
+
+import { BaseProxyStorageV2 } from "../proxy/BaseProxyStorageV2.sol";
 
 import "hardhat/console.sol";
 
 interface IStaking {
     function balanceOfLton(uint32 _index) external view returns (uint256 amount) ;
     function balanceOfLton(uint32 _index, address account) external view returns (uint256 amount);
+}
+
+interface IStakeManagerV2 {
+    function updateStake1Rate(uint256 _rate) external;
+    function claimStakerV2(address to, uint256 value) external;  
+    function claimOperator(address to, uint256 value) external;
 }
 
 contract DAOv2CommitteeV2 is
@@ -128,6 +128,10 @@ contract DAOv2CommitteeV2 is
         sequencer = _sequencer;
     }
 
+    function setStakeManagerV2(address _stakeManagerV2) external onlyOwner nonZero(_stakeManagerV2) {
+        stakeManagerV2 = _stakeManagerV2;
+    }
+
     /// @notice Increases the number of member slot
     /// @param _newMaxMember New number of member slot
     /// @param _quorum New quorum
@@ -195,6 +199,37 @@ contract DAOv2CommitteeV2 is
     }
 
     //////////////////////////////////////////////////////////////////////
+    // only StakeMangerV2
+    function updateStake1Rate(
+        uint256 _rate
+    ) 
+        external
+        onlyStakeManagerV2
+    {
+        IStakeManagerV2(stakeManagerV2).updateStake1Rate(_rate);
+    }
+
+    function claimStakerV2(
+        address to,
+        uint256 value
+    )
+        external
+        onlyStakeManagerV2
+    {
+        IStakeManagerV2(stakeManagerV2).claimStakerV2(to,value);
+    }
+    
+    function claimOperator(
+        address to,
+        uint256 value
+    )
+        external
+        onlyStakeManagerV2
+    {
+        IStakeManagerV2(stakeManagerV2).claimOperator(to,value);
+    }
+
+    //////////////////////////////////////////////////////////////////////
     // Managing members
 
     function createCandidateV2(
@@ -250,91 +285,6 @@ contract DAOv2CommitteeV2 is
 
         return candidatesV2.length;
     }
-
-    // /// @notice Replaces an existing member
-    // /// @param _memberIndex The member slot index to be replaced
-    // /// @return Whether or not the execution succeeded
-    // function changeMember(
-    //     uint256 _memberIndex,
-    //     uint32 _sequencerIndex
-    // )
-    //     external
-    //     validMemberIndex(_memberIndex)
-    //     returns (bool)
-    // {
-    //     require(isExistCandidateV2(msg.sender,_sequencerIndex), "DAO: not registerd");
-    //     address newMember = msg.sender;
-
-    //     LibDaoV2.CandidateInfoV2 storage candidateInfo = _candidateInfosV2[newMember][_sequencerIndex];
-    //     require(
-    //         candidateInfo.memberJoinedTime == 0,
-    //         "DAO: already member"
-    //     );
-
-    //     address prevMember = members[_memberIndex];
-    //     // address prevMemberContract = candidateContract(prevMember);
-
-    //     //
-    //     candidateInfo.memberJoinedTime = uint128(block.timestamp);
-    //     candidateInfo.indexMembers = _memberIndex;
-    //     //만약 이전 멤버가 V2였다면 해당 멤버의sequencerIndex를 불러옴
-    //     uint32 preSqIndex = seqIndex[_memberIndex];
-        
-
-    //     members[_memberIndex] = newMember;
-    //     //memberIndex에 sequencerIndex를 저장
-    //     seqIndex[_memberIndex] = _sequencerIndex;
-
-    //     if (prevMember == address(0)) {
-    //         emit ChangedMember(_memberIndex, prevMember, newMember);
-    //         return true;
-    //     }
-
-    //     LibDaoV2.CandidateInfoV2 storage prevCandidateInfo = _candidateInfosV2[prevMember][_sequencerIndex];
-
-    //     //candidateIndex가 0이면 시퀀서로 등록된 것이다.
-    //     /*
-    //         1. 뉴멤버가 시퀀서일때
-    //             1-1. 이전 멤버도 시퀀서일때 (시퀀서끼리 비교)
-    //             1-2. 이전 멤버는 candidate일때 (시퀀서 vs candidate)
-    //         2. 뉴멤버가 candidate일때
-    //             2-1. 이전 멤버는 시퀀서일때 (candidate vs 시퀀서)
-    //             2-2. 이전 멤버도 candidate일때 (candidate끼리 비교)
-    //     */
-    //     if (candidateInfo.candidateIndex == 0) {
-    //         if(prevCandidateInfo.candidateIndex == 0) {
-    //             require(
-    //                 IStaking(address(sequencer)).balanceOfLton(candidateInfo.sequencerIndex,newMember) > IStaking(address(sequencer)).balanceOfLton(prevCandidateInfo.sequencerIndex,prevMember),
-    //                 "not enough amount"
-    //             );
-    //         } else {
-    //             require(
-    //                 IStaking(address(sequencer)).balanceOfLton(candidateInfo.sequencerIndex,newMember) > IStaking(address(candidate)).balanceOfLton(prevCandidateInfo.candidateIndex,prevMember),
-    //                 "not enough amount"
-    //             );
-    //         }
-    //     } else {
-    //         if(prevCandidateInfo.candidateIndex == 0) {
-    //             require(
-    //                 IStaking(address(candidate)).balanceOfLton(candidateInfo.candidateIndex,newMember) > IStaking(address(sequencer)).balanceOfLton(prevCandidateInfo.sequencerIndex,prevMember),
-    //                 "not enough amount"
-    //             );
-    //         } else {
-    //             require(
-    //                 IStaking(address(candidate)).balanceOfLton(candidateInfo.candidateIndex,newMember) > IStaking(address(candidate)).balanceOfLton(prevCandidateInfo.candidateIndex,prevMember),
-    //                 "not enough amount"
-    //             );
-    //         }
-    //     }
-
-    //     prevCandidateInfo.indexMembers = 0;
-    //     prevCandidateInfo.rewardPeriod = uint128(uint256(prevCandidateInfo.rewardPeriod).add(block.timestamp.sub(prevCandidateInfo.memberJoinedTime)));
-    //     prevCandidateInfo.memberJoinedTime = 0;
-
-    //     emit ChangedMember(_memberIndex, prevMember, newMember);
-
-    //     return true;
-    // }
     
     /// @notice Replaces an existing member
     /// @param _memberIndex The member slot index to be replaced
@@ -588,14 +538,21 @@ contract DAOv2CommitteeV2 is
 
     /// @notice Retires member
     /// @return Whether or not the execution succeeded
+    // V1 member라면 _index가 0이다.
     function retireMember(uint32 _index) onlyMemberV2(_index) external returns (bool) {
-        require((isExistCandidate(msg.sender) || isExistCandidateV2(msg.sender,_index)), "DAO: not registerd");
-        // address candidate = ICandidate(msg.sender).candidate();
+        // require((isExistCandidate(msg.sender) || isExistCandidateV2(msg.sender,_index)), "DAO: not registerd"); -> member검사해서 따로 안해도됨
+        uint8 checkSender = isCandidateV2(msg.sender,_index);
         LibDaoV2.CandidateInfoV2 storage candidateInfo = _candidateInfosV2[msg.sender][_index];
-        // require(
-        //     candidateInfo.indexMembers != 0,
-        //     "DAO: NM"
-        // );
+        if(checkSender == 0) {
+            //V1의 member이다.
+            console.log("retire V1 member");
+            address candidate = ICandidate(msg.sender).candidate();
+            CandidateInfo storage candidateInfo = _candidateInfos[candidate];
+            require(
+                candidateInfo.candidateContract == msg.sender,
+                "DAO: IC"
+            );
+        }
 
         members[candidateInfo.indexMembers] = address(0);
         candidateInfo.rewardPeriod = uint128(uint256(candidateInfo.rewardPeriod).add(block.timestamp.sub(candidateInfo.memberJoinedTime)));

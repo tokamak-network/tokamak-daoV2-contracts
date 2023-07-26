@@ -23,6 +23,7 @@ contract StorageStateCommitteeV2 {
     // IOptimismSequencer public sequencer;
     address public candidate;
     address public sequencer;
+    address public stakeManagerV2;
 
     address[] public candidatesV2;
 
@@ -32,13 +33,22 @@ contract StorageStateCommitteeV2 {
     mapping(address => mapping(uint32 => LibDaoV2.CandidateInfoV2)) internal _candidateInfosV2;
 
     modifier validLayer2Manager() {
-        require(address(layer2Manager) != address(0), "StorageStateCommittee: invalid Layer2Manager");
+        require(address(layer2Manager) != address(0), "StorageStateCommitteeV2: invalid Layer2Manager");
         _;
     }
 
     modifier validSeigManagerV2() {
-        require(address(seigManagerV2) != address(0), "StorageStateCommittee: invalid SeigManagerV2");
+        require(address(seigManagerV2) != address(0), "StorageStateCommitteeV2: invalid SeigManagerV2");
         _;
+    }
+
+    modifier onlyStakeManagerV2() {
+        require(isStakeManagerV2(), "StorageStateCommitteeV2: msg.sender not stakeManagerV2");
+        _;
+    }
+
+    function isStakeManagerV2() public view returns (bool) {
+        return (address(stakeManagerV2) == msg.sender);
     }
 
     function isMemberV2(address _candidate, uint32 _index) public view returns (bool) {
