@@ -2207,91 +2207,91 @@ describe('DAOv2Committee', () => {
         });
     })
 
-    // describe("#9. Vault", () => {
-    //     it('check DAOVault balance', async function () {
-    //         let amount = await deployed.ton.balanceOf(deployed.daovault.address);
-    //         expect(amount).to.be.gt(0);
-    //     });
+    describe("#9. Vault", () => {
+        it('check DAOVault balance', async function () {
+            let amount = await deployed.ton.balanceOf(deployed.daovault.address);
+            expect(amount).to.be.gt(0);
+        });
       
-    //     describe('Claim activity reward', function () {
-    //         it("Candidates who were not members will not receive any rewards.", async () => {
-    //             expect(await DAOProxyLogicV2.isMemberV2(candidate4.address,sequencerIndexSave)).to.be.equal(false)
-    //             let claimableAmount = await DAOProxyLogicV2.getClaimableActivityRewardV2(candidate4.address,sequencerIndexSave);
-    //             expect(claimableAmount).to.be.equal(0)
-    //         })
+        describe('Claim activity reward', function () {
+            it("Candidates who were not members will not receive any rewards.", async () => {
+                expect(await DAOProxyLogicV2.isMemberV2(candidate4.address,sequencerIndexSave)).to.be.equal(false)
+                let claimableAmount = await DAOProxyLogicV2.getClaimableActivityRewardV2(candidate4.address,sequencerIndexSave);
+                expect(claimableAmount).to.be.equal(0)
+            })
 
-    //         it("Candidates who were members even if they are not current members can receive rewards.", async () => {
-    //             expect(await DAOProxyLogicV2.isMemberV2(candidate1.address,sequencerIndexSave)).to.be.equal(false)
-    //             let claimableAmount = await DAOProxyLogicV2.getClaimableActivityRewardV2(candidate1.address,sequencerIndexSave);
-    //             expect(claimableAmount).to.be.gt(0)
-    //         })
+            it("Candidates who were members even if they are not current members can receive rewards.", async () => {
+                expect(await DAOProxyLogicV2.isMemberV2(candidate3.address,sequencerIndexSave)).to.be.equal(false)
+                let claimableAmount = await DAOProxyLogicV2.getClaimableActivityRewardV2(candidate3.address,sequencerIndexSave);
+                expect(claimableAmount).to.be.gt(0)
+            })
 
-    //         it("All current members can receive rewards.", async () => {
-    //             expect(await DAOProxyLogicV2.isMemberV2(sequencer1.address,sequencerIndexSave)).to.be.equal(true)
-    //             expect(await DAOProxyLogicV2.isMemberV2(candidate2.address,sequencerIndexSave)).to.be.equal(true)
-    //             expect(await DAOProxyLogicV2.isMemberV2(candidate3.address,sequencerIndexSave)).to.be.equal(true)
-    //             expect(await DAOProxyLogicV2.getClaimableActivityRewardV2(sequencer1.address,sequencerIndexSave)).to.be.gt(0)
-    //             expect(await DAOProxyLogicV2.getClaimableActivityRewardV2(candidate2.address,sequencerIndexSave)).to.be.gt(0)
-    //             expect(await DAOProxyLogicV2.getClaimableActivityRewardV2(candidate3.address,sequencerIndexSave)).to.be.gt(0)
-    //         })
+            it("All current members can receive rewards.", async () => {
+                expect(await DAOProxyLogicV2.isMemberV2(candidate1.address,sequencerIndexSave)).to.be.equal(true)
+                expect(await DAOProxyLogicV2.isMemberV2(candidate2.address,sequencerIndexSave)).to.be.equal(true)
+                expect(await DAOProxyLogicV2.isMemberV2(sequencer1.address,sequencerIndexSave)).to.be.equal(true)
+                expect(await DAOProxyLogicV2.getClaimableActivityRewardV2(candidate1.address,sequencerIndexSave)).to.be.gt(0)
+                expect(await DAOProxyLogicV2.getClaimableActivityRewardV2(candidate2.address,sequencerIndexSave)).to.be.gt(0)
+                expect(await DAOProxyLogicV2.getClaimableActivityRewardV2(sequencer1.address,sequencerIndexSave)).to.be.gt(0)
+            })
 
-    //         it("Anyone who has a claimReward can receive a claim.", async () => {
-    //             const beforeBalance = await deployed.ton.balanceOf(candidate1.address);
+            it("Anyone who has a claimReward can receive a claim.", async () => {
+                const beforeBalance = await deployed.ton.balanceOf(candidate3.address);
 
-    //             const claimableAmount = await DAOProxyLogicV2.getClaimableActivityRewardV2(candidate1.address,sequencerIndexSave);
-    //             expect(claimableAmount).to.be.gt(0)
+                const claimableAmount = await DAOProxyLogicV2.getClaimableActivityRewardV2(candidate3.address,sequencerIndexSave);
+                expect(claimableAmount).to.be.gt(0)
 
-    //             await DAOProxyLogicV2.connect(candidate1).claimActivityReward(candidate1.address, sequencerIndexSave);
+                await DAOProxyLogicV2.connect(candidate3).claimActivityReward(candidate3.address, sequencerIndexSave);
 
-    //             const afterBalance = await deployed.ton.balanceOf(candidate1.address);
+                const afterBalance = await deployed.ton.balanceOf(candidate3.address);
 
-    //             expect(Number(afterBalance)-Number(beforeBalance)).to.be.equal(Number(claimableAmount));
-    //         })
+                expect(Number(afterBalance)-Number(beforeBalance)).to.be.equal(Number(claimableAmount));
+            })
 
-    //         it("All current members can claim.", async () => {
-    //             const beforeBalance = await deployed.ton.balanceOf(sequencer1.address);
-    //             // console.log(beforeBalance)
+            it("All current members can claim.", async () => {
+                const beforeBalance = await deployed.ton.balanceOf(sequencer1.address);
+                // console.log(beforeBalance)
 
-    //             const claimableAmount = await DAOProxyLogicV2.getClaimableActivityRewardV2(sequencer1.address,sequencerIndexSave);
-    //             // console.log(claimableAmount)
-    //             expect(claimableAmount).to.be.gt(0)
+                const claimableAmount = await DAOProxyLogicV2.getClaimableActivityRewardV2(sequencer1.address,sequencerIndexSave);
+                // console.log(claimableAmount)
+                expect(claimableAmount).to.be.gt(0)
 
-    //             await DAOProxyLogicV2.connect(sequencer1).claimActivityReward(sequencer1.address, sequencerIndexSave);
+                await DAOProxyLogicV2.connect(sequencer1).claimActivityReward(sequencer1.address, sequencerIndexSave);
 
-    //             const afterBalance = await deployed.ton.balanceOf(sequencer1.address);
-    //             // console.log(afterBalance)
+                const afterBalance = await deployed.ton.balanceOf(sequencer1.address);
+                // console.log(afterBalance)
 
-    //             //getClaim할때는 period가 1001140인데 calimActivity할때는 period가 1001141이다
-    //             //멤버는 초당 reward를 받기 때문에 getClaim과의 정확한 비교는 힘들다.
-    //             expect(Number(afterBalance)).to.be.gt(Number(beforeBalance));
-    //             expect(Number(afterBalance)-Number(beforeBalance)).to.be.gt(Number(claimableAmount));
+                //getClaim할때는 period가 1001140인데 calimActivity할때는 period가 1001141이다
+                //멤버는 초당 reward를 받기 때문에 getClaim과의 정확한 비교는 힘들다.
+                expect(Number(afterBalance)).to.be.gt(Number(beforeBalance));
+                expect(Number(afterBalance)-Number(beforeBalance)).to.be.gt(Number(claimableAmount));
 
-    //             const beforeBalance2 = await deployed.ton.balanceOf(candidate2.address);
+                const beforeBalance2 = await deployed.ton.balanceOf(candidate2.address);
 
-    //             const claimableAmount2 = await DAOProxyLogicV2.getClaimableActivityRewardV2(candidate2.address,sequencerIndexSave);
-    //             expect(claimableAmount2).to.be.gt(0)
+                const claimableAmount2 = await DAOProxyLogicV2.getClaimableActivityRewardV2(candidate2.address,sequencerIndexSave);
+                expect(claimableAmount2).to.be.gt(0)
 
-    //             await DAOProxyLogicV2.connect(candidate2).claimActivityReward(candidate2.address, sequencerIndexSave);
+                await DAOProxyLogicV2.connect(candidate2).claimActivityReward(candidate2.address, sequencerIndexSave);
 
-    //             const afterBalance2 = await deployed.ton.balanceOf(candidate2.address);
+                const afterBalance2 = await deployed.ton.balanceOf(candidate2.address);
 
-    //             expect(Number(afterBalance2)-Number(beforeBalance2)).to.be.gt(Number(claimableAmount2));
-    //             expect(Number(afterBalance2)).to.be.gt(Number(beforeBalance2));
+                expect(Number(afterBalance2)-Number(beforeBalance2)).to.be.gt(Number(claimableAmount2));
+                expect(Number(afterBalance2)).to.be.gt(Number(beforeBalance2));
 
-    //             const beforeBalance3 = await deployed.ton.balanceOf(candidate3.address);
+                const beforeBalance3 = await deployed.ton.balanceOf(candidate1.address);
 
-    //             const claimableAmount3 = await DAOProxyLogicV2.getClaimableActivityRewardV2(candidate3.address,sequencerIndexSave);
-    //             expect(claimableAmount3).to.be.gt(0)
+                const claimableAmount3 = await DAOProxyLogicV2.getClaimableActivityRewardV2(candidate1.address,sequencerIndexSave);
+                expect(claimableAmount3).to.be.gt(0)
 
-    //             await DAOProxyLogicV2.connect(candidate3).claimActivityReward(candidate3.address, sequencerIndexSave);
+                await DAOProxyLogicV2.connect(candidate1).claimActivityReward(candidate1.address, sequencerIndexSave);
 
-    //             const afterBalance3 = await deployed.ton.balanceOf(candidate3.address);
+                const afterBalance3 = await deployed.ton.balanceOf(candidate1.address);
 
-    //             expect(Number(afterBalance3)-Number(beforeBalance3)).to.be.gt(Number(claimableAmount3));
-    //             expect(Number(afterBalance3)).to.be.gt(Number(beforeBalance3));
-    //         })
-    //     });
-    // })
+                expect(Number(afterBalance3)-Number(beforeBalance3)).to.be.gt(Number(claimableAmount3));
+                expect(Number(afterBalance3)).to.be.gt(Number(beforeBalance3));
+            })
+        });
+    })
 
     // describe("#10. multi Agenda test", () => {
     //     describe("same targetAddress, different function test", () => {
