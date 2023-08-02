@@ -252,8 +252,8 @@ contract DAOv2CommitteeV2 is
             rewardPeriod: 0,
             claimedTimestamp: 0
         });
-        console.log("senderAddress :", senderAddress);
-        console.log("_candidateIndex :", _candidateIndex);
+        // console.log("senderAddress :", senderAddress);
+        // console.log("_candidateIndex :", _candidateIndex);
 
 
         candidatesV2.push(senderAddress);
@@ -434,7 +434,7 @@ contract DAOv2CommitteeV2 is
                     console.log(prevCandidateInfo.candidateIndex);
                     if(checkPreMember == 1) {
                         //newMember는 V2의 sequencer, prevMember는 V2의 sequencerCandidate
-                        console.log("sequencerV2");
+                        // console.log("sequencerV2");
                         compareAddr = sequencer;
                         compareIndex = prevCandidateInfo.sequencerIndex;    
                         // require(
@@ -443,7 +443,7 @@ contract DAOv2CommitteeV2 is
                         // );
                     } else {
                         //newMember는 V2의 sequencer, prevMember는 V2의 candidate    
-                        console.log("candidateV2");
+                        // console.log("candidateV2");
                         compareAddr = candidate;
                         compareIndex = prevCandidateInfo.candidateIndex;
                         // require(
@@ -455,9 +455,9 @@ contract DAOv2CommitteeV2 is
                     //     IStaking(address(sequencer)).balanceOfLton(candidateInfo.sequencerIndex,newMember) > IStaking(address(compareAddr)).balanceOfLton(compareIndex,prevMember),
                     //     "not enough amount"
                     // );
-                    console.log("compareAddr :", compareAddr);
-                    console.log("prevTON :", IStaking(address(compareAddr)).balanceOfLton(compareIndex,prevMember));
-                    console.log("newTON :", IStaking(address(sequencer)).balanceOfLton(candidateInfo.sequencerIndex,newMember));
+                    // console.log("compareAddr :", compareAddr);
+                    // console.log("prevTON :", IStaking(address(compareAddr)).balanceOfLton(compareIndex,prevMember));
+                    // console.log("newTON :", IStaking(address(sequencer)).balanceOfLton(candidateInfo.sequencerIndex,newMember));
                     require(
                         IStaking(address(sequencer)).balanceOfLton(candidateInfo.sequencerIndex,newMember) > IStaking(address(compareAddr)).balanceOfLton(compareIndex,prevMember),
                         "not enough amount"
@@ -471,9 +471,9 @@ contract DAOv2CommitteeV2 is
                 if (checkPreMember == 0) {
                     //prevMember가 V1일때
                     address prevMemberContract = candidateContract(prevMember);
-                    console.log("prevAddr :", prevMemberContract);
-                    console.log("prevTON :", ICandidate(prevMemberContract).totalStaked());
-                    console.log("newTON :", balanceOfOnCandidateV2(candidateInfo.candidateIndex,newMember));
+                    // console.log("prevAddr :", prevMemberContract);
+                    // console.log("prevTON :", ICandidate(prevMemberContract).totalStaked());
+                    // console.log("newTON :", balanceOfOnCandidateV2(candidateInfo.candidateIndex,newMember));
                     // console.log("newTON :", IStaking(address(candidate)).balanceOfLton(candidateInfo.sequencerIndex,newMember));
                     // require(
                     //     IStaking(address(candidate)).balanceOfLton(candidateInfo.sequencerIndex,newMember) > ICandidate(prevMemberContract).totalStaked(),
