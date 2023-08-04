@@ -7,6 +7,8 @@ import { DAOStakingV2Fixture } from './shared/fixtureInterfaces'
 import snapshotGasCost from './shared/snapshotGasCost'
 
 import seigManager_ABI from '../abi/seigManager.json'
+import layer2Registry_ABI from '../abi/Layer2Registry.json'
+import WTON_ABI from '../abi/WTON.json'
 import DAOv1CommitteProxy_ABI from '../abi/DAOCommitteeProxy.json'
 import DAOCommitteProxyV2_ABI from '../artifacts/contracts/dao/DAOCommitteeProxyV2.sol/DAOCommitteeProxyV2.json'
 import DAOv2Committee_ABI from '../artifacts/contracts/dao/DAOv2Committee.sol/DAOv2Committee.json'
@@ -18,6 +20,7 @@ import { time } from "@nomicfoundation/hardhat-network-helpers";
 const Web3EthAbi = require('web3-eth-abi');
 const { padLeft } = require('web3-utils');
 
+const { marshalString, unmarshalString } = require('./helpers/marshal');
 
 const { 
     AGENDA_INDEX_CREATED_TIMESTAMP,
@@ -123,6 +126,14 @@ describe('DAOv2Committee', () => {
     let seigManagerV1 : any
     let seigManagerAddr = "0x710936500aC59e8551331871Cbad3D33d5e0D909"
 
+    let registry : any
+    let layer2RegistryAddr = "0x0b3E174A2170083e770D5d4Cf56774D221b7063e"
+    
+    let depositManagerAddr = "0x56E465f654393fa48f007Ed7346105c7195CEe43"
+
+    let wton : any
+    let wtonAddr = "0xc4A11aaf6ea915Ed7Ac194161d2fC9384F15bff2"
+
     const votesList = [
         {
           "votes": [VOTE_ABSTAIN, VOTE_ABSTAIN, VOTE_ABSTAIN],
@@ -220,6 +231,8 @@ describe('DAOv2Committee', () => {
         candidate2: ethers.utils.parseEther("10100000"),      //candidate2 amount
         candidate3: ethers.utils.parseEther("450000"),        //candidate3 amount
         sequencer1: ethers.utils.parseEther("5500000"),        //sequencer amount
+        candidate4: ethers.utils.parseEther("5600000"),       //candidate4 amount
+        candidate5: ethers.utils.parseEther("5700000")        //candidate5 amount
     }
 
 
@@ -282,8 +295,75 @@ describe('DAOv2Committee', () => {
         expect(result[1]).to.be.equal(_vote);
     }
 
-    async function addCandidateV1(candidate: any) {
+    async function addCandidateV1(candidate: any, amount: any) {
+        const minimum = await seigManagerV1.minimumAmount();
+        const beforeTonBalance = await deployed.ton.balanceOf(candidate);
 
+        // const stakeAmountTON = TON_MINIMUM_STAKE_AMOUNT.toFixed(TON_UNIT);
+        // const stakeAmountWTON = TON_MINIMUM_STAKE_AMOUNT.times(WTON_TON_RATIO).toFixed(WTON_UNIT);
+        //await ton.approve(committeeProxy.address, stakeAmountTON, {from: candidate});
+        //tmp = await ton.allowance(candidate, committeeProxy.address);
+        //tmp.should.be.bignumber.equal(TON_MINIMUM_STAKE_AMOUNT.toFixed(TON_UNIT));
+
+        await DAOProxyLogicV1.createCandidate(candidate, {from: candidate});
+
+        const candidateContractAddress = await DAOProxyLogicV1.candidateContract(candidate);
+
+        //const testMemo = "candidate memo string";
+        //const data = web3.eth.abi.encodeParameter("string", testMemo);
+
+        (await registry.layer2s(candidateContractAddress)).should.be.equal(true);
+
+        await deposit(candidateContractAddress, candidate, amount);
+
+        const afterTonBalance = await deployed.ton.balanceOf(candidate);
+        
+        // beforeTonBalance.sub(afterTonBalance).should.be.bignumber.equal(stakeAmountTON);
+        expect(beforeTonBalance.sub(afterTonBalance)).to.be.equal(amount);
+
+        // const coinageAddress = await seigManagerV1.coinages(candidateContractAddress);
+        // const coinage = await AutoRefactorCoinage.at(coinageAddress);
+        // const stakedAmount = await coinage.balanceOf(candidate);
+        // stakedAmount.should.be.bignumber.equal(stakeAmountWTON);
+
+        const candidatesLength = await DAOProxyLogicV1.candidatesLength();
+        let foundCandidate = false;
+        for (let i = 0; i < candidatesLength; i++) {
+            const address = await DAOProxyLogicV1.candidates(i);
+            if (address === candidate) {
+                foundCandidate = true;
+                break;
+            }
+        }
+        // foundCandidate.should.be.equal(true);
+        expect(foundCandidate).to.be.equal(true);
+    }
+
+    async function deposit(candidateContractAddress: any, account: any, tonAmount: any) {
+        const beforeBalance = await deployed.ton.balanceOf(account);
+        // beforeBalance.should.be.bignumber.gte(tonAmount);
+        expect(beforeBalance).to.be.gte(tonAmount)
+        const data = marshalString(
+          [depositManagerAddr, candidateContractAddress]
+            .map(unmarshalString)
+            .map(str => padLeft(str, 64))
+            .join(''),
+        );
+        
+        // const padDeposit = padLeft(depositManagerAddr.toString(), 32);
+        // const padCandidateContract = padLeft(candidateContractAddress.toString(), 32);
+        // const data = padDeposit + padCandidateContract
+        // console.log(data);
+        // console.log("data : ", data.length)
+        await deployed.ton.approveAndCall(
+          wton.address,
+          tonAmount,
+          data,
+          {from: account}
+        );
+        const afterBalance = await deployed.ton.balanceOf(account);
+        // beforeBalance.sub(afterBalance).should.be.bignumber.equal(tonAmount);
+        expect(beforeBalance.sub(afterBalance)).to.be.equal(tonAmount);
     }
 
     before('create fixture loader', async () => {
@@ -753,7 +833,15 @@ describe('DAOv2Committee', () => {
 
         it("connect seigManger", async () => {
             seigManagerV1 = await ethers.getContractAt(seigManager_ABI, seigManagerAddr, deployer);
-            console.log(seigManagerV1)
+            // console.log(seigManagerV1)
+        })
+
+        it("connect l2registry", async () => {
+            registry = await ethers.getContractAt(layer2Registry_ABI.abi, layer2RegistryAddr, deployer);
+        })
+
+        it("connect wton", async () => {
+            wton = await ethers.getContractAt(WTON_ABI.abi, wtonAddr, deployer);
         })
     })
 
@@ -1739,7 +1827,27 @@ describe('DAOv2Committee', () => {
         })
 
         describe("#7-7. V1 createCandidate", () => {
+            it("check data", async () => {
+                const padDeposit = padLeft(depositManagerAddr.toString(), 32);
+                const padCandidateContract = padLeft(wtonAddr.toString(), 32);
+                const data = depositManagerAddr + wtonAddr
+                const data2 = depositManagerAddr.concat(wtonAddr);
+                console.log(data);
+                console.log("data : ", data.length)
+                console.log(data2);
+                console.log("data : ", data2.length)
+            })
 
+            it("check data2", async () => {
+                const data = marshalString(
+                    [depositManagerAddr, wtonAddr]
+                        .map(unmarshalString)
+                        .map(str => padLeft(str, 64))
+                        .join(''),
+                );
+                console.log(data);
+                console.log("data : ", data.length)
+            })
         })
         
         describe("#7-7. Member challenge", () => {
