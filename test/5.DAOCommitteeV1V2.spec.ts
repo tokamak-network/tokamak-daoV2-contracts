@@ -62,21 +62,17 @@ const {
 // 기존 Proxy에 새로운 V2로직을 연동하여서 V2에 대한 새로운 DAO를 테스트
 // DAO Challenge 시나리오
 // 1. 시퀀서는 현재 1개(1명), 해당 시퀀서에 대한 후보자는 4명으로 challenge가능한 인원은 총 5명이다.
-// 2. 기존 member들은 V1 member들임
+// 2. 기존 member들은 V1 member임
 // 3. 기존 member에서 V1 candidate가 challenge를 진행 (실패 경우, 성공 경우 테스트) -> 성공하여서 기존 member1, member2에 candidate4가 추가됨 (V1 -> V1 member 테스트)
 // 4. V1 member에서 V2 member 테스트 (sequencer1, candidate2, candidate3 로 변경) (V1 -> V2 sequencer, V1 -> V2 candidate member 변경 테스트)
 // 5. V2 member에서 V2 member 테스트 (sequencer1, candidate2, candidate1 로 변경) (V2 -> V2 변경 테스트)
 // 6. candidate1 retrie 테스트 (V2 member retire 테스트)
 // 7. candidate1 재등록 테스트 (V2 candidate 공석에 member 들어가는 테스트) (현재까지 멤버 : sequencer1 V2, candidate2 V2, candidate1 V2)
-// 8. V2 member에서 V1 member 테스트 (candidate5가 V2 멤버에 대한 도전 테스트) 
+// 8. V2 member에서 V1 member 테스트 (candidate5가 V2 멤버에 대한 도전 테스트) (V2 candidate -> V1 변경 테스트) (현재까지 멤버 : sequencer1 V2, candidate2 V2, candidate5 V1)
+// 9. retireMemberV2 cadndidate5 retire 테스트 (V1 member retire 테스트)
+// 10. member index가 empty일때 등록 member로 등록 (현재까지 멤버 : sequencer1 V2, candidate2 V2, candidate5 V1)
+// 11. retireMember 테스트 
 
-// 2. candidate1이 0번 member로 들어감
-// 3. candidate2가 1번 member로 들어감
-// 4. candidate3가 2번 member로 들어감
-// 5. sequencer가 member보다 더작은 양을 challenge하면 실패
-// 6. sequencer가 memeber랑 같은 양을 challenge하면 실패
-// 7. seqeuncer가 memeber보다 더 많은 양을 가지고 Challenge하면 성공
-// 최종 멤버 candidate1, candidate2, sequencer1
 describe('DAOv2Committee', () => {
     let deployer: Signer, addr1: Signer, sequencer1: Signer, daoPrivateOwner: Signer
 
@@ -604,7 +600,11 @@ describe('DAOv2Committee', () => {
             )
 
             const _retireMember = Web3EthAbi.encodeFunctionSignature(
-                "retireMember(uint32)"
+                "retireMember()"
+            )
+
+            const _retireMemberV2 = Web3EthAbi.encodeFunctionSignature(
+                "retireMemberV2(uint32)"
             )
 
             const _castVote = Web3EthAbi.encodeFunctionSignature(
@@ -744,7 +744,11 @@ describe('DAOv2Committee', () => {
             )
 
             const _retireMember = Web3EthAbi.encodeFunctionSignature(
-                "retireMember(uint32)"
+                "retireMember()"
+            )
+
+            const _retireMemberV2 = Web3EthAbi.encodeFunctionSignature(
+                "retireMemberV2(uint32)"
             )
 
             const _castVote = Web3EthAbi.encodeFunctionSignature(
@@ -825,7 +829,7 @@ describe('DAOv2Committee', () => {
                 [
                     _setSeigManagerV2,_setLayer2Manager,_setCandidates,_setOptimismSequencer,
                     _increaseMaxMember,_decreaseMaxMember,_setQuorum,_createCandidateV2,_createOptimismSequencer,
-                    _changeMemberV1,_changeMember,_updateSeigniorageV2,_retireMember,_castVote,_claimActivityReward,
+                    _changeMemberV1,_changeMember,_updateSeigniorageV2,_retireMember,_retireMemberV2,_castVote,_claimActivityReward,
                     _totalSupplyOnCandidateV2,_totalSupplyOnSequencerV2,_balanceOfOnCandidateV2,_balanceOfOnSequencerV2,
                     _candidatesLength,_candidatesLengthV2,_isExistCandidate,_isExistCandidateV2,
                     _getClaimableActivityReward,_getClaimableActivityRewardV2
@@ -2012,14 +2016,14 @@ describe('DAOv2Committee', () => {
 
             it("cannot run retire if you are not a member.", async () => {
                 await expect(
-                    DAOProxyLogicV2.connect(addr1).retireMember(sequencerIndexSave)
+                    DAOProxyLogicV2.connect(addr1).retireMemberV2(sequencerIndexSave)
                 ).to.be.revertedWith("DAO: NM") 
             })
 
-            it("Members can retire. The member retired at address0.", async () => {
+            it("Members(V2) can retire. The member retired at address0.", async () => {
                 let changeIndex = 2;
                 const topic = deployed.daov2committeeV2.interface.getEventTopic('ChangedMember');
-                const receipt = await(await DAOProxyLogicV2.connect(candidate1).retireMember(sequencerIndexSave)).wait();
+                const receipt = await(await DAOProxyLogicV2.connect(candidate1).retireMemberV2(sequencerIndexSave)).wait();
                 const log = receipt.logs.find(x => x.topics.indexOf(topic) >= 0);
                 const deployedEvent = deployed.daov2committeeV2.interface.parseLog(log);
                 
@@ -2068,7 +2072,7 @@ describe('DAOv2Committee', () => {
             })
 
             it("If the deposit amount is greater, the challenge succeeds. (V2 -> V1 member)", async () => {
-                expect(await DAOProxyLogicV2.isMemberV2(candidate5.address,sequencerIndexSave)).to.be.equal(false)
+                expect(await DAOProxyLogicV2.isMemberV2(candidate5.address,0)).to.be.equal(false)
 
                 let changeIndex2 = 2;
                 let beforeMember2 = await DAOProxyLogicV2.members(changeIndex2)
@@ -2082,6 +2086,50 @@ describe('DAOv2Committee', () => {
                 expect(deployedEvent2.args.newMember).to.be.eq(candidate5.address);
 
                 expect(await DAOProxyLogicV1.isMember(candidate5.address)).to.be.equal(true)
+            })
+
+            it("Members(V1) can retire. The member retired at address0. using retireMemberV2", async () => {
+                let changeIndex = 2;
+                const topic = deployed.daov2committeeV2.interface.getEventTopic('ChangedMember');
+                const receipt = await(await DAOProxyLogicV2.connect(candidate5).retireMemberV2(0)).wait();
+                const log = receipt.logs.find(x => x.topics.indexOf(topic) >= 0);
+                const deployedEvent = deployed.daov2committeeV2.interface.parseLog(log);
+                
+                expect(deployedEvent.args.slotIndex).to.eq(changeIndex);
+                expect(deployedEvent.args.prevMember).to.eq(candidate5.address);
+                expect(deployedEvent.args.newMember).to.eq(addr0);
+            })
+
+            it("member index empty, the challenge succeeds. (0 -> V1 member)", async () => {
+                expect(await DAOProxyLogicV2.isMemberV2(candidate5.address,0)).to.be.equal(false)
+
+                let changeIndex2 = 2;
+                let beforeMember2 = await DAOProxyLogicV2.members(changeIndex2)
+                const topic2 = deployed.daov2committeeV2.interface.getEventTopic('ChangedMember');
+                const receipt2 = await(await DAOProxyLogicV2.connect(candidate5).changeMemberV2(changeIndex2,0)).wait();
+                const log2 = receipt2.logs.find(x => x.topics.indexOf(topic2) >= 0);
+                const deployedEvent2 = deployed.daov2committeeV2.interface.parseLog(log2);
+                
+                expect(deployedEvent2.args.slotIndex).to.be.eq(changeIndex2);
+                expect(deployedEvent2.args.prevMember).to.be.eq(beforeMember2);
+                expect(deployedEvent2.args.newMember).to.be.eq(candidate5.address);
+
+                expect(await DAOProxyLogicV1.isMember(candidate5.address)).to.be.equal(true)
+            })
+
+            it("Members(V1) can retire. The member retired at address0. using retireMember", async () => {
+                let changeIndex = 2;
+                let contractAddress = await DAOProxyLogicV1.candidateContract(candidate5.address)
+                getCandidateContract = await ethers.getContractAt(candidateContract_ABI.abi, contractAddress, deployer);
+                
+                const topic = deployed.daov2committeeV2.interface.getEventTopic('ChangedMember');
+                const receipt = await(await getCandidateContract.connect(candidate5).retireMember()).wait();
+                const log = receipt.logs.find(x => x.topics.indexOf(topic) >= 0);
+                const deployedEvent = deployed.daov2committeeV2.interface.parseLog(log);
+                
+                expect(deployedEvent.args.slotIndex).to.eq(changeIndex);
+                expect(deployedEvent.args.prevMember).to.eq(candidate5.address);
+                expect(deployedEvent.args.newMember).to.eq(addr0);
             })
         })
     })

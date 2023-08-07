@@ -383,10 +383,10 @@ contract DAOv2CommitteeV2 is
                 ICandidate(candidateInfo.candidateContract).isCandidateContract(),
                 "DAO: NC"
             );
-            // require(
-            //     candidateInfo.candidateContract == msg.sender,
-            //     "DAO: IC"
-            // );
+            require(
+                newMember == msg.sender,
+                "DAO: IC"
+            );
             require(
                 candidateInfo.memberJoinedTime == 0,
                 "DAO: AM"
@@ -495,6 +495,7 @@ contract DAOv2CommitteeV2 is
                     prevCandidateInfo.rewardPeriod = uint128(uint256(prevCandidateInfo.rewardPeriod).add(block.timestamp.sub(prevCandidateInfo.memberJoinedTime)));
                     prevCandidateInfo.memberJoinedTime = 0;
                 } else {
+                    //newMebemr가 V2 sequencer이고 prevMember가 V2일때
                     LibDaoV2.CandidateInfoV2 storage prevCandidateInfo = _candidateInfosV2[prevMember][preSqIndex];
                     console.log(prevCandidateInfo.candidateIndex);
                     if(checkPreMember == 1) {
@@ -542,7 +543,7 @@ contract DAOv2CommitteeV2 is
                 } else {
                     LibDaoV2.CandidateInfoV2 storage prevCandidateInfo = _candidateInfosV2[prevMember][_sequencerIndex];
                     if(checkPreMember == 1) {
-                        //newMember는 V2의 sequencer, prevMember는 V2의 sequencerCandidate
+                        //newMember는 V2의 candidate, prevMember는 V2의 sequencerCandidate
                         compareAddr = sequencer;
                         compareIndex = prevCandidateInfo.sequencerIndex;  
                         // require(
@@ -550,7 +551,7 @@ contract DAOv2CommitteeV2 is
                         //     "not enough amount"
                         // );
                     } else {
-                        //newMember는 V2의 sequencer, prevMember는 V2의 candidate    
+                        //newMember는 V2의 candidate, prevMember는 V2의 candidate    
                         compareAddr = candidate;
                         compareIndex = prevCandidateInfo.candidateIndex;
                         // require(
@@ -587,20 +588,39 @@ contract DAOv2CommitteeV2 is
 
     //////////////////////////////////////////////////////////////////////
     // member
+    /// @notice Retires member
+    /// @return Whether or not the execution succeeded
+    function retireMember() onlyMemberContract external returns (bool) {
+        address candidate = ICandidate(msg.sender).candidate();
+        CandidateInfo storage candidateInfo = _candidateInfos[candidate];
+        require(
+            candidateInfo.candidateContract == msg.sender,
+            "DAOCommittee: invalid candidate contract"
+        );
+        members[candidateInfo.indexMembers] = address(0);
+        candidateInfo.rewardPeriod = uint128(uint256(candidateInfo.rewardPeriod).add(block.timestamp.sub(candidateInfo.memberJoinedTime)));
+        candidateInfo.memberJoinedTime = 0;
+
+        uint256 prevIndex = candidateInfo.indexMembers;
+        candidateInfo.indexMembers = 0;
+        emit ChangedMember(prevIndex, candidate, address(0));
+
+        return true;
+    }
 
     /// @notice Retires member
     /// @return Whether or not the execution succeeded
     // V1 member라면 _index가 0이다.
-    function retireMember(uint32 _index) onlyMemberV2(_index) external returns (bool) {
+    function retireMemberV2(uint32 _index) onlyMemberV2(_index) external returns (bool) {
         // require((isExistCandidate(msg.sender) || isExistCandidateV2(msg.sender,_index)), "DAO: not registerd"); -> member검사해서 따로 안해도됨
         uint8 checkSender = isCandidateV2(msg.sender,_index);
         if(checkSender == 0) {
             //V1의 member이다.
             console.log("retire V1 member");
-            address candidate = ICandidate(msg.sender).candidate();
-            CandidateInfo storage candidateInfo = _candidateInfos[candidate];
+            CandidateInfo storage candidateInfo = _candidateInfos[msg.sender];
+            address candidate = ICandidate(candidateInfo.candidateContract).candidate();
             require(
-                candidateInfo.candidateContract == msg.sender,
+                candidate == msg.sender,
                 "DAO: IC"
             );
             members[candidateInfo.indexMembers] = address(0);
