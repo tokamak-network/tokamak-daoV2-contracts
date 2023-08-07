@@ -8,6 +8,7 @@ import snapshotGasCost from './shared/snapshotGasCost'
 
 import seigManager_ABI from '../abi/seigManager.json'
 import layer2Registry_ABI from '../abi/Layer2Registry.json'
+import candidateContract_ABI from '../abi/Candidate.json'
 import WTON_ABI from '../abi/WTON.json'
 import DAOv1CommitteProxy_ABI from '../abi/DAOCommitteeProxy.json'
 import DAOCommitteProxyV2_ABI from '../artifacts/contracts/dao/DAOCommitteeProxyV2.sol/DAOCommitteeProxyV2.json'
@@ -75,6 +76,8 @@ describe('DAOv2Committee', () => {
     let candidate1: any, candidate2: any, candidate3: any, candidate4:any, candidate5:any, candidate6:any
     let candidates: Signer[] = [];
 
+    let getCandidateContract: any
+
     let deployed: DAOStakingV2Fixture
     
     let daoCommitteProxyAddress = "0xDD9f0cCc044B0781289Ee318e5971b0139602C26"; //DAOCommitteProxy Address
@@ -133,6 +136,8 @@ describe('DAOv2Committee', () => {
 
     let wton : any
     let wtonAddr = "0xc4A11aaf6ea915Ed7Ac194161d2fC9384F15bff2"
+
+    let ray = ethers.utils.parseUnits("1", 9);
 
     const votesList = [
         {
@@ -229,9 +234,9 @@ describe('DAOv2Committee', () => {
     let mainnetDAOstaking = {
         candidate1: ethers.utils.parseEther("5500000"),       //candidate1 amount
         candidate2: ethers.utils.parseEther("10100000"),      //candidate2 amount
-        candidate3: ethers.utils.parseEther("450000"),        //candidate3 amount
+        candidate3: ethers.utils.parseEther("460000"),        //candidate3 amount
         sequencer1: ethers.utils.parseEther("5500000"),        //sequencer amount
-        candidate4: ethers.utils.parseEther("5600000"),       //candidate4 amount
+        candidate4: ethers.utils.parseEther("450000"),       //candidate4 amount
         candidate5: ethers.utils.parseEther("5700000")        //candidate5 amount
     }
 
@@ -297,7 +302,11 @@ describe('DAOv2Committee', () => {
 
     async function addCandidateV1(candidate: any, amount: any) {
         const minimum = await seigManagerV1.minimumAmount();
-        const beforeTonBalance = await deployed.ton.balanceOf(candidate);
+        const beforeTonBalance = await deployed.ton.balanceOf(candidate.address);
+        const minumumRay = minimum/Number(ray)
+        // console.log("minimum :", minimum/Number(ray))
+        // console.log("beforeTonBalance :", beforeTonBalance)
+        expect(Number(beforeTonBalance)).to.be.gte(minumumRay)
 
         // const stakeAmountTON = TON_MINIMUM_STAKE_AMOUNT.toFixed(TON_UNIT);
         // const stakeAmountWTON = TON_MINIMUM_STAKE_AMOUNT.times(WTON_TON_RATIO).toFixed(WTON_UNIT);
@@ -305,19 +314,16 @@ describe('DAOv2Committee', () => {
         //tmp = await ton.allowance(candidate, committeeProxy.address);
         //tmp.should.be.bignumber.equal(TON_MINIMUM_STAKE_AMOUNT.toFixed(TON_UNIT));
 
-        await DAOProxyLogicV1.createCandidate(candidate, {from: candidate});
-
-        const candidateContractAddress = await DAOProxyLogicV1.candidateContract(candidate);
+        await DAOProxyLogicV1.connect(candidate).createCandidate(candidate.address);
+        const candidateContractAddress = await DAOProxyLogicV1.candidateContract(candidate.address);
 
         //const testMemo = "candidate memo string";
         //const data = web3.eth.abi.encodeParameter("string", testMemo);
-
-        (await registry.layer2s(candidateContractAddress)).should.be.equal(true);
+        expect(await registry.layer2s(candidateContractAddress)).to.be.equal(true);
 
         await deposit(candidateContractAddress, candidate, amount);
 
-        const afterTonBalance = await deployed.ton.balanceOf(candidate);
-        
+        const afterTonBalance = await deployed.ton.balanceOf(candidate.address);
         // beforeTonBalance.sub(afterTonBalance).should.be.bignumber.equal(stakeAmountTON);
         expect(beforeTonBalance.sub(afterTonBalance)).to.be.equal(amount);
 
@@ -326,21 +332,23 @@ describe('DAOv2Committee', () => {
         // const stakedAmount = await coinage.balanceOf(candidate);
         // stakedAmount.should.be.bignumber.equal(stakeAmountWTON);
 
-        const candidatesLength = await DAOProxyLogicV1.candidatesLength();
-        let foundCandidate = false;
-        for (let i = 0; i < candidatesLength; i++) {
-            const address = await DAOProxyLogicV1.candidates(i);
-            if (address === candidate) {
-                foundCandidate = true;
-                break;
-            }
-        }
-        // foundCandidate.should.be.equal(true);
-        expect(foundCandidate).to.be.equal(true);
+        const candidatecheck = await DAOProxyLogicV1.isExistCandidate(candidate.address);
+        // console.log("candidatesLength : ", candidatesLength)
+        expect(candidatecheck).to.be.equal(true);
+        // let foundCandidate = false;
+        // for (let i = 0; i < candidatesLength; i++) {
+        //     const address = await DAOProxyLogicV1.candidates(i);
+        //     if (address === candidate.address) {
+        //         foundCandidate = true;
+        //         break;
+        //     }
+        // }
+        // // foundCandidate.should.be.equal(true);
+        // expect(foundCandidate).to.be.equal(true);
     }
 
     async function deposit(candidateContractAddress: any, account: any, tonAmount: any) {
-        const beforeBalance = await deployed.ton.balanceOf(account);
+        const beforeBalance = await deployed.ton.balanceOf(account.address);
         // beforeBalance.should.be.bignumber.gte(tonAmount);
         expect(beforeBalance).to.be.gte(tonAmount)
         const data = marshalString(
@@ -355,13 +363,12 @@ describe('DAOv2Committee', () => {
         // const data = padDeposit + padCandidateContract
         // console.log(data);
         // console.log("data : ", data.length)
-        await deployed.ton.approveAndCall(
+        await deployed.ton.connect(account).approveAndCall(
           wton.address,
           tonAmount,
-          data,
-          {from: account}
+          data
         );
-        const afterBalance = await deployed.ton.balanceOf(account);
+        const afterBalance = await deployed.ton.balanceOf(account.address);
         // beforeBalance.sub(afterBalance).should.be.bignumber.equal(tonAmount);
         expect(beforeBalance.sub(afterBalance)).to.be.equal(tonAmount);
     }
@@ -716,8 +723,12 @@ describe('DAOv2Committee', () => {
                 "createOptimismSequencer(address,uint32)"
             )
 
+            const _changeMemberV1 = Web3EthAbi.encodeFunctionSignature(
+                "changeMember(uint256)"
+            )
+
             const _changeMember = Web3EthAbi.encodeFunctionSignature(
-                "changeMember(uint256,uint32)"
+                "changeMemberV2(uint256,uint32)"
             )
 
             const _updateSeigniorageV2 = Web3EthAbi.encodeFunctionSignature(
@@ -785,6 +796,7 @@ describe('DAOv2Committee', () => {
             console.log("setQuorum :", _setQuorum);
             console.log("createCandidateV2 :", _createCandidateV2);
             console.log("createOptimismSequencer :", _createOptimismSequencer);
+            console.log("changeMemberV1 :", _changeMemberV1);
             console.log("changeMember :", _changeMember);
             console.log("updateSeigniorageV2 :", _updateSeigniorageV2);
             console.log("retireMember :", _retireMember);
@@ -805,7 +817,7 @@ describe('DAOv2Committee', () => {
                 [
                     _setSeigManagerV2,_setLayer2Manager,_setCandidates,_setOptimismSequencer,
                     _increaseMaxMember,_decreaseMaxMember,_setQuorum,_createCandidateV2,_createOptimismSequencer,
-                    _changeMember,_updateSeigniorageV2,_retireMember,_castVote,_claimActivityReward,
+                    _changeMemberV1,_changeMember,_updateSeigniorageV2,_retireMember,_castVote,_claimActivityReward,
                     _totalSupplyOnCandidateV2,_totalSupplyOnSequencerV2,_balanceOfOnCandidateV2,_balanceOfOnSequencerV2,
                     _candidatesLength,_candidatesLengthV2,_isExistCandidate,_isExistCandidateV2,
                     _getClaimableActivityReward,_getClaimableActivityRewardV2
@@ -1827,30 +1839,41 @@ describe('DAOv2Committee', () => {
         })
 
         describe("#7-7. V1 createCandidate", () => {
-            it("check data", async () => {
-                const padDeposit = padLeft(depositManagerAddr.toString(), 32);
-                const padCandidateContract = padLeft(wtonAddr.toString(), 32);
-                const data = depositManagerAddr + wtonAddr
-                const data2 = depositManagerAddr.concat(wtonAddr);
-                console.log(data);
-                console.log("data : ", data.length)
-                console.log(data2);
-                console.log("data : ", data2.length)
+            // it("check data", async () => {
+            //     const padDeposit = padLeft(depositManagerAddr.toString(), 32);
+            //     const padCandidateContract = padLeft(wtonAddr.toString(), 32);
+            //     const data = depositManagerAddr + wtonAddr
+            //     const data2 = depositManagerAddr.concat(wtonAddr);
+            //     console.log(data);
+            //     console.log("data : ", data.length)
+            //     console.log(data2);
+            //     console.log("data : ", data2.length)
+            // })
+
+            // it("check data2", async () => {
+            //     const data = marshalString(
+            //         [depositManagerAddr, wtonAddr]
+            //             .map(unmarshalString)
+            //             .map(str => padLeft(str, 64))
+            //             .join(''),
+            //     );
+            //     console.log(data);
+            //     console.log("data : ", data.length)
+            // })
+
+            it("add candidateV1 (candidate4)", async () => {
+                if (mainnetDAOstaking.candidate4.gt(await deployed.ton.balanceOf(candidate4.address)))
+                    await (await deployed.ton.connect(deployed.tonAdmin).mint(candidate4.address, mainnetDAOstaking.candidate4)).wait();
+                // console.log(DAOProxyLogicV1)
+                await addCandidateV1(candidate4,mainnetDAOstaking.candidate4);
             })
 
-            it("check data2", async () => {
-                const data = marshalString(
-                    [depositManagerAddr, wtonAddr]
-                        .map(unmarshalString)
-                        .map(str => padLeft(str, 64))
-                        .join(''),
-                );
-                console.log(data);
-                console.log("data : ", data.length)
+            it("add candidateV1 (candidate5)", async () => {
+
             })
         })
         
-        describe("#7-7. Member challenge", () => {
+        describe("#7-8. Member challenge", () => {
             it("check now V1 members", async () => {
                 let member1 = await DAOProxyLogicV2.members(0)
                 let member2 = await DAOProxyLogicV2.members(1)
@@ -1861,16 +1884,34 @@ describe('DAOv2Committee', () => {
             })
 
             it("not candidate not challenge", async () => {
+                console.log(DAOProxyLogicV2);
                 await expect(
-                    DAOProxyLogicV2.connect(addr1).changeMember(0,sequencerIndexSave)
+                    DAOProxyLogicV2.connect(addr1).changeMemberV2(0,sequencerIndexSave)
                 ).to.be.revertedWith("DAO: NC") 
+            })
+
+            it("There is a member of V1, candidateV1 challenge if low balance challenge fail", async () => {
+                let changeIndex = 0;
+                let beforeMember = await DAOProxyLogicV2.members(changeIndex)
+                let beforeAmount = await DAOProxyLogicV1.totalSupplyOnCandidate(beforeMember)
+                console.log("beforeAmount : ", beforeAmount);
+                let challengeAmount = await DAOProxyLogicV1.totalSupplyOnCandidate(candidate4.address)
+                console.log("challengeAmount : ", challengeAmount);
+                expect(beforeAmount).to.be.gte(challengeAmount)
+
+                let contractAddress = await DAOProxyLogicV1.candidateContract(candidate4.address)
+                getCandidateContract = await ethers.getContractAt(candidateContract_ABI.abi, contractAddress, deployer);
+                await expect(
+                    getCandidateContract.connect(candidate4).changeMember(changeIndex)
+                ).to.be.revertedWith("not enough amount") 
+
             })
 
             it("There is a member of V1, but a V2 candidate challenge", async () => {
                 let changeIndex = 0;
                 let beforeMember = await DAOProxyLogicV2.members(changeIndex)
                 const topic = deployed.daov2committeeV2.interface.getEventTopic('ChangedMember');
-                const receipt = await(await DAOProxyLogicV2.connect(candidate1).changeMember(changeIndex,sequencerIndexSave)).wait();
+                const receipt = await(await DAOProxyLogicV2.connect(candidate1).changeMemberV2(changeIndex,sequencerIndexSave)).wait();
                 const log = receipt.logs.find(x => x.topics.indexOf(topic) >= 0);
                 const deployedEvent = deployed.daov2committeeV2.interface.parseLog(log);
                 
@@ -1883,7 +1924,7 @@ describe('DAOv2Committee', () => {
                 let changeIndex = 1;
                 let beforeMember = await DAOProxyLogicV2.members(changeIndex)
                 const topic = deployed.daov2committeeV2.interface.getEventTopic('ChangedMember');
-                const receipt = await(await DAOProxyLogicV2.connect(candidate2).changeMember(changeIndex,sequencerIndexSave)).wait();
+                const receipt = await(await DAOProxyLogicV2.connect(candidate2).changeMemberV2(changeIndex,sequencerIndexSave)).wait();
                 const log = receipt.logs.find(x => x.topics.indexOf(topic) >= 0);
                 const deployedEvent = deployed.daov2committeeV2.interface.parseLog(log);
                 
@@ -1896,7 +1937,7 @@ describe('DAOv2Committee', () => {
                 let changeIndex2 = 2;
                 let beforeMember2 = await DAOProxyLogicV2.members(changeIndex2)
                 const topic2 = deployed.daov2committeeV2.interface.getEventTopic('ChangedMember');
-                const receipt2 = await(await DAOProxyLogicV2.connect(candidate3).changeMember(changeIndex2,sequencerIndexSave)).wait();
+                const receipt2 = await(await DAOProxyLogicV2.connect(candidate3).changeMemberV2(changeIndex2,sequencerIndexSave)).wait();
                 const log2 = receipt2.logs.find(x => x.topics.indexOf(topic2) >= 0);
                 const deployedEvent2 = deployed.daov2committeeV2.interface.parseLog(log2);
                 
@@ -1912,7 +1953,7 @@ describe('DAOv2Committee', () => {
                 // console.log(await deployed.candidate["balanceOfLton(uint32,address)"](3, candidate3.address))
                 console.log("sequencerIndexSave :", sequencerIndexSave);
                 await expect(
-                    DAOProxyLogicV2.connect(sequencer1).changeMember(1,sequencerIndexSave)
+                    DAOProxyLogicV2.connect(sequencer1).changeMemberV2(1,sequencerIndexSave)
                 ).to.be.revertedWith("not enough amount") 
             })
 
@@ -1920,7 +1961,7 @@ describe('DAOv2Committee', () => {
                 // console.log(await deployed.optimismSequencer["balanceOfLton(uint32,address)"](1, sequencer1.address))
                 // console.log(await deployed.candidate["balanceOfLton(uint32,address)"](2, candidate2.address))
                 await expect(
-                    DAOProxyLogicV2.connect(sequencer1).changeMember(0,sequencerIndexSave)
+                    DAOProxyLogicV2.connect(sequencer1).changeMemberV2(0,sequencerIndexSave)
                 ).to.be.revertedWith("not enough amount") 
             })
 
@@ -1928,7 +1969,7 @@ describe('DAOv2Committee', () => {
                 let changeIndex = 2;
                 let beforeMember = await DAOProxyLogicV2.members(changeIndex)
                 const topic = deployed.daov2committeeV2.interface.getEventTopic('ChangedMember');
-                const receipt = await(await DAOProxyLogicV2.connect(sequencer1).changeMember(changeIndex,sequencerIndexSave)).wait();
+                const receipt = await(await DAOProxyLogicV2.connect(sequencer1).changeMemberV2(changeIndex,sequencerIndexSave)).wait();
                 const log = receipt.logs.find(x => x.topics.indexOf(topic) >= 0);
                 const deployedEvent = deployed.daov2committeeV2.interface.parseLog(log);
                 
@@ -1962,7 +2003,7 @@ describe('DAOv2Committee', () => {
                 let changeIndex2 = 0;
                 let beforeMember2 = await DAOProxyLogicV2.members(changeIndex2)
                 const topic2 = deployed.daov2committeeV2.interface.getEventTopic('ChangedMember');
-                const receipt2 = await(await DAOProxyLogicV2.connect(candidate1).changeMember(changeIndex2,sequencerIndexSave)).wait();
+                const receipt2 = await(await DAOProxyLogicV2.connect(candidate1).changeMemberV2(changeIndex2,sequencerIndexSave)).wait();
                 const log2 = receipt2.logs.find(x => x.topics.indexOf(topic2) >= 0);
                 const deployedEvent2 = deployed.daov2committeeV2.interface.parseLog(log2);
                 
@@ -1991,7 +2032,7 @@ describe('DAOv2Committee', () => {
             it("can not exceed maximum", async () => {
                 expect(await DAOProxyLogicV2.maxMember()).to.be.equal(3);
                 await expect(
-                    DAOProxyLogicV2.connect(candidate1).changeMember(3,sequencerIndexSave)
+                    DAOProxyLogicV2.connect(candidate1).changeMemberV2(3,sequencerIndexSave)
                 ).to.be.revertedWith("DAO: VI") 
             })
         })

@@ -285,12 +285,65 @@ contract DAOv2CommitteeV2 is
 
         return candidatesV2.length;
     }
+
+    /// @notice Replaces an existing member
+    /// @param _memberIndex The member slot index to be replaced
+    /// @return Whether or not the execution succeeded
+    function changeMember(
+        uint256 _memberIndex
+    )
+        external
+        validMemberIndex(_memberIndex)
+        returns (bool)
+    {
+        address newMember = ICandidate(msg.sender).candidate();
+        CandidateInfo storage candidateInfo = _candidateInfos[newMember];
+        require(
+            ICandidate(msg.sender).isCandidateContract(),
+            "DAOCommittee: sender is not a candidate contract"
+        );
+        require(
+            candidateInfo.candidateContract == msg.sender,
+            "DAOCommittee: invalid candidate contract"
+        );
+        require(
+            candidateInfo.memberJoinedTime == 0,
+            "DAOCommittee: already member"
+        );
+        
+        address prevMember = members[_memberIndex];
+        address prevMemberContract = candidateContract(prevMember);
+
+        candidateInfo.memberJoinedTime = uint128(block.timestamp);
+        candidateInfo.indexMembers = _memberIndex;
+
+        members[_memberIndex] = newMember;
+
+        if (prevMember == address(0)) {
+            emit ChangedMember(_memberIndex, prevMember, newMember);
+            return true;
+        }
+
+        require(
+            ICandidate(msg.sender).totalStaked() > ICandidate(prevMemberContract).totalStaked(),
+            "not enough amount"
+        );
+
+        CandidateInfo storage prevCandidateInfo = _candidateInfos[prevMember];
+        prevCandidateInfo.indexMembers = 0;
+        prevCandidateInfo.rewardPeriod = uint128(uint256(prevCandidateInfo.rewardPeriod).add(block.timestamp.sub(prevCandidateInfo.memberJoinedTime)));
+        prevCandidateInfo.memberJoinedTime = 0;
+
+        emit ChangedMember(_memberIndex, prevMember, newMember);
+
+        return true;
+    }
     
     /// @notice Replaces an existing member
     /// @param _memberIndex The member slot index to be replaced
     /// @param _sequencerIndex V2의 candidate의 sequencerIndex로 0이면 V1멤버이고 1이상이면 V2멤버이다.
     /// @return Whether or not the execution succeeded
-    function changeMember(
+    function changeMemberV2(
         uint256 _memberIndex,
         uint32 _sequencerIndex
     ) 
@@ -320,20 +373,26 @@ contract DAOv2CommitteeV2 is
         uint32 compareIndex;
         if(checkSender == 0){
             //newMember가 V1일때
-            newMember = ICandidate(msg.sender).candidate();
-            CandidateInfo storage candidateInfo = _candidateInfos[newMember];
+
+            console.log("1");
+            CandidateInfo storage candidateInfo = _candidateInfos[msg.sender];
+            newMember = ICandidate(candidateInfo.candidateContract).candidate();
+            console.log("msg.sender :", msg.sender);
+            console.log("newMember :", newMember);
             require(
-                ICandidate(msg.sender).isCandidateContract(),
+                ICandidate(candidateInfo.candidateContract).isCandidateContract(),
                 "DAO: NC"
             );
-            require(
-                candidateInfo.candidateContract == msg.sender,
-                "DAO: IC"
-            );
+            console.log("2");
+            // require(
+            //     candidateInfo.candidateContract == msg.sender,
+            //     "DAO: IC"
+            // );
             require(
                 candidateInfo.memberJoinedTime == 0,
                 "DAO: AM"
             );
+            console.log("2");
             candidateInfo.memberJoinedTime = uint128(block.timestamp);
             candidateInfo.indexMembers = _memberIndex;
 
@@ -342,14 +401,17 @@ contract DAOv2CommitteeV2 is
             seqIndex[_memberIndex] = 0;
 
             if (prevMember == address(0)) {
+                console.log("no this");
                 members[_memberIndex] = newMember;
                 emit ChangedMember(_memberIndex, prevMember, newMember);
                 return true;
             }
 
             uint8 checkPreMember = isCandidateV2(prevMember, preSqIndex);
+            console.log("checkPreMember : ", checkPreMember);
             if(checkPreMember == 0) {
                 //V1끼리 비교
+                console.log("2");
                 address prevMemberContract = candidateContract(prevMember);
                 require(
                     ICandidate(msg.sender).totalStaked() > ICandidate(prevMemberContract).totalStaked(),
@@ -408,10 +470,10 @@ contract DAOv2CommitteeV2 is
                 return true;
             }
             uint32 preSqIndex = seqIndex[_memberIndex];
-            console.log("preSqIndex :", preSqIndex);
             uint8 checkPreMember = isCandidateV2(prevMember, preSqIndex);
-            console.log("checkPreMember :", checkPreMember);
-            console.log("prevMember :", prevMember);
+            // console.log("preSqIndex :", preSqIndex);
+            // console.log("checkPreMember :", checkPreMember);
+            // console.log("prevMember :", prevMember);
             if(checkSender == 1) {
                 //newMebemr가 V2의 sequencer일때
                 if (checkPreMember == 0) {
@@ -542,7 +604,6 @@ contract DAOv2CommitteeV2 is
     function retireMember(uint32 _index) onlyMemberV2(_index) external returns (bool) {
         // require((isExistCandidate(msg.sender) || isExistCandidateV2(msg.sender,_index)), "DAO: not registerd"); -> member검사해서 따로 안해도됨
         uint8 checkSender = isCandidateV2(msg.sender,_index);
-        LibDaoV2.CandidateInfoV2 storage candidateInfo = _candidateInfosV2[msg.sender][_index];
         if(checkSender == 0) {
             //V1의 member이다.
             console.log("retire V1 member");
@@ -552,15 +613,25 @@ contract DAOv2CommitteeV2 is
                 candidateInfo.candidateContract == msg.sender,
                 "DAO: IC"
             );
+            members[candidateInfo.indexMembers] = address(0);
+            candidateInfo.rewardPeriod = uint128(uint256(candidateInfo.rewardPeriod).add(block.timestamp.sub(candidateInfo.memberJoinedTime)));
+            candidateInfo.memberJoinedTime = 0;
+
+            uint256 prevIndex = candidateInfo.indexMembers;
+            candidateInfo.indexMembers = 0;
+
+            emit ChangedMember(prevIndex, msg.sender, address(0));
+        } else {
+            LibDaoV2.CandidateInfoV2 storage candidateInfoV2 = _candidateInfosV2[msg.sender][_index];
+            members[candidateInfoV2.indexMembers] = address(0);
+            candidateInfoV2.rewardPeriod = uint128(uint256(candidateInfoV2.rewardPeriod).add(block.timestamp.sub(candidateInfoV2.memberJoinedTime)));
+            candidateInfoV2.memberJoinedTime = 0;
+
+            uint256 prevIndex = candidateInfoV2.indexMembers;
+            candidateInfoV2.indexMembers = 0;
+
+            emit ChangedMember(prevIndex, msg.sender, address(0));
         }
-
-        members[candidateInfo.indexMembers] = address(0);
-        candidateInfo.rewardPeriod = uint128(uint256(candidateInfo.rewardPeriod).add(block.timestamp.sub(candidateInfo.memberJoinedTime)));
-        candidateInfo.memberJoinedTime = 0;
-
-        uint256 prevIndex = candidateInfo.indexMembers;
-        candidateInfo.indexMembers = 0;
-        emit ChangedMember(prevIndex, msg.sender, address(0));
 
         return true;
     }
