@@ -62,6 +62,14 @@ const {
 // 기존 Proxy에 새로운 V2로직을 연동하여서 V2에 대한 새로운 DAO를 테스트
 // DAO Challenge 시나리오
 // 1. 시퀀서는 현재 1개(1명), 해당 시퀀서에 대한 후보자는 4명으로 challenge가능한 인원은 총 5명이다.
+// 2. 기존 member들은 V1 member들임
+// 3. 기존 member에서 V1 candidate가 challenge를 진행 (실패 경우, 성공 경우 테스트) -> 성공하여서 기존 member1, member2에 candidate4가 추가됨 (V1 -> V1 member 테스트)
+// 4. V1 member에서 V2 member 테스트 (sequencer1, candidate2, candidate3 로 변경) (V1 -> V2 sequencer, V1 -> V2 candidate member 변경 테스트)
+// 5. V2 member에서 V2 member 테스트 (sequencer1, candidate2, candidate1 로 변경) (V2 -> V2 변경 테스트)
+// 6. candidate1 retrie 테스트 (V2 member retire 테스트)
+// 7. candidate1 재등록 테스트 (V2 candidate 공석에 member 들어가는 테스트) (현재까지 멤버 : sequencer1 V2, candidate2 V2, candidate1 V2)
+// 8. V2 member에서 V1 member 테스트 (candidate5가 V2 멤버에 대한 도전 테스트) 
+
 // 2. candidate1이 0번 member로 들어감
 // 3. candidate2가 1번 member로 들어감
 // 4. candidate3가 2번 member로 들어감
@@ -218,7 +226,7 @@ describe('DAOv2Committee', () => {
     let candidateInfo = {
         tonAmount1: ethers.utils.parseEther("5500000"),        //초반 member였다가 뺏김
         tonAmount2: ethers.utils.parseEther("10100000"),       //member
-        tonAmount3: ethers.utils.parseEther("450000"),         //member
+        tonAmount3: ethers.utils.parseEther("460000"),         //member
         tonAmount4: ethers.utils.parseEther("100"),            //그냥 candidate의 역할만함
     }
 
@@ -1869,7 +1877,10 @@ describe('DAOv2Committee', () => {
             })
 
             it("add candidateV1 (candidate5)", async () => {
-
+                if (mainnetDAOstaking.candidate5.gt(await deployed.ton.balanceOf(candidate5.address)))
+                    await (await deployed.ton.connect(deployed.tonAdmin).mint(candidate5.address, mainnetDAOstaking.candidate5)).wait();
+                
+                await addCandidateV1(candidate5,mainnetDAOstaking.candidate5);
             })
         })
         
@@ -1884,7 +1895,7 @@ describe('DAOv2Committee', () => {
             })
 
             it("not candidate not challenge", async () => {
-                console.log(DAOProxyLogicV2);
+                // console.log(DAOProxyLogicV2);
                 await expect(
                     DAOProxyLogicV2.connect(addr1).changeMemberV2(0,sequencerIndexSave)
                 ).to.be.revertedWith("DAO: NC") 
@@ -1904,23 +1915,43 @@ describe('DAOv2Committee', () => {
                 await expect(
                     getCandidateContract.connect(candidate4).changeMember(changeIndex)
                 ).to.be.revertedWith("not enough amount") 
-
             })
 
-            it("There is a member of V1, but a V2 candidate challenge", async () => {
+            it("There is a member of V1, candidateV1 challenge if high balance challenge success", async () => {
+                let changeIndex = 2;
+                let beforeMember = await DAOProxyLogicV2.members(changeIndex)
+                let beforeAmount = await DAOProxyLogicV1.totalSupplyOnCandidate(beforeMember)
+                console.log("beforeAmount : ", beforeAmount);
+                let challengeAmount = await DAOProxyLogicV1.totalSupplyOnCandidate(candidate4.address)
+                console.log("challengeAmount : ", challengeAmount);
+                expect(beforeAmount).to.be.lte(challengeAmount)
+
+                let contractAddress = await DAOProxyLogicV1.candidateContract(candidate4.address)
+                getCandidateContract = await ethers.getContractAt(candidateContract_ABI.abi, contractAddress, deployer);
+                await getCandidateContract.connect(candidate4).changeMember(changeIndex);
+
+                let afterMember = await DAOProxyLogicV2.members(changeIndex)
+                console.log("getCandidateContract : ", getCandidateContract.address)
+                console.log("beforeMember : ", beforeMember)
+                console.log("afterMember : ", afterMember)
+                console.log("candidate4 : ", candidate4.address)
+                expect(afterMember).to.be.equal(candidate4.address);
+            })
+
+            it("There is a member of V1, but a V2 sequencer1 challenge", async () => {
                 let changeIndex = 0;
                 let beforeMember = await DAOProxyLogicV2.members(changeIndex)
                 const topic = deployed.daov2committeeV2.interface.getEventTopic('ChangedMember');
-                const receipt = await(await DAOProxyLogicV2.connect(candidate1).changeMemberV2(changeIndex,sequencerIndexSave)).wait();
+                const receipt = await(await DAOProxyLogicV2.connect(sequencer1).changeMemberV2(changeIndex,sequencerIndexSave)).wait();
                 const log = receipt.logs.find(x => x.topics.indexOf(topic) >= 0);
                 const deployedEvent = deployed.daov2committeeV2.interface.parseLog(log);
                 
                 expect(deployedEvent.args.slotIndex).to.eq(changeIndex);
                 expect(deployedEvent.args.prevMember).to.eq(beforeMember);
-                expect(deployedEvent.args.newMember).to.eq(candidate1.address);
+                expect(deployedEvent.args.newMember).to.eq(sequencer1.address);
             })
 
-            it("everyMember change V2member", async () => {
+            it("everyMember changeMember, V2 sequencer, V2 candidate, V2 candidate", async () => {
                 let changeIndex = 1;
                 let beforeMember = await DAOProxyLogicV2.members(changeIndex)
                 const topic = deployed.daov2committeeV2.interface.getEventTopic('ChangedMember');
@@ -1953,7 +1984,7 @@ describe('DAOv2Committee', () => {
                 // console.log(await deployed.candidate["balanceOfLton(uint32,address)"](3, candidate3.address))
                 console.log("sequencerIndexSave :", sequencerIndexSave);
                 await expect(
-                    DAOProxyLogicV2.connect(sequencer1).changeMemberV2(1,sequencerIndexSave)
+                    DAOProxyLogicV2.connect(candidate1).changeMemberV2(1,sequencerIndexSave)
                 ).to.be.revertedWith("not enough amount") 
             })
 
@@ -1961,7 +1992,7 @@ describe('DAOv2Committee', () => {
                 // console.log(await deployed.optimismSequencer["balanceOfLton(uint32,address)"](1, sequencer1.address))
                 // console.log(await deployed.candidate["balanceOfLton(uint32,address)"](2, candidate2.address))
                 await expect(
-                    DAOProxyLogicV2.connect(sequencer1).changeMemberV2(0,sequencerIndexSave)
+                    DAOProxyLogicV2.connect(candidate1).changeMemberV2(0,sequencerIndexSave)
                 ).to.be.revertedWith("not enough amount") 
             })
 
@@ -1969,14 +2000,14 @@ describe('DAOv2Committee', () => {
                 let changeIndex = 2;
                 let beforeMember = await DAOProxyLogicV2.members(changeIndex)
                 const topic = deployed.daov2committeeV2.interface.getEventTopic('ChangedMember');
-                const receipt = await(await DAOProxyLogicV2.connect(sequencer1).changeMemberV2(changeIndex,sequencerIndexSave)).wait();
+                const receipt = await(await DAOProxyLogicV2.connect(candidate1).changeMemberV2(changeIndex,sequencerIndexSave)).wait();
                 const log = receipt.logs.find(x => x.topics.indexOf(topic) >= 0);
                 const deployedEvent = deployed.daov2committeeV2.interface.parseLog(log);
                 
                 expect(deployedEvent.args.slotIndex).to.eq(changeIndex);
                 expect(deployedEvent.args.prevMember).to.eq(beforeMember);
                 expect(deployedEvent.args.prevMember).to.eq(candidate3.address);
-                expect(deployedEvent.args.newMember).to.eq(sequencer1.address);
+                expect(deployedEvent.args.newMember).to.eq(candidate1.address);
             })
 
             it("cannot run retire if you are not a member.", async () => {
@@ -1986,7 +2017,7 @@ describe('DAOv2Committee', () => {
             })
 
             it("Members can retire. The member retired at address0.", async () => {
-                let changeIndex = 0;
+                let changeIndex = 2;
                 const topic = deployed.daov2committeeV2.interface.getEventTopic('ChangedMember');
                 const receipt = await(await DAOProxyLogicV2.connect(candidate1).retireMember(sequencerIndexSave)).wait();
                 const log = receipt.logs.find(x => x.topics.indexOf(topic) >= 0);
@@ -1998,9 +2029,9 @@ describe('DAOv2Committee', () => {
             })
 
             it("Even after retirement, you can register as a member again.", async () => {
-                expect(await DAOProxyLogicV2.isMemberV2(candidate3.address,sequencerIndexSave)).to.be.equal(false)
+                expect(await DAOProxyLogicV2.isMemberV2(candidate1.address,sequencerIndexSave)).to.be.equal(false)
 
-                let changeIndex2 = 0;
+                let changeIndex2 = 2;
                 let beforeMember2 = await DAOProxyLogicV2.members(changeIndex2)
                 const topic2 = deployed.daov2committeeV2.interface.getEventTopic('ChangedMember');
                 const receipt2 = await(await DAOProxyLogicV2.connect(candidate1).changeMemberV2(changeIndex2,sequencerIndexSave)).wait();
@@ -2015,9 +2046,9 @@ describe('DAOv2Committee', () => {
             })
 
             it("fill all slots", async () => {
-                expect(await DAOProxyLogicV2.members(0)).to.be.equal(candidate1.address);
+                expect(await DAOProxyLogicV2.members(0)).to.be.equal(sequencer1.address);
                 expect(await DAOProxyLogicV2.members(1)).to.be.equal(candidate2.address);
-                expect(await DAOProxyLogicV2.members(2)).to.be.equal(sequencer1.address);
+                expect(await DAOProxyLogicV2.members(2)).to.be.equal(candidate1.address);
             })
 
             it("check now V2 members", async () => {
@@ -2034,6 +2065,23 @@ describe('DAOv2Committee', () => {
                 await expect(
                     DAOProxyLogicV2.connect(candidate1).changeMemberV2(3,sequencerIndexSave)
                 ).to.be.revertedWith("DAO: VI") 
+            })
+
+            it("If the deposit amount is greater, the challenge succeeds. (V2 -> V1 member)", async () => {
+                expect(await DAOProxyLogicV2.isMemberV2(candidate5.address,sequencerIndexSave)).to.be.equal(false)
+
+                let changeIndex2 = 2;
+                let beforeMember2 = await DAOProxyLogicV2.members(changeIndex2)
+                const topic2 = deployed.daov2committeeV2.interface.getEventTopic('ChangedMember');
+                const receipt2 = await(await DAOProxyLogicV2.connect(candidate5).changeMemberV2(changeIndex2,0)).wait();
+                const log2 = receipt2.logs.find(x => x.topics.indexOf(topic2) >= 0);
+                const deployedEvent2 = deployed.daov2committeeV2.interface.parseLog(log2);
+                
+                expect(deployedEvent2.args.slotIndex).to.be.eq(changeIndex2);
+                expect(deployedEvent2.args.prevMember).to.be.eq(beforeMember2);
+                expect(deployedEvent2.args.newMember).to.be.eq(candidate5.address);
+
+                expect(await DAOProxyLogicV1.isMember(candidate5.address)).to.be.equal(true)
             })
         })
     })
