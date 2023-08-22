@@ -72,6 +72,12 @@ contract DAOv2CommitteeV1 is
         uint256 newReward
     );
 
+    event ClaimedActivityReward(
+        address indexed candidate,
+        address receiver,
+        uint256 amount
+    );
+
     modifier onlyOwner() {
         require(hasRole(DEFAULT_ADMIN_ROLE, msg.sender), "DAO: NA");
         _;
@@ -621,14 +627,14 @@ contract DAOv2CommitteeV1 is
         return _candidateInfos[_candidate].candidateContract != address(0);
     }
 
-    function getClaimableActivityReward(address _candidate) public view returns (uint256) {
-        CandidateInfo storage info = _candidateInfos[_candidate];
-        uint256 period = info.rewardPeriod;
+    // function getClaimableActivityReward(address _candidate) public view returns (uint256) {
+    //     CandidateInfo storage info = _candidateInfos[_candidate];
+    //     uint256 period = info.rewardPeriod;
 
-        if (info.memberJoinedTime > 0) {
-            period = (info.memberJoinedTime > info.claimedTimestamp) ? period.add(block.timestamp.sub(info.memberJoinedTime)) : period.add(block.timestamp.sub(info.claimedTimestamp));
-        }
+    //     if (info.memberJoinedTime > 0) {
+    //         period = (info.memberJoinedTime > info.claimedTimestamp) ? period.add(block.timestamp.sub(info.memberJoinedTime)) : period.add(block.timestamp.sub(info.claimedTimestamp));
+    //     }
 
-        return period.mul(activityRewardPerSecond);
-    }
+    //     return period.mul(activityRewardPerSecond);
+    // }
 }

@@ -141,6 +141,8 @@ describe('DAOv2Committee', () => {
     let wton : any
     let wtonAddr = "0xc4A11aaf6ea915Ed7Ac194161d2fC9384F15bff2"
 
+    let tonContract : any
+
     let ray = ethers.utils.parseUnits("1", 9);
 
     const votesList = [
@@ -390,6 +392,7 @@ describe('DAOv2Committee', () => {
         candidate4 = deployed.daoPrivateOwner;
         candidate5 = deployed.addr1;
         candidate6 = deployed.addr2;
+        tonContract = deployed.ton;
         
         candidates.push(candidate1)
         candidates.push(candidate2)
@@ -611,8 +614,12 @@ describe('DAOv2Committee', () => {
                 "castVote(uint256,uint256,string,uint32)"
             )
 
+            const _claimActivityRewardV1 = Web3EthAbi.encodeFunctionSignature(
+                "claimActivityReward(address)"
+            )
+
             const _claimActivityReward = Web3EthAbi.encodeFunctionSignature(
-                "claimActivityReward(address,uint32)"
+                "claimActivityRewardV2(address,uint32)"
             )
 
             const _totalSupplyOnCandidateV2 = Web3EthAbi.encodeFunctionSignature(
@@ -685,7 +692,7 @@ describe('DAOv2Committee', () => {
                     [
                         _setSeigManagerV2,_setLayer2Manager,_setCandidates,_setOptimismSequencer,
                         _increaseMaxMember,_decreaseMaxMember,_setQuorum,_createCandidateV2,_createOptimismSequencer,
-                        _changeMember,_updateSeigniorageV2,_retireMember,_castVote,_claimActivityReward,
+                        _changeMember,_updateSeigniorageV2,_retireMember,_castVote,_claimActivityRewardV1,_claimActivityReward,
                         _totalSupplyOnCandidateV2,_totalSupplyOnSequencerV2,_balanceOfOnCandidateV2,_balanceOfOnSequencerV2,
                         _candidatesLength,_candidatesLengthV2,_isExistCandidate,_isExistCandidateV2,
                         _getClaimableActivityReward,_getClaimableActivityRewardV2
@@ -755,8 +762,12 @@ describe('DAOv2Committee', () => {
                 "castVote(uint256,uint256,string,uint32)"
             )
 
+            const _claimActivityRewardV1 = Web3EthAbi.encodeFunctionSignature(
+                "claimActivityReward(address)"
+            )
+
             const _claimActivityReward = Web3EthAbi.encodeFunctionSignature(
-                "claimActivityReward(address,uint32)"
+                "claimActivityRewardV2(address,uint32)"
             )
 
             const _totalSupplyOnCandidateV2 = Web3EthAbi.encodeFunctionSignature(
@@ -829,7 +840,7 @@ describe('DAOv2Committee', () => {
                 [
                     _setSeigManagerV2,_setLayer2Manager,_setCandidates,_setOptimismSequencer,
                     _increaseMaxMember,_decreaseMaxMember,_setQuorum,_createCandidateV2,_createOptimismSequencer,
-                    _changeMemberV1,_changeMember,_updateSeigniorageV2,_retireMember,_retireMemberV2,_castVote,_claimActivityReward,
+                    _changeMemberV1,_changeMember,_updateSeigniorageV2,_retireMember,_retireMemberV2,_castVote,_claimActivityRewardV1,_claimActivityReward,
                     _totalSupplyOnCandidateV2,_totalSupplyOnSequencerV2,_balanceOfOnCandidateV2,_balanceOfOnSequencerV2,
                     _candidatesLength,_candidatesLengthV2,_isExistCandidate,_isExistCandidateV2,
                     _getClaimableActivityReward,_getClaimableActivityRewardV2
@@ -2130,6 +2141,73 @@ describe('DAOv2Committee', () => {
                 expect(deployedEvent.args.slotIndex).to.eq(changeIndex);
                 expect(deployedEvent.args.prevMember).to.eq(candidate5.address);
                 expect(deployedEvent.args.newMember).to.eq(addr0);
+            })
+
+            it("member index empty, the challenge succeeds. (0 -> V1 member)", async () => {
+                expect(await DAOProxyLogicV2.isMemberV2(candidate5.address,0)).to.be.equal(false)
+
+                let changeIndex2 = 2;
+                let beforeMember2 = await DAOProxyLogicV2.members(changeIndex2)
+                const topic2 = deployed.daov2committeeV2.interface.getEventTopic('ChangedMember');
+                const receipt2 = await(await DAOProxyLogicV2.connect(candidate5).changeMemberV2(changeIndex2,0)).wait();
+                const log2 = receipt2.logs.find(x => x.topics.indexOf(topic2) >= 0);
+                const deployedEvent2 = deployed.daov2committeeV2.interface.parseLog(log2);
+                
+                expect(deployedEvent2.args.slotIndex).to.be.eq(changeIndex2);
+                expect(deployedEvent2.args.prevMember).to.be.eq(beforeMember2);
+                expect(deployedEvent2.args.newMember).to.be.eq(candidate5.address);
+
+                expect(await DAOProxyLogicV1.isMember(candidate5.address)).to.be.equal(true)
+            })
+        })
+
+        describe("#7-9. member claimActivityReward", () => {
+            it("V1 member retire because To receive accurate claimReward", async () => {
+                let changeIndex = 2;
+                const topic = deployed.daov2committeeV2.interface.getEventTopic('ChangedMember');
+                const receipt = await(await DAOProxyLogicV2.connect(candidate5).retireMemberV2(0)).wait();
+                const log = receipt.logs.find(x => x.topics.indexOf(topic) >= 0);
+                const deployedEvent = deployed.daov2committeeV2.interface.parseLog(log);
+                
+                expect(deployedEvent.args.slotIndex).to.eq(changeIndex);
+                expect(deployedEvent.args.prevMember).to.eq(candidate5.address);
+                expect(deployedEvent.args.newMember).to.eq(addr0);
+            })
+
+            it("V2 member retire because To receive accurate claimReward", async () => {
+                let changeIndex = 0;
+                const topic = deployed.daov2committeeV2.interface.getEventTopic('ChangedMember');
+                const receipt = await(await DAOProxyLogicV2.connect(sequencer1).retireMemberV2(sequencerIndexSave)).wait();
+                const log = receipt.logs.find(x => x.topics.indexOf(topic) >= 0);
+                const deployedEvent = deployed.daov2committeeV2.interface.parseLog(log);
+                
+                expect(deployedEvent.args.slotIndex).to.eq(changeIndex);
+                expect(deployedEvent.args.prevMember).to.eq(sequencer1.address);
+                expect(deployedEvent.args.newMember).to.eq(addr0);
+            })
+
+            it("getClaimableActivityRewardV2 and claimReward for memberV1", async () => {
+                let beforeTONAmount = await tonContract.balanceOf(candidate5.address)
+                console.log("1")
+                let claimAmountV1 = await DAOProxyLogicV2.getClaimableActivityReward(candidate5.address);
+                console.log("1")
+                await DAOProxyLogicV2.connect(candidate5).claimActivityRewardV2(candidate5.address,0);
+                console.log("1")
+                let afterTONAmount = await tonContract.balanceOf(candidate5.address)
+                console.log("1")
+                expect(afterTONAmount.sub(beforeTONAmount)).to.be.equal(claimAmountV1);
+            })
+
+            it("getClaimableActivityRewardV2 and claimReward for memberV2", async () => {
+                let beforeTONAmount = await tonContract.balanceOf(sequencer1.address)
+                let claimAmountV2 = await DAOProxyLogicV2.getClaimableActivityRewardV2(sequencer1.address,sequencerIndexSave);
+                await DAOProxyLogicV2.connect(sequencer1).claimActivityRewardV2(sequencer1.address,sequencerIndexSave);
+                let afterTONAmount = await tonContract.balanceOf(sequencer1.address)
+                expect(afterTONAmount.sub(beforeTONAmount)).to.be.equal(claimAmountV2);
+            })
+
+            it("member entering V1, V2", async () => {
+
             })
         })
     })

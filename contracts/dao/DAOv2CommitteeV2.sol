@@ -161,19 +161,58 @@ contract DAOv2CommitteeV2 is
         onlyOwner
         validMemberIndex(_reducingMemberIndex)
     {
+        uint32 sequenIndex = seqIndex[_reducingMemberIndex];
         address reducingMember = members[_reducingMemberIndex];
-        CandidateInfo storage reducingCandidate = _candidateInfos[reducingMember];
+        if(sequenIndex == 0) {
+            //reducingMember가 V1일때
+            CandidateInfo storage reducingCandidate = _candidateInfos[reducingMember];
 
-        if (_reducingMemberIndex != members.length - 1) {
-            address tailMember = members[members.length - 1];
-            CandidateInfo storage tailCandidate = _candidateInfos[tailMember];
+            if (_reducingMemberIndex != members.length - 1) {
+                address tailMember = members[members.length - 1];
+                uint32 tailIndex = seqIndex[_reducingMemberIndex];
+                if(tailIndex == 0) {
+                    //tail 멤버가 V1일때
+                    CandidateInfo storage tailCandidate = _candidateInfos[tailMember];
 
-            tailCandidate.indexMembers = _reducingMemberIndex;
-            members[_reducingMemberIndex] = tailMember;
+                    tailCandidate.indexMembers = _reducingMemberIndex;
+                    members[_reducingMemberIndex] = tailMember;
+                } else {
+                    //tail 멤버가 V2일때
+                    LibDaoV2.CandidateInfoV2 storage tailCandidate = _candidateInfosV2[reducingMember][tailIndex];
+
+                    tailCandidate.indexMembers = _reducingMemberIndex;
+                    members[_reducingMemberIndex] = tailMember;
+                }
+            }
+            reducingCandidate.indexMembers = 0;
+            reducingCandidate.rewardPeriod = uint128(uint256(reducingCandidate.rewardPeriod).add(block.timestamp.sub(reducingCandidate.memberJoinedTime)));
+            reducingCandidate.memberJoinedTime = 0;
+        } else {
+            //reducingMember가 V2일때
+            LibDaoV2.CandidateInfoV2 storage reducingCandidate = _candidateInfosV2[reducingMember][sequenIndex];
+            
+            if (_reducingMemberIndex != members.length - 1) {
+                address tailMember = members[members.length - 1];
+                uint32 tailIndex = seqIndex[_reducingMemberIndex];
+                if(tailIndex == 0) {
+                    //tail 멤버가 V1일때
+                    CandidateInfo storage tailCandidate = _candidateInfos[tailMember];
+
+                    tailCandidate.indexMembers = _reducingMemberIndex;
+                    members[_reducingMemberIndex] = tailMember;
+                } else {
+                    //tail 멤버가 V2일때
+                    LibDaoV2.CandidateInfoV2 storage tailCandidate = _candidateInfosV2[reducingMember][tailIndex];
+
+                    tailCandidate.indexMembers = _reducingMemberIndex;
+                    members[_reducingMemberIndex] = tailMember;
+                }
+            }
+            reducingCandidate.indexMembers = 0;
+            reducingCandidate.rewardPeriod = uint128(uint256(reducingCandidate.rewardPeriod).add(block.timestamp.sub(reducingCandidate.memberJoinedTime)));
+            reducingCandidate.memberJoinedTime = 0;
         }
-        reducingCandidate.indexMembers = 0;
-        reducingCandidate.rewardPeriod = uint128(uint256(reducingCandidate.rewardPeriod).add(block.timestamp.sub(reducingCandidate.memberJoinedTime)));
-        reducingCandidate.memberJoinedTime = 0;
+
 
         members.pop();
         maxMember = maxMember.sub(1);
@@ -311,6 +350,8 @@ contract DAOv2CommitteeV2 is
             "DAOCommittee: already member"
         );
         
+        uint32 sequenIndex = seqIndex[_memberIndex];
+        require(sequenIndex == 0, "need to challange V1 member");
         address prevMember = members[_memberIndex];
         address prevMemberContract = candidateContract(prevMember);
 
@@ -474,18 +515,13 @@ contract DAOv2CommitteeV2 is
             }
             uint32 preSqIndex = seqIndex[_memberIndex];
             uint8 checkPreMember = isCandidateV2(prevMember, preSqIndex);
-            // console.log("preSqIndex :", preSqIndex);
-            // console.log("checkPreMember :", checkPreMember);
-            // console.log("prevMember :", prevMember);
+
             if(checkSender == 1) {
                 //newMebemr가 V2의 sequencer일때
                 if (checkPreMember == 0) {
                     //prevMember가 V1일때
                     address prevMemberContract = candidateContract(prevMember);
-                    // require(
-                    //     IStaking(address(sequencer)).balanceOfLton(candidateInfo.sequencerIndex,newMember) > ICandidate(prevMemberContract).totalStaked(),
-                    //     "not enough amount"
-                    // );
+                    
                     require(
                         balanceOfOnSequencerV2(candidateInfo.sequencerIndex,newMember) > ICandidate(prevMemberContract).totalStaked(),
                         "not enough amount"
@@ -503,19 +539,11 @@ contract DAOv2CommitteeV2 is
                         // console.log("sequencerV2");
                         compareAddr = sequencer;
                         compareIndex = prevCandidateInfo.sequencerIndex;    
-                        // require(
-                        //     IStaking(address(sequencer)).balanceOfLton(candidateInfo.sequencerIndex,newMember) > IStaking(address(sequencer)).balanceOfLton(prevCandidateInfo.sequencerIndex,prevMember),
-                        //     "not enough amount"
-                        // );
                     } else {
                         //newMember는 V2의 sequencer, prevMember는 V2의 candidate    
                         // console.log("candidateV2");
                         compareAddr = candidate;
                         compareIndex = prevCandidateInfo.candidateIndex;
-                        // require(
-                        //     IStaking(address(sequencer)).balanceOfLton(candidateInfo.sequencerIndex,newMember) > IStaking(address(candidate)).balanceOfLton(prevCandidateInfo.candidateIndex,prevMember),
-                        //     "not enough amount"
-                        // );
                     }
                     
                     require(
@@ -546,23 +574,11 @@ contract DAOv2CommitteeV2 is
                         //newMember는 V2의 candidate, prevMember는 V2의 sequencerCandidate
                         compareAddr = sequencer;
                         compareIndex = prevCandidateInfo.sequencerIndex;  
-                        // require(
-                        //     IStaking(address(candidate)).balanceOfLton(candidateInfo.sequencerIndex,newMember) > IStaking(address(sequencer)).balanceOfLton(prevCandidateInfo.sequencerIndex,prevMember),
-                        //     "not enough amount"
-                        // );
                     } else {
                         //newMember는 V2의 candidate, prevMember는 V2의 candidate    
                         compareAddr = candidate;
                         compareIndex = prevCandidateInfo.candidateIndex;
-                        // require(
-                        //     IStaking(address(candidate)).balanceOfLton(candidateInfo.sequencerIndex,newMember) > IStaking(address(candidate)).balanceOfLton(prevCandidateInfo.candidateIndex,prevMember),
-                        //     "not enough amount"
-                        // );
                     }
-                    // require(
-                    //     IStaking(address(candidate)).balanceOfLton(candidateInfo.sequencerIndex,newMember) > IStaking(address(compareAddr)).balanceOfLton(compareIndex,prevMember),
-                    //     "not enough amount"
-                    // );
                     require(
                         IStaking(address(candidate)).balanceOfLton(candidateInfo.sequencerIndex,newMember) > IStaking(address(compareAddr)).balanceOfLton(compareIndex,prevMember),
                         "not enough amount"
@@ -614,6 +630,7 @@ contract DAOv2CommitteeV2 is
     function retireMemberV2(uint32 _index) onlyMemberV2(_index) external returns (bool) {
         // require((isExistCandidate(msg.sender) || isExistCandidateV2(msg.sender,_index)), "DAO: not registerd"); -> member검사해서 따로 안해도됨
         uint8 checkSender = isCandidateV2(msg.sender,_index);
+        console.log("checkSender :",checkSender);
         if(checkSender == 0) {
             //V1의 member이다.
             console.log("retire V1 member");
@@ -632,6 +649,7 @@ contract DAOv2CommitteeV2 is
 
             emit ChangedMember(prevIndex, msg.sender, address(0));
         } else {
+            console.log("retire V2 member");
             LibDaoV2.CandidateInfoV2 storage candidateInfoV2 = _candidateInfosV2[msg.sender][_index];
             members[candidateInfoV2.indexMembers] = address(0);
             candidateInfoV2.rewardPeriod = uint128(uint256(candidateInfoV2.rewardPeriod).add(block.timestamp.sub(candidateInfoV2.memberJoinedTime)));
@@ -690,17 +708,31 @@ contract DAOv2CommitteeV2 is
     }
 
     /// @notice Claims the activity reward for member
-    function claimActivityReward(address _receiver, uint32 _sqIndex) external {        
+    function claimActivityReward(address _receiver) external {
+        address candidate = ICandidate(msg.sender).candidate();
+        CandidateInfo storage candidateInfo = _candidateInfos[candidate];
+        require(
+            candidateInfo.candidateContract == msg.sender,
+            "DAOCommittee: invalid candidate contract"
+        );
+
+        uint256 amount = getClaimableActivityReward(candidate);
+        require(amount > 0, "DAOCommittee: you don't have claimable ton");
+
+        daoVault.claimTON(_receiver, amount);
+        candidateInfo.claimedTimestamp = uint128(block.timestamp);
+        candidateInfo.rewardPeriod = 0;
+
+        emit ClaimedActivityReward(candidate, _receiver, amount);
+    }
+
+    /// @notice Claims the activity reward for member
+    function claimActivityRewardV2(address _receiver, uint32 _sqIndex) external {        
         uint256 amount;
         if(_sqIndex == 0) {
             amount = getClaimableActivityReward(msg.sender);
             require(amount > 0, "DAO: TZ");
-            address candidate = ICandidate(msg.sender).candidate();
-            CandidateInfo storage candidateInfo = _candidateInfos[candidate];
-            require(
-                candidateInfo.candidateContract == msg.sender,
-                "DAO: not registerd"
-            ); 
+            CandidateInfo storage candidateInfo = _candidateInfos[msg.sender];
 
             candidateInfo.claimedTimestamp = uint128(block.timestamp);
             candidateInfo.rewardPeriod = 0;  
@@ -725,6 +757,10 @@ contract DAOv2CommitteeV2 is
         for (uint256 i = members.length; i < maxMember; i++) {
             members.push(address(0));
         }
+    }
+
+    function _toRAY(uint256 v) internal pure returns (uint256) {
+        return v * 10 ** 9;
     }
 
     //////////////////////////////////////////////////////////////////////
@@ -818,7 +854,4 @@ contract DAOv2CommitteeV2 is
         return period.mul(activityRewardPerSecond);
     }
 
-    function _toRAY(uint256 v) internal pure returns (uint256) {
-        return v * 10 ** 9;
-    }
 }
