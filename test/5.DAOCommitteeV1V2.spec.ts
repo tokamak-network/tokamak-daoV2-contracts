@@ -72,6 +72,7 @@ const {
 // 9. retireMemberV2 cadndidate5 retire 테스트 (V1 member retire 테스트)
 // 10. member index가 empty일때 등록 member로 등록 (현재까지 멤버 : sequencer1 V2, candidate2 V2, candidate5 V1)
 // 11. retireMember 테스트 
+// 12. claimActivityReward 테스트
 
 describe('DAOv2Committee', () => {
     let deployer: Signer, addr1: Signer, sequencer1: Signer, daoPrivateOwner: Signer
@@ -394,9 +395,9 @@ describe('DAOv2Committee', () => {
         candidate6 = deployed.addr2;
         tonContract = deployed.ton;
         
-        candidates.push(candidate1)
-        candidates.push(candidate2)
         candidates.push(sequencer1)
+        candidates.push(candidate2)
+        candidates.push(candidate5)
 
         console.log("sequencer1.address : ", sequencer1.address)
         console.log("candidate1.address : ", candidate1.address)
@@ -2186,811 +2187,841 @@ describe('DAOv2Committee', () => {
                 expect(deployedEvent.args.newMember).to.eq(addr0);
             })
 
-            it("getClaimableActivityRewardV2 and claimReward for memberV1", async () => {
+            it("getClaimableActivityReward and claimActivityRewardV2 for memberV1", async () => {
                 let beforeTONAmount = await tonContract.balanceOf(candidate5.address)
-                console.log("1")
                 let claimAmountV1 = await DAOProxyLogicV2.getClaimableActivityReward(candidate5.address);
-                console.log("1")
+                expect(claimAmountV1).to.be.gt(0)
                 await DAOProxyLogicV2.connect(candidate5).claimActivityRewardV2(candidate5.address,0);
-                console.log("1")
                 let afterTONAmount = await tonContract.balanceOf(candidate5.address)
-                console.log("1")
+
                 expect(afterTONAmount.sub(beforeTONAmount)).to.be.equal(claimAmountV1);
             })
 
-            it("getClaimableActivityRewardV2 and claimReward for memberV2", async () => {
+            it("getClaimableActivityRewardV2 and claimActivityRewardV2 for memberV2", async () => {
                 let beforeTONAmount = await tonContract.balanceOf(sequencer1.address)
                 let claimAmountV2 = await DAOProxyLogicV2.getClaimableActivityRewardV2(sequencer1.address,sequencerIndexSave);
+                expect(claimAmountV2).to.be.gt(0)
                 await DAOProxyLogicV2.connect(sequencer1).claimActivityRewardV2(sequencer1.address,sequencerIndexSave);
                 let afterTONAmount = await tonContract.balanceOf(sequencer1.address)
                 expect(afterTONAmount.sub(beforeTONAmount)).to.be.equal(claimAmountV2);
             })
 
             it("member entering V1, V2", async () => {
+                let changeIndex = 0;
+                let beforeMember = await DAOProxyLogicV2.members(changeIndex)
+                expect(beforeMember).to.be.equal(addr0)
+                const topic = deployed.daov2committeeV2.interface.getEventTopic('ChangedMember');
+                const receipt = await(await DAOProxyLogicV2.connect(sequencer1).changeMemberV2(changeIndex,sequencerIndexSave)).wait();
+                const log = receipt.logs.find(x => x.topics.indexOf(topic) >= 0);
+                const deployedEvent = deployed.daov2committeeV2.interface.parseLog(log);
+                
+                expect(deployedEvent.args.slotIndex).to.eq(changeIndex);
+                expect(deployedEvent.args.prevMember).to.eq(beforeMember);
+                expect(deployedEvent.args.newMember).to.eq(sequencer1.address);
 
+
+                expect(await DAOProxyLogicV2.isMemberV2(candidate5.address,0)).to.be.equal(false)
+
+                let changeIndex2 = 2;
+                let beforeMember2 = await DAOProxyLogicV2.members(changeIndex2)
+                expect(beforeMember2).to.be.equal(addr0)
+                const topic2 = deployed.daov2committeeV2.interface.getEventTopic('ChangedMember');
+                const receipt2 = await(await DAOProxyLogicV2.connect(candidate5).changeMemberV2(changeIndex2,0)).wait();
+                const log2 = receipt2.logs.find(x => x.topics.indexOf(topic2) >= 0);
+                const deployedEvent2 = deployed.daov2committeeV2.interface.parseLog(log2);
+                
+                expect(deployedEvent2.args.slotIndex).to.be.eq(changeIndex2);
+                expect(deployedEvent2.args.prevMember).to.be.eq(beforeMember2);
+                expect(deployedEvent2.args.newMember).to.be.eq(candidate5.address);
+
+                expect(await DAOProxyLogicV1.isMember(candidate5.address)).to.be.equal(true)
             })
         })
     })
 
-    // describe("#8. DAO Agenda Test", () => {
-    //     describe("check the beforeAgenda", () => {
-    //         it("check", async () => {
-    //             beforeAgendaID = await deployed.daoagendaManager.numAgendas();
-    //         })
-    //     })
-    //     for(let i = 0; i < votesList.length; i ++) {
-    //     // for(let i = 0; i < 1; i ++) {
-    //         describe(`ACCEPTED Agenda ${i}`, () => {
-    //             it("create new agenda", async () => {
-    //                 const noticePeriod = await deployed.daoagendaManager.minimumNoticePeriodSeconds();
-    //                 const votingPeriod = await deployed.daoagendaManager.minimumVotingPeriodSeconds();
-    //                 const selector = Web3EthAbi.encodeFunctionSignature("setMinimumNoticePeriodSeconds(uint256)");
-    //                 const newMinimumNoticePeriod = i * 10;
-    //                 const data = padLeft(newMinimumNoticePeriod.toString(16), 64);
-    //                 const functionBytecode = selector.concat(data);
+    describe("#8. DAO Agenda Test", () => {
+        describe("check the beforeAgenda", () => {
+            it("check", async () => {
+                beforeAgendaID = await deployed.daoagendaManager.numAgendas();
+            })
+        })
+        for(let i = 0; i < votesList.length; i ++) {
+        // for(let i = 0; i < 1; i ++) {
+            describe(`ACCEPTED Agenda ${i}`, () => {
+                it("create new agenda", async () => {
+                    const noticePeriod = await deployed.daoagendaManager.minimumNoticePeriodSeconds();
+                    const votingPeriod = await deployed.daoagendaManager.minimumVotingPeriodSeconds();
+                    const selector = Web3EthAbi.encodeFunctionSignature("setMinimumNoticePeriodSeconds(uint256)");
+                    const newMinimumNoticePeriod = i * 10;
+                    const data = padLeft(newMinimumNoticePeriod.toString(16), 64);
+                    const functionBytecode = selector.concat(data);
 
-    //                 const param = Web3EthAbi.encodeParameters(
-    //                     ["address[]", "uint128", "uint128", "bool", "bytes[]"],
-    //                     [[deployed.daoagendaManager.address], noticePeriod.toString(), votingPeriod.toString(), true, [functionBytecode]]
-    //                 );
+                    const param = Web3EthAbi.encodeParameters(
+                        ["address[]", "uint128", "uint128", "bool", "bytes[]"],
+                        [[deployed.daoagendaManager.address], noticePeriod.toString(), votingPeriod.toString(), true, [functionBytecode]]
+                    );
             
-    //                 const beforeBalance = await deployed.ton.balanceOf(addr1.address);
-    //                 const agendaFee = await deployed.daoagendaManager.createAgendaFees();
-    //                 expect(agendaFee).to.be.gt(0);
+                    const beforeBalance = await deployed.ton.balanceOf(addr1.address);
+                    const agendaFee = await deployed.daoagendaManager.createAgendaFees();
+                    expect(agendaFee).to.be.gt(0);
 
-    //                 if (agendaFee.gt(beforeBalance))
-    //                     await (await deployed.ton.connect(deployed.tonAdmin).mint(addr1.address, agendaFee)).wait();
+                    if (agendaFee.gt(beforeBalance))
+                        await (await deployed.ton.connect(deployed.tonAdmin).mint(addr1.address, agendaFee)).wait();
 
-    //                 const beforeBalance2 = await deployed.ton.balanceOf(addr1.address);
+                    const beforeBalance2 = await deployed.ton.balanceOf(addr1.address);
 
-    //                 // create agenda
-    //                 await deployed.ton.connect(addr1).approveAndCall(
-    //                     DAOProxyLogicV2.address,
-    //                     agendaFee,
-    //                     param
-    //                 );
+                    // create agenda
+                    await deployed.ton.connect(addr1).approveAndCall(
+                        DAOProxyLogicV2.address,
+                        agendaFee,
+                        param
+                    );
 
-    //                 const afterBalance = await deployed.ton.balanceOf(addr1.address);
-    //                 expect(afterBalance).to.be.lt(beforeBalance2);
-    //                 expect(beforeBalance2.sub(afterBalance)).to.be.equal(agendaFee)
+                    const afterBalance = await deployed.ton.balanceOf(addr1.address);
+                    expect(afterBalance).to.be.lt(beforeBalance2);
+                    expect(beforeBalance2.sub(afterBalance)).to.be.equal(agendaFee)
         
-    //                 agendaID = (await deployed.daoagendaManager.numAgendas()).sub(1);
-    //                 //const executionInfo = await agendaManager.executionInfos(agendaID);
-    //                 const executionInfo = await deployed.daoagendaManager.getExecutionInfo(agendaID);
-    //                 expect(executionInfo[0][0]).to.be.equal(deployed.daoagendaManager.address);
-    //                 expect(executionInfo[1][0]).to.be.equal(functionBytecode);
-    //             })
+                    agendaID = (await deployed.daoagendaManager.numAgendas()).sub(1);
+                    //const executionInfo = await agendaManager.executionInfos(agendaID);
+                    const executionInfo = await deployed.daoagendaManager.getExecutionInfo(agendaID);
+                    expect(executionInfo[0][0]).to.be.equal(deployed.daoagendaManager.address);
+                    expect(executionInfo[1][0]).to.be.equal(functionBytecode);
+                })
 
-    //             it('increase block time and check votable', async function () {
-    //                 const agenda = await deployed.daoagendaManager.agendas(agendaID);  
-    //                 const noticeEndTimestamp = agenda[AGENDA_INDEX_NOTICE_END_TIMESTAMP];
-    //                 await time.increaseTo(Number(noticeEndTimestamp));
-    //                 expect(await deployed.daoagendaManager.isVotableStatus(agendaID)).to.be.equal(true);
-    //             });
+                it('increase block time and check votable', async function () {
+                    const agenda = await deployed.daoagendaManager.agendas(agendaID);  
+                    const noticeEndTimestamp = agenda[AGENDA_INDEX_NOTICE_END_TIMESTAMP];
+                    await time.increaseTo(Number(noticeEndTimestamp));
+                    expect(await deployed.daoagendaManager.isVotableStatus(agendaID)).to.be.equal(true);
+                });
 
-    //             describe(`Vote - ${votesList[i].votes}`, function () {
-    //                 it(`cast vote`, async () => {
-    //                     for (let j = 0; j < votesList[i].votes.length; j++) {
-    //                 //   for (let j = 0; j < 1; j++) {
-    //                     console.log("candidates[",j,"] : ",candidates[j].address);
-    //                     await castVote(agendaID, candidates[j], votesList[i].votes[j], sequencerIndexSave);
-    //                     }
-    //                 });
+                describe(`Vote - ${votesList[i].votes}`, function () {
+                    it(`cast vote`, async () => {
+                        for (let j = 0; j < votesList[i].votes.length; j++) {
+                    //   for (let j = 0; j < 1; j++) {
+                        console.log("candidates[",j,"] : ",candidates[j].address);
+                        await castVote(agendaID, candidates[j], votesList[i].votes[j], sequencerIndexSave);
+                        }
+                    });
         
-    //                 it("check vote result/status", async () => {
-    //                     const agenda = await deployed.daoagendaManager.agendas(agendaID);
-    //                     expect(agenda[AGENDA_INDEX_RESULT]).to.be.equal(votesList[i].expected_result);
-    //                     expect(agenda[AGENDA_INDEX_STATUS]).to.be.equal(votesList[i].expected_status);
+                    it("check vote result/status", async () => {
+                        const agenda = await deployed.daoagendaManager.agendas(agendaID);
+                        expect(agenda[AGENDA_INDEX_RESULT]).to.be.equal(votesList[i].expected_result);
+                        expect(agenda[AGENDA_INDEX_STATUS]).to.be.equal(votesList[i].expected_status);
         
-    //                     if (agenda[AGENDA_INDEX_STATUS] == AGENDA_STATUS_WAITING_EXEC) {
-    //                     const votingEndTimestamp = agenda[AGENDA_INDEX_VOTING_END_TIMESTAMP];
-    //                     const currentTime = await time.latest();
-    //                     if (currentTime < votingEndTimestamp) {
-    //                         await time.increaseTo(Number(votingEndTimestamp));
-    //                     }
-    //                     expect(await deployed.daoagendaManager.canExecuteAgenda(agendaID)).to.be.equal(true);
-    //                     }
-    //                 });
+                        if (agenda[AGENDA_INDEX_STATUS] == AGENDA_STATUS_WAITING_EXEC) {
+                        const votingEndTimestamp = agenda[AGENDA_INDEX_VOTING_END_TIMESTAMP];
+                        const currentTime = await time.latest();
+                        if (currentTime < votingEndTimestamp) {
+                            await time.increaseTo(Number(votingEndTimestamp));
+                        }
+                        expect(await deployed.daoagendaManager.canExecuteAgenda(agendaID)).to.be.equal(true);
+                        }
+                    });
 
-    //                 it("execute", async () => {
-    //                     const agenda = await deployed.daoagendaManager.agendas(agendaID);
-    //                     expect(agenda[AGENDA_INDEX_EXECUTED_TIMESTAMP]).to.be.equal(0);
-    //                     const beforeValue2 = await deployed.daoagendaManager.minimumNoticePeriodSeconds();
-    //                     console.log("agendaID : ", agendaID)
-    //                     console.log("beforeAgendaID : ", beforeAgendaID)
-    //                     console.log("beforeValue2 :", beforeValue2)
-    //                     let diffAgenda = agendaID - beforeAgendaID
+                    it("execute", async () => {
+                        const agenda = await deployed.daoagendaManager.agendas(agendaID);
+                        expect(agenda[AGENDA_INDEX_EXECUTED_TIMESTAMP]).to.be.equal(0);
+                        const beforeValue2 = await deployed.daoagendaManager.minimumNoticePeriodSeconds();
+                        console.log("agendaID : ", agendaID)
+                        console.log("beforeAgendaID : ", beforeAgendaID)
+                        console.log("beforeValue2 :", beforeValue2)
+                        let diffAgenda = agendaID - beforeAgendaID
             
-    //                     if (agenda[AGENDA_INDEX_STATUS] == AGENDA_STATUS_WAITING_EXEC) {
-    //                         const beforeValue = await deployed.daoagendaManager.minimumNoticePeriodSeconds();
-    //                         await DAOProxyLogicV1.executeAgenda(agendaID);
-    //                         const afterValue = await deployed.daoagendaManager.minimumNoticePeriodSeconds();
-    //                         console.log("beforeValue :", beforeValue)
-    //                         console.log("afterValue :", afterValue)
-    //                         expect(beforeValue).to.be.not.equal(afterValue);
-    //                         expect(afterValue).to.be.equal((diffAgenda * 10));
+                        if (agenda[AGENDA_INDEX_STATUS] == AGENDA_STATUS_WAITING_EXEC) {
+                            const beforeValue = await deployed.daoagendaManager.minimumNoticePeriodSeconds();
+                            await DAOProxyLogicV1.executeAgenda(agendaID);
+                            const afterValue = await deployed.daoagendaManager.minimumNoticePeriodSeconds();
+                            console.log("beforeValue :", beforeValue)
+                            console.log("afterValue :", afterValue)
+                            expect(beforeValue).to.be.not.equal(afterValue);
+                            expect(afterValue).to.be.equal((diffAgenda * 10));
             
-    //                         const afterAgenda = await deployed.daoagendaManager.agendas(agendaID); 
-    //                         expect(afterAgenda[AGENDA_INDEX_EXECUTED]).to.be.equal(true);
-    //                         expect(afterAgenda[AGENDA_INDEX_EXECUTED_TIMESTAMP]).to.be.gt(0); 
-    //                     }
-    //                 });
-    //             })
-    //         })
-    //     }
+                            const afterAgenda = await deployed.daoagendaManager.agendas(agendaID); 
+                            expect(afterAgenda[AGENDA_INDEX_EXECUTED]).to.be.equal(true);
+                            expect(afterAgenda[AGENDA_INDEX_EXECUTED_TIMESTAMP]).to.be.gt(0); 
+                        }
+                    });
+                })
+            })
+        }
         
-    //     describe("DISMISS agenda", async () => {
-    //         it('create new agenda', async function () {
-    //             const noticePeriod = await deployed.daoagendaManager.minimumNoticePeriodSeconds();
-    //             const votingPeriod = await deployed.daoagendaManager.minimumVotingPeriodSeconds();
-    //             const selector = Web3EthAbi.encodeFunctionSignature("setMinimumNoticePeriodSeconds(uint256)");
-    //             const newMinimumNoticePeriod = 10;
-    //             const data = padLeft(newMinimumNoticePeriod.toString(16), 64);
-    //             const functionBytecode = selector.concat(data);
+        describe("DISMISS agenda", async () => {
+            it('create new agenda', async function () {
+                const noticePeriod = await deployed.daoagendaManager.minimumNoticePeriodSeconds();
+                const votingPeriod = await deployed.daoagendaManager.minimumVotingPeriodSeconds();
+                const selector = Web3EthAbi.encodeFunctionSignature("setMinimumNoticePeriodSeconds(uint256)");
+                const newMinimumNoticePeriod = 10;
+                const data = padLeft(newMinimumNoticePeriod.toString(16), 64);
+                const functionBytecode = selector.concat(data);
       
-    //             const param = Web3EthAbi.encodeParameters(
-    //               ["address[]", "uint128", "uint128", "bool", "bytes[]"],
-    //                 [ 
-    //                     [deployed.daoagendaManager.address], 
-    //                     noticePeriod.toString(), 
-    //                     votingPeriod.toString(), 
-    //                     true, 
-    //                     [functionBytecode]
-    //                 ]
-    //             );
+                const param = Web3EthAbi.encodeParameters(
+                  ["address[]", "uint128", "uint128", "bool", "bytes[]"],
+                    [ 
+                        [deployed.daoagendaManager.address], 
+                        noticePeriod.toString(), 
+                        votingPeriod.toString(), 
+                        true, 
+                        [functionBytecode]
+                    ]
+                );
       
-    //             const beforeBalance = await deployed.ton.balanceOf(addr1.address);
-    //             const agendaFee = await deployed.daoagendaManager.createAgendaFees();
-    //             expect(agendaFee).to.be.gt(0);
+                const beforeBalance = await deployed.ton.balanceOf(addr1.address);
+                const agendaFee = await deployed.daoagendaManager.createAgendaFees();
+                expect(agendaFee).to.be.gt(0);
 
-    //             if (agendaFee.gt(beforeBalance))
-    //                 await (await deployed.ton.connect(deployed.tonAdmin).mint(addr1.address, agendaFee)).wait();
+                if (agendaFee.gt(beforeBalance))
+                    await (await deployed.ton.connect(deployed.tonAdmin).mint(addr1.address, agendaFee)).wait();
                 
-    //             const beforeBalance2 = await deployed.ton.balanceOf(addr1.address);
+                const beforeBalance2 = await deployed.ton.balanceOf(addr1.address);
       
-    //             // create agenda
-    //             await deployed.ton.connect(addr1).approveAndCall(
-    //                 DAOProxyLogicV2.address,
-    //                 agendaFee,
-    //                 param
-    //             );
-    //             const afterBalance = await deployed.ton.balanceOf(addr1.address);
-    //             expect(afterBalance).to.be.lt(beforeBalance2);
-    //             expect(beforeBalance2.sub(afterBalance)).to.be.equal(agendaFee);
+                // create agenda
+                await deployed.ton.connect(addr1).approveAndCall(
+                    DAOProxyLogicV2.address,
+                    agendaFee,
+                    param
+                );
+                const afterBalance = await deployed.ton.balanceOf(addr1.address);
+                expect(afterBalance).to.be.lt(beforeBalance2);
+                expect(beforeBalance2.sub(afterBalance)).to.be.equal(agendaFee);
       
-    //             agendaID = (await deployed.daoagendaManager.numAgendas()).sub(1);
-    //             //const executionInfo = await agendaManager.executionInfos(agendaID);
-    //             const executionInfo = await deployed.daoagendaManager.getExecutionInfo(agendaID);
-    //             expect(executionInfo[0][0]).to.be.equal(deployed.daoagendaManager.address);
-    //             expect(executionInfo[1][0]).to.be.equal(functionBytecode);
-    //         });
+                agendaID = (await deployed.daoagendaManager.numAgendas()).sub(1);
+                //const executionInfo = await agendaManager.executionInfos(agendaID);
+                const executionInfo = await deployed.daoagendaManager.getExecutionInfo(agendaID);
+                expect(executionInfo[0][0]).to.be.equal(deployed.daoagendaManager.address);
+                expect(executionInfo[1][0]).to.be.equal(functionBytecode);
+            });
 
-    //         it('increase block time and check votable', async function () {
-    //             const agenda = await deployed.daoagendaManager.agendas(agendaID);  
-    //             const noticeEndTimestamp = agenda[AGENDA_INDEX_NOTICE_END_TIMESTAMP];
-    //             await time.increaseTo(Number(noticeEndTimestamp));
-    //             expect(await deployed.daoagendaManager.isVotableStatus(agendaID)).to.be.equal(true);
-    //         });
+            it('increase block time and check votable', async function () {
+                const agenda = await deployed.daoagendaManager.agendas(agendaID);  
+                const noticeEndTimestamp = agenda[AGENDA_INDEX_NOTICE_END_TIMESTAMP];
+                await time.increaseTo(Number(noticeEndTimestamp));
+                expect(await deployed.daoagendaManager.isVotableStatus(agendaID)).to.be.equal(true);
+            });
     
-    //         it(`cast vote`, async function () {
-    //             await castVote(agendaID, candidates[0], VOTE_YES, sequencerIndexSave);
-    //         });
+            it(`cast vote`, async function () {
+                await castVote(agendaID, candidates[0], VOTE_YES, sequencerIndexSave);
+            });
     
-    //         it("check vote result/status", async function () {
-    //             const agenda = await deployed.daoagendaManager.agendas(agendaID);
-    //             expect(agenda[AGENDA_INDEX_RESULT]).to.be.equal(AGENDA_RESULT_PENDING);
-    //             expect(agenda[AGENDA_INDEX_STATUS]).to.be.equal(AGENDA_STATUS_VOTING);
-    //         });
+            it("check vote result/status", async function () {
+                const agenda = await deployed.daoagendaManager.agendas(agendaID);
+                expect(agenda[AGENDA_INDEX_RESULT]).to.be.equal(AGENDA_RESULT_PENDING);
+                expect(agenda[AGENDA_INDEX_STATUS]).to.be.equal(AGENDA_STATUS_VOTING);
+            });
     
-    //         it('increase block time', async function () {
-    //             const agenda = await deployed.daoagendaManager.agendas(agendaID);  
-    //             const noticeEndTimestamp = agenda[AGENDA_INDEX_VOTING_END_TIMESTAMP];
-    //             await time.increaseTo(Number(noticeEndTimestamp)+1);
-    //             expect(await deployed.daoagendaManager.isVotableStatus(agendaID)).to.be.equal(false);
-    //         });
+            it('increase block time', async function () {
+                const agenda = await deployed.daoagendaManager.agendas(agendaID);  
+                const noticeEndTimestamp = agenda[AGENDA_INDEX_VOTING_END_TIMESTAMP];
+                await time.increaseTo(Number(noticeEndTimestamp)+1);
+                expect(await deployed.daoagendaManager.isVotableStatus(agendaID)).to.be.equal(false);
+            });
     
-    //         it("end agenda voting", async function () {
-    //             await DAOProxyLogicV1.endAgendaVoting(agendaID);
-    //         });
+            it("end agenda voting", async function () {
+                await DAOProxyLogicV1.endAgendaVoting(agendaID);
+            });
     
-    //         it("check vote result/status", async function () {
-    //             const agenda = await deployed.daoagendaManager.agendas(agendaID);
-    //             expect(agenda[AGENDA_INDEX_RESULT]).to.be.equal(AGENDA_RESULT_DISMISSED);
-    //             expect(agenda[AGENDA_INDEX_STATUS]).to.be.equal(AGENDA_STATUS_ENDED);
-    //             expect(await deployed.daoagendaManager.isVotableStatus(agendaID)).to.be.equal(false);
-    //         });
-    //     })
+            it("check vote result/status", async function () {
+                const agenda = await deployed.daoagendaManager.agendas(agendaID);
+                expect(agenda[AGENDA_INDEX_RESULT]).to.be.equal(AGENDA_RESULT_DISMISSED);
+                expect(agenda[AGENDA_INDEX_STATUS]).to.be.equal(AGENDA_STATUS_ENDED);
+                expect(await deployed.daoagendaManager.isVotableStatus(agendaID)).to.be.equal(false);
+            });
+        })
 
-    //     describe("non-atomic agenda(multi agenda)", async function () {
-    //         it('create new agenda', async function () {
-    //           const noticePeriod = await deployed.daoagendaManager.minimumNoticePeriodSeconds();
-    //           const votingPeriod = await deployed.daoagendaManager.minimumVotingPeriodSeconds();
+        describe("non-atomic agenda(multi agenda)", async function () {
+            it('create new agenda', async function () {
+              const noticePeriod = await deployed.daoagendaManager.minimumNoticePeriodSeconds();
+              const votingPeriod = await deployed.daoagendaManager.minimumVotingPeriodSeconds();
     
-    //           let targets = [];
-    //           let functionBytecodes = [];
-    //           for (let i = 0; i < 10; i++) {
-    //             const selector1 = Web3EthAbi.encodeFunctionSignature("setMinimumNoticePeriodSeconds(uint256)");
-    //             const newMinimumNoticePeriod = 1000000 * (i+1);
-    //             const data1 = padLeft(newMinimumNoticePeriod.toString(16), 64);
-    //             const functionBytecode1 = selector1.concat(data1);
-    //             targets.push(deployed.daoagendaManager.address);
-    //             functionBytecodes.push(functionBytecode1);
-    //           }
+              let targets = [];
+              let functionBytecodes = [];
+              for (let i = 0; i < 10; i++) {
+                const selector1 = Web3EthAbi.encodeFunctionSignature("setMinimumNoticePeriodSeconds(uint256)");
+                const newMinimumNoticePeriod = 1000000 * (i+1);
+                const data1 = padLeft(newMinimumNoticePeriod.toString(16), 64);
+                const functionBytecode1 = selector1.concat(data1);
+                targets.push(deployed.daoagendaManager.address);
+                functionBytecodes.push(functionBytecode1);
+              }
     
-    //           const param = Web3EthAbi.encodeParameters(
-    //             ["address[]", "uint128", "uint128", "bool", "bytes[]"],
-    //             [
-    //                 targets, 
-    //                 noticePeriod.toString(),
-    //                 votingPeriod.toString(),
-    //                 false,
-    //                 functionBytecodes
-    //             ]
-    //           );
+              const param = Web3EthAbi.encodeParameters(
+                ["address[]", "uint128", "uint128", "bool", "bytes[]"],
+                [
+                    targets, 
+                    noticePeriod.toString(),
+                    votingPeriod.toString(),
+                    false,
+                    functionBytecodes
+                ]
+              );
     
-    //           const beforeBalance = await deployed.ton.balanceOf(addr1.address);
-    //           const agendaFee = await deployed.daoagendaManager.createAgendaFees();
-    //           expect(agendaFee).to.be.gt(0);
+              const beforeBalance = await deployed.ton.balanceOf(addr1.address);
+              const agendaFee = await deployed.daoagendaManager.createAgendaFees();
+              expect(agendaFee).to.be.gt(0);
 
-    //           if (agendaFee.gt(beforeBalance))
-    //                 await (await deployed.ton.connect(deployed.tonAdmin).mint(addr1.address, agendaFee)).wait();
+              if (agendaFee.gt(beforeBalance))
+                    await (await deployed.ton.connect(deployed.tonAdmin).mint(addr1.address, agendaFee)).wait();
                 
-    //           const beforeBalance2 = await deployed.ton.balanceOf(addr1.address);
+              const beforeBalance2 = await deployed.ton.balanceOf(addr1.address);
     
-    //           // create agenda
-    //           await deployed.ton.connect(addr1).approveAndCall(
-    //             DAOProxyLogicV2.address,
-    //             agendaFee,
-    //             param
-    //           );
+              // create agenda
+              await deployed.ton.connect(addr1).approveAndCall(
+                DAOProxyLogicV2.address,
+                agendaFee,
+                param
+              );
 
-    //           const afterBalance = await deployed.ton.balanceOf(addr1.address);
-    //           expect(afterBalance).to.be.lt(beforeBalance2);
-    //           expect(beforeBalance2.sub(afterBalance)).to.be.equal(agendaFee);
+              const afterBalance = await deployed.ton.balanceOf(addr1.address);
+              expect(afterBalance).to.be.lt(beforeBalance2);
+              expect(beforeBalance2.sub(afterBalance)).to.be.equal(agendaFee);
     
-    //           agendaID = (await deployed.daoagendaManager.numAgendas()).sub(1);
-    //           //const executionInfo = await agendaManager.executionInfos(agendaID);
-    //           const executionInfo = await deployed.daoagendaManager.getExecutionInfo(agendaID);
-    //           //console.log(executionInfo)
-    //           //expect(executionInfo[0][0]).to.be.equal(deployed.daoagendaManager.address);
-    //           //expect(executionInfo[1][0]).to.be.equal(functionBytecodes);
-    //         });
+              agendaID = (await deployed.daoagendaManager.numAgendas()).sub(1);
+              //const executionInfo = await agendaManager.executionInfos(agendaID);
+              const executionInfo = await deployed.daoagendaManager.getExecutionInfo(agendaID);
+              //console.log(executionInfo)
+              //expect(executionInfo[0][0]).to.be.equal(deployed.daoagendaManager.address);
+              //expect(executionInfo[1][0]).to.be.equal(functionBytecodes);
+            });
     
-    //         it('increase block time and check votable', async function () {
-    //           const agenda = await deployed.daoagendaManager.agendas(agendaID);  
-    //           const noticeEndTimestamp = agenda[AGENDA_INDEX_NOTICE_END_TIMESTAMP];
-    //           await time.increaseTo(Number(noticeEndTimestamp));
-    //           expect(await deployed.daoagendaManager.isVotableStatus(agendaID)).to.be.equal(true);
-    //         });
+            it('increase block time and check votable', async function () {
+              const agenda = await deployed.daoagendaManager.agendas(agendaID);  
+              const noticeEndTimestamp = agenda[AGENDA_INDEX_NOTICE_END_TIMESTAMP];
+              await time.increaseTo(Number(noticeEndTimestamp));
+              expect(await deployed.daoagendaManager.isVotableStatus(agendaID)).to.be.equal(true);
+            });
     
-    //         it(`cast vote`, async function () {
-    //           await castVote(agendaID, candidates[0], VOTE_YES, sequencerIndexSave);
-    //           await castVote(agendaID, candidates[1], VOTE_YES, sequencerIndexSave);
-    //         });
+            it(`cast vote`, async function () {
+              await castVote(agendaID, candidates[0], VOTE_YES, sequencerIndexSave);
+              await castVote(agendaID, candidates[1], VOTE_YES, sequencerIndexSave);
+            });
     
-    //         it("check vote result/status", async function () {
-    //           const agenda = await deployed.daoagendaManager.agendas(agendaID);
-    //           expect(agenda[AGENDA_INDEX_RESULT]).to.be.equal(AGENDA_RESULT_ACCEPTED);
-    //           expect(agenda[AGENDA_INDEX_STATUS]).to.be.equal(AGENDA_STATUS_WAITING_EXEC);
-    //         });
+            it("check vote result/status", async function () {
+              const agenda = await deployed.daoagendaManager.agendas(agendaID);
+              expect(agenda[AGENDA_INDEX_RESULT]).to.be.equal(AGENDA_RESULT_ACCEPTED);
+              expect(agenda[AGENDA_INDEX_STATUS]).to.be.equal(AGENDA_STATUS_WAITING_EXEC);
+            });
     
-    //         it('increase block time', async function () {
-    //           const agenda = await deployed.daoagendaManager.agendas(agendaID);  
-    //           const noticeEndTimestamp = agenda[AGENDA_INDEX_VOTING_END_TIMESTAMP];
-    //           await time.increaseTo(Number(noticeEndTimestamp)+1);
-    //           expect(await deployed.daoagendaManager.isVotableStatus(agendaID)).to.be.equal(false);
-    //         });
+            it('increase block time', async function () {
+              const agenda = await deployed.daoagendaManager.agendas(agendaID);  
+              const noticeEndTimestamp = agenda[AGENDA_INDEX_VOTING_END_TIMESTAMP];
+              await time.increaseTo(Number(noticeEndTimestamp)+1);
+              expect(await deployed.daoagendaManager.isVotableStatus(agendaID)).to.be.equal(false);
+            });
     
-    //         it("execute", async function () {
-    //           const beforeAgenda = await deployed.daoagendaManager.agendas(agendaID); 
-    //           const beforeValue = await deployed.daoagendaManager.minimumNoticePeriodSeconds();
-    //           expect(beforeAgenda[AGENDA_INDEX_EXECUTED]).to.be.equal(false);
-    //           const executeTx = await DAOProxyLogicV1.executeAgenda(agendaID);
-    //           const afterValue = await deployed.daoagendaManager.minimumNoticePeriodSeconds();
-    //           expect(beforeValue).to.be.not.equal(afterValue);
+            it("execute", async function () {
+              const beforeAgenda = await deployed.daoagendaManager.agendas(agendaID); 
+              const beforeValue = await deployed.daoagendaManager.minimumNoticePeriodSeconds();
+              expect(beforeAgenda[AGENDA_INDEX_EXECUTED]).to.be.equal(false);
+              const executeTx = await DAOProxyLogicV1.executeAgenda(agendaID);
+              const afterValue = await deployed.daoagendaManager.minimumNoticePeriodSeconds();
+              expect(beforeValue).to.be.not.equal(afterValue);
     
-    //           const afterAgenda = await deployed.daoagendaManager.agendas(agendaID); 
-    //           expect(afterAgenda[AGENDA_INDEX_EXECUTED]).to.be.equal(true);
-    //           //afterAgenda[AGENDA_INDEX_EXECUTED_TIMESTAMP].should.be.bignumber.gt(toBN("0")); 
-    //         });
+              const afterAgenda = await deployed.daoagendaManager.agendas(agendaID); 
+              expect(afterAgenda[AGENDA_INDEX_EXECUTED]).to.be.equal(true);
+              //afterAgenda[AGENDA_INDEX_EXECUTED_TIMESTAMP].should.be.bignumber.gt(toBN("0")); 
+            });
     
-    //         it("check executed result/status", async function () {
-    //           const executedInfo = await deployed.daoagendaManager.getExecutionInfo(agendaID);
-    //           //expect(executedInfo.executeStartFrom).to.be.lt(10);
-    //           //expect(await deployed.daoagendaManager.minimumNoticePeriodSeconds()).to.be.lt(10000000);
-    //           expect(executedInfo.executeStartFrom).to.be.equal(10);
-    //           expect(await deployed.daoagendaManager.minimumNoticePeriodSeconds()).to.be.equal(10000000);
-    //         });
-    //     });
+            it("check executed result/status", async function () {
+              const executedInfo = await deployed.daoagendaManager.getExecutionInfo(agendaID);
+              //expect(executedInfo.executeStartFrom).to.be.lt(10);
+              //expect(await deployed.daoagendaManager.minimumNoticePeriodSeconds()).to.be.lt(10000000);
+              expect(executedInfo.executeStartFrom).to.be.equal(10);
+              expect(await deployed.daoagendaManager.minimumNoticePeriodSeconds()).to.be.equal(10000000);
+            });
+        });
 
-    //     describe("executing period of agenda", async function () {
-    //         it('create new agenda', async function () {
-    //             const noticePeriod = await deployed.daoagendaManager.minimumNoticePeriodSeconds();
-    //             const votingPeriod = await deployed.daoagendaManager.minimumVotingPeriodSeconds();
-    //             const selector = Web3EthAbi.encodeFunctionSignature("setMinimumNoticePeriodSeconds(uint256)");
-    //             // console.log(selector);
-    //             const newMinimumNoticePeriod = 20;
-    //             const data = padLeft(newMinimumNoticePeriod.toString(16), 64);
-    //             const functionBytecode = selector.concat(data);
-    //             // console.log(functionBytecode);
+        describe("executing period of agenda", async function () {
+            it('create new agenda', async function () {
+                const noticePeriod = await deployed.daoagendaManager.minimumNoticePeriodSeconds();
+                const votingPeriod = await deployed.daoagendaManager.minimumVotingPeriodSeconds();
+                const selector = Web3EthAbi.encodeFunctionSignature("setMinimumNoticePeriodSeconds(uint256)");
+                // console.log(selector);
+                const newMinimumNoticePeriod = 20;
+                const data = padLeft(newMinimumNoticePeriod.toString(16), 64);
+                const functionBytecode = selector.concat(data);
+                // console.log(functionBytecode);
     
-    //             const param = Web3EthAbi.encodeParameters(
-    //                 ["address[]", "uint128", "uint128", "bool", "bytes[]"],
-    //                 [[deployed.daoagendaManager.address], noticePeriod.toString(), votingPeriod.toString(), true, [functionBytecode]]
-    //             );
+                const param = Web3EthAbi.encodeParameters(
+                    ["address[]", "uint128", "uint128", "bool", "bytes[]"],
+                    [[deployed.daoagendaManager.address], noticePeriod.toString(), votingPeriod.toString(), true, [functionBytecode]]
+                );
     
-    //             const beforeBalance = await deployed.ton.balanceOf(addr1.address);
-    //             const agendaFee = await deployed.daoagendaManager.createAgendaFees();
-    //             expect(agendaFee).to.be.gt(0);
+                const beforeBalance = await deployed.ton.balanceOf(addr1.address);
+                const agendaFee = await deployed.daoagendaManager.createAgendaFees();
+                expect(agendaFee).to.be.gt(0);
 
-    //             if (agendaFee.gt(beforeBalance))
-    //                 await (await deployed.ton.connect(deployed.tonAdmin).mint(addr1.address, agendaFee)).wait();
+                if (agendaFee.gt(beforeBalance))
+                    await (await deployed.ton.connect(deployed.tonAdmin).mint(addr1.address, agendaFee)).wait();
                 
-    //             const beforeBalance2 = await deployed.ton.balanceOf(addr1.address);
+                const beforeBalance2 = await deployed.ton.balanceOf(addr1.address);
     
-    //             // create agenda
-    //             await deployed.ton.connect(addr1).approveAndCall(
-    //                 DAOProxyLogicV2.address,
-    //                 agendaFee,
-    //                 param
-    //             );
-    //             const afterBalance = await deployed.ton.balanceOf(addr1.address);
-    //             expect(afterBalance).to.be.lt(beforeBalance2);
-    //             expect(beforeBalance2.sub(afterBalance)).to.be.equal(agendaFee);
+                // create agenda
+                await deployed.ton.connect(addr1).approveAndCall(
+                    DAOProxyLogicV2.address,
+                    agendaFee,
+                    param
+                );
+                const afterBalance = await deployed.ton.balanceOf(addr1.address);
+                expect(afterBalance).to.be.lt(beforeBalance2);
+                expect(beforeBalance2.sub(afterBalance)).to.be.equal(agendaFee);
     
-    //             agendaID = (await deployed.daoagendaManager.numAgendas()).sub(1);
-    //             //const executionInfo = await agendaManager.executionInfos(agendaID);
-    //             const executionInfo = await deployed.daoagendaManager.getExecutionInfo(agendaID);
-    //             expect(executionInfo[0][0]).to.be.equal(deployed.daoagendaManager.address);
-    //             expect(executionInfo[1][0]).to.be.equal(functionBytecode);
-    //         });
+                agendaID = (await deployed.daoagendaManager.numAgendas()).sub(1);
+                //const executionInfo = await agendaManager.executionInfos(agendaID);
+                const executionInfo = await deployed.daoagendaManager.getExecutionInfo(agendaID);
+                expect(executionInfo[0][0]).to.be.equal(deployed.daoagendaManager.address);
+                expect(executionInfo[1][0]).to.be.equal(functionBytecode);
+            });
     
-    //         it('increase block time and check votable', async function () {
-    //             const agenda = await deployed.daoagendaManager.agendas(agendaID);  
-    //             const noticeEndTimestamp = agenda[AGENDA_INDEX_NOTICE_END_TIMESTAMP];
-    //             await time.increaseTo(Number(noticeEndTimestamp));
-    //             expect(await deployed.daoagendaManager.isVotableStatus(agendaID)).to.be.equal(true);
-    //         });
+            it('increase block time and check votable', async function () {
+                const agenda = await deployed.daoagendaManager.agendas(agendaID);  
+                const noticeEndTimestamp = agenda[AGENDA_INDEX_NOTICE_END_TIMESTAMP];
+                await time.increaseTo(Number(noticeEndTimestamp));
+                expect(await deployed.daoagendaManager.isVotableStatus(agendaID)).to.be.equal(true);
+            });
     
-    //         it(`cast vote`, async function () {
-    //             await castVote(agendaID, candidates[0], VOTE_YES, sequencerIndexSave);
-    //             await castVote(agendaID, candidates[1], VOTE_YES, sequencerIndexSave);
-    //             await castVote(agendaID, candidates[2], VOTE_YES, sequencerIndexSave);
-    //         });
+            it(`cast vote`, async function () {
+                await castVote(agendaID, candidates[0], VOTE_YES, sequencerIndexSave);
+                await castVote(agendaID, candidates[1], VOTE_YES, sequencerIndexSave);
+                await castVote(agendaID, candidates[2], VOTE_YES, sequencerIndexSave);
+            });
     
-    //         it("check vote result/status", async function () {
-    //             const agenda = await deployed.daoagendaManager.agendas(agendaID);
-    //             expect(agenda[AGENDA_INDEX_RESULT]).to.be.equal(AGENDA_RESULT_ACCEPTED);
-    //             expect(agenda[AGENDA_INDEX_STATUS]).to.be.equal(AGENDA_STATUS_WAITING_EXEC);
-    //             expect(await time.latest()).to.be.lt(agenda[AGENDA_INDEX_VOTING_END_TIMESTAMP]);
-    //             expect(await deployed.daoagendaManager.canExecuteAgenda(agendaID)).to.be.equal(false);
-    //         });
+            it("check vote result/status", async function () {
+                const agenda = await deployed.daoagendaManager.agendas(agendaID);
+                expect(agenda[AGENDA_INDEX_RESULT]).to.be.equal(AGENDA_RESULT_ACCEPTED);
+                expect(agenda[AGENDA_INDEX_STATUS]).to.be.equal(AGENDA_STATUS_WAITING_EXEC);
+                expect(await time.latest()).to.be.lt(agenda[AGENDA_INDEX_VOTING_END_TIMESTAMP]);
+                expect(await deployed.daoagendaManager.canExecuteAgenda(agendaID)).to.be.equal(false);
+            });
     
-    //         it('increase block time', async function () {
-    //           const agenda = await deployed.daoagendaManager.agendas(agendaID);  
+            it('increase block time', async function () {
+              const agenda = await deployed.daoagendaManager.agendas(agendaID);  
     
-    //           const votingEndTimestamp = agenda[AGENDA_INDEX_VOTING_END_TIMESTAMP];
-    //           const executingPeriodTimestamp = await deployed.daoagendaManager.executingPeriodSeconds();
-    //           console.log("votingEndTimestamp :", votingEndTimestamp);
-    //           console.log("executingPeriodTimestamp :", executingPeriodTimestamp);
-    //           await time.increaseTo(Number(votingEndTimestamp)+1);
+              const votingEndTimestamp = agenda[AGENDA_INDEX_VOTING_END_TIMESTAMP];
+              const executingPeriodTimestamp = await deployed.daoagendaManager.executingPeriodSeconds();
+              console.log("votingEndTimestamp :", votingEndTimestamp);
+              console.log("executingPeriodTimestamp :", executingPeriodTimestamp);
+              await time.increaseTo(Number(votingEndTimestamp)+1);
               
-    //           expect(await deployed.daoagendaManager.canExecuteAgenda(agendaID)).to.be.equal(true);
+              expect(await deployed.daoagendaManager.canExecuteAgenda(agendaID)).to.be.equal(true);
               
-    //           const executableLimitTimestamp = agenda[AGENDA_INDEX_EXECUTABLE_LIMIT_TIMESTAMP];
-    //           expect(Number(votingEndTimestamp)+Number(executingPeriodTimestamp)).to.be.equal(Number(executableLimitTimestamp));
-    //           console.log("executableLimitTimestamp :", executableLimitTimestamp);
-    //           await time.increaseTo(Number(executableLimitTimestamp)+1);
-    //         });
+              const executableLimitTimestamp = agenda[AGENDA_INDEX_EXECUTABLE_LIMIT_TIMESTAMP];
+              expect(Number(votingEndTimestamp)+Number(executingPeriodTimestamp)).to.be.equal(Number(executableLimitTimestamp));
+              console.log("executableLimitTimestamp :", executableLimitTimestamp);
+              await time.increaseTo(Number(executableLimitTimestamp)+1);
+            });
     
-    //         it("check executable limit", async function () {
-    //           const agenda = await deployed.daoagendaManager.agendas(agendaID);  
+            it("check executable limit", async function () {
+              const agenda = await deployed.daoagendaManager.agendas(agendaID);  
     
-    //           expect(await deployed.daoagendaManager.isVotableStatus(agendaID)).to.be.equal(false);
-    //           expect(await time.latest()).to.be.gt(agenda[AGENDA_INDEX_EXECUTABLE_LIMIT_TIMESTAMP]);
-    //           expect(await deployed.daoagendaManager.canExecuteAgenda(agendaID)).to.be.equal(false);
-    //           await expect(
-    //             DAOProxyLogicV1.executeAgenda(agendaID)
-    //           ).to.be.revertedWith("DAO: CA"); 
-    //         });
-    //     });
-    // })
+              expect(await deployed.daoagendaManager.isVotableStatus(agendaID)).to.be.equal(false);
+              expect(await time.latest()).to.be.gt(agenda[AGENDA_INDEX_EXECUTABLE_LIMIT_TIMESTAMP]);
+              expect(await deployed.daoagendaManager.canExecuteAgenda(agendaID)).to.be.equal(false);
+              await expect(
+                DAOProxyLogicV1.executeAgenda(agendaID)
+              ).to.be.revertedWith("DAO: CA"); 
+            });
+        });
+    })
 
-    // describe("#9. Vault", () => {
-    //     it('check DAOVault balance', async function () {
-    //         let amount = await deployed.ton.balanceOf(deployed.daovault.address);
-    //         expect(amount).to.be.gt(0);
-    //     });
+    describe("#9. Vault", () => {
+        it('check DAOVault balance', async function () {
+            let amount = await deployed.ton.balanceOf(deployed.daovault.address);
+            expect(amount).to.be.gt(0);
+        });
       
-    //     describe('Claim activity reward', function () {
-    //         it("Candidates who were not members will not receive any rewards.", async () => {
-    //             expect(await DAOProxyLogicV2.isMemberV2(candidate4.address,sequencerIndexSave)).to.be.equal(false)
-    //             let claimableAmount = await DAOProxyLogicV2.getClaimableActivityRewardV2(candidate4.address,sequencerIndexSave);
-    //             expect(claimableAmount).to.be.equal(0)
-    //         })
+        describe('Claim activity reward', function () {
+            it("Candidates who were not members will not receive any rewards.", async () => {
+                expect(await DAOProxyLogicV2.isMemberV2(candidate4.address,sequencerIndexSave)).to.be.equal(false)
+                let claimableAmount = await DAOProxyLogicV2.getClaimableActivityRewardV2(candidate4.address,sequencerIndexSave);
+                expect(claimableAmount).to.be.equal(0)
+            })
 
-    //         it("Candidates who were members even if they are not current members can receive rewards.", async () => {
-    //             expect(await DAOProxyLogicV2.isMemberV2(candidate3.address,sequencerIndexSave)).to.be.equal(false)
-    //             let claimableAmount = await DAOProxyLogicV2.getClaimableActivityRewardV2(candidate3.address,sequencerIndexSave);
-    //             expect(claimableAmount).to.be.gt(0)
-    //         })
+            it("Candidates who were members even if they are not current members can receive rewards.", async () => {
+                expect(await DAOProxyLogicV2.isMemberV2(candidate3.address,sequencerIndexSave)).to.be.equal(false)
+                let claimableAmount = await DAOProxyLogicV2.getClaimableActivityRewardV2(candidate3.address,sequencerIndexSave);
+                expect(claimableAmount).to.be.gt(0)
+            })
 
-    //         it("All current members can receive rewards.", async () => {
-    //             expect(await DAOProxyLogicV2.isMemberV2(candidate1.address,sequencerIndexSave)).to.be.equal(true)
-    //             expect(await DAOProxyLogicV2.isMemberV2(candidate2.address,sequencerIndexSave)).to.be.equal(true)
-    //             expect(await DAOProxyLogicV2.isMemberV2(sequencer1.address,sequencerIndexSave)).to.be.equal(true)
-    //             expect(await DAOProxyLogicV2.getClaimableActivityRewardV2(candidate1.address,sequencerIndexSave)).to.be.gt(0)
-    //             expect(await DAOProxyLogicV2.getClaimableActivityRewardV2(candidate2.address,sequencerIndexSave)).to.be.gt(0)
-    //             expect(await DAOProxyLogicV2.getClaimableActivityRewardV2(sequencer1.address,sequencerIndexSave)).to.be.gt(0)
-    //         })
+            it("All current members can receive rewards.", async () => {
+                expect(await DAOProxyLogicV2.isMemberV2(sequencer1.address,sequencerIndexSave)).to.be.equal(true)
+                expect(await DAOProxyLogicV2.isMemberV2(candidate2.address,sequencerIndexSave)).to.be.equal(true)
+                expect(await DAOProxyLogicV2.isMember(candidate5.address)).to.be.equal(true)
+                console.log(await DAOProxyLogicV2.getClaimableActivityRewardV2(sequencer1.address,sequencerIndexSave))
+                console.log(await DAOProxyLogicV2.getClaimableActivityRewardV2(candidate2.address,sequencerIndexSave))
+                console.log(await DAOProxyLogicV2.getClaimableActivityReward(candidate5.address))
+                expect(await DAOProxyLogicV2.getClaimableActivityRewardV2(sequencer1.address,sequencerIndexSave)).to.be.gt(0)
+                expect(await DAOProxyLogicV2.getClaimableActivityRewardV2(candidate2.address,sequencerIndexSave)).to.be.gt(0)
+                expect(await DAOProxyLogicV2.getClaimableActivityReward(candidate5.address)).to.be.gt(0)
+            })
 
-    //         it("Anyone who has a claimReward can receive a claim.", async () => {
-    //             const beforeBalance = await deployed.ton.balanceOf(candidate3.address);
+            it("Anyone who has a claimReward can receive a claim.", async () => {
+                const beforeBalance = await deployed.ton.balanceOf(candidate3.address);
 
-    //             const claimableAmount = await DAOProxyLogicV2.getClaimableActivityRewardV2(candidate3.address,sequencerIndexSave);
-    //             expect(claimableAmount).to.be.gt(0)
+                const claimableAmount = await DAOProxyLogicV2.getClaimableActivityRewardV2(candidate3.address,sequencerIndexSave);
+                expect(claimableAmount).to.be.gt(0)
 
-    //             await DAOProxyLogicV2.connect(candidate3).claimActivityReward(candidate3.address, sequencerIndexSave);
+                await DAOProxyLogicV2.connect(candidate3).claimActivityRewardV2(candidate3.address, sequencerIndexSave);
 
-    //             const afterBalance = await deployed.ton.balanceOf(candidate3.address);
+                const afterBalance = await deployed.ton.balanceOf(candidate3.address);
 
-    //             expect(Number(afterBalance)-Number(beforeBalance)).to.be.equal(Number(claimableAmount));
-    //         })
+                expect(Number(afterBalance)-Number(beforeBalance)).to.be.equal(Number(claimableAmount));
+            })
 
-    //         it("All current members can claim.", async () => {
-    //             const beforeBalance = await deployed.ton.balanceOf(sequencer1.address);
-    //             // console.log(beforeBalance)
+            it("All current members can claim.", async () => {
+                const beforeBalance = await deployed.ton.balanceOf(sequencer1.address);
+                // console.log(beforeBalance)
 
-    //             const claimableAmount = await DAOProxyLogicV2.getClaimableActivityRewardV2(sequencer1.address,sequencerIndexSave);
-    //             // console.log(claimableAmount)
-    //             expect(claimableAmount).to.be.gt(0)
+                const claimableAmount = await DAOProxyLogicV2.getClaimableActivityRewardV2(sequencer1.address,sequencerIndexSave);
+                // console.log(claimableAmount)
+                expect(claimableAmount).to.be.gt(0)
 
-    //             await DAOProxyLogicV2.connect(sequencer1).claimActivityReward(sequencer1.address, sequencerIndexSave);
+                await DAOProxyLogicV2.connect(sequencer1).claimActivityRewardV2(sequencer1.address, sequencerIndexSave);
 
-    //             const afterBalance = await deployed.ton.balanceOf(sequencer1.address);
-    //             // console.log(afterBalance)
+                const afterBalance = await deployed.ton.balanceOf(sequencer1.address);
+                // console.log(afterBalance)
+                //getClaim할때는 period가 1001140인데 calimActivity할때는 period가 1001141이다
+                //멤버는 초당 reward를 받기 때문에 getClaim과의 정확한 비교는 힘들다.
+                expect(Number(afterBalance)).to.be.gt(Number(beforeBalance));
+                expect(Number(afterBalance)-Number(beforeBalance)).to.be.gt(Number(claimableAmount));
+                console.log("1")
 
-    //             //getClaim할때는 period가 1001140인데 calimActivity할때는 period가 1001141이다
-    //             //멤버는 초당 reward를 받기 때문에 getClaim과의 정확한 비교는 힘들다.
-    //             expect(Number(afterBalance)).to.be.gt(Number(beforeBalance));
-    //             expect(Number(afterBalance)-Number(beforeBalance)).to.be.gt(Number(claimableAmount));
+                const beforeBalance2 = await deployed.ton.balanceOf(candidate2.address);
 
-    //             const beforeBalance2 = await deployed.ton.balanceOf(candidate2.address);
+                const claimableAmount2 = await DAOProxyLogicV2.getClaimableActivityRewardV2(candidate2.address,sequencerIndexSave);
+                expect(claimableAmount2).to.be.gt(0)
 
-    //             const claimableAmount2 = await DAOProxyLogicV2.getClaimableActivityRewardV2(candidate2.address,sequencerIndexSave);
-    //             expect(claimableAmount2).to.be.gt(0)
+                await DAOProxyLogicV2.connect(candidate2).claimActivityRewardV2(candidate2.address, sequencerIndexSave);
 
-    //             await DAOProxyLogicV2.connect(candidate2).claimActivityReward(candidate2.address, sequencerIndexSave);
+                const afterBalance2 = await deployed.ton.balanceOf(candidate2.address);
 
-    //             const afterBalance2 = await deployed.ton.balanceOf(candidate2.address);
+                expect(Number(afterBalance2)-Number(beforeBalance2)).to.be.gt(Number(claimableAmount2));
+                expect(Number(afterBalance2)).to.be.gt(Number(beforeBalance2));
+                console.log("2")
+                const beforeBalance3 = await deployed.ton.balanceOf(candidate1.address);
 
-    //             expect(Number(afterBalance2)-Number(beforeBalance2)).to.be.gt(Number(claimableAmount2));
-    //             expect(Number(afterBalance2)).to.be.gt(Number(beforeBalance2));
+                const claimableAmount3 = await DAOProxyLogicV2.getClaimableActivityRewardV2(candidate1.address,sequencerIndexSave);
+                console.log(claimableAmount3)
+                expect(claimableAmount3).to.be.gt(0)
 
-    //             const beforeBalance3 = await deployed.ton.balanceOf(candidate1.address);
+                await DAOProxyLogicV2.connect(candidate1).claimActivityRewardV2(candidate1.address, sequencerIndexSave);
 
-    //             const claimableAmount3 = await DAOProxyLogicV2.getClaimableActivityRewardV2(candidate1.address,sequencerIndexSave);
-    //             expect(claimableAmount3).to.be.gt(0)
+                const afterBalance3 = await deployed.ton.balanceOf(candidate1.address);
+                console.log("4")
+                expect(Number(afterBalance3)-Number(beforeBalance3)).to.be.equal(Number(claimableAmount3));
+                expect(Number(afterBalance3)).to.be.gt(Number(beforeBalance3));
+            })
+        });
+    })
 
-    //             await DAOProxyLogicV2.connect(candidate1).claimActivityReward(candidate1.address, sequencerIndexSave);
-
-    //             const afterBalance3 = await deployed.ton.balanceOf(candidate1.address);
-
-    //             expect(Number(afterBalance3)-Number(beforeBalance3)).to.be.gt(Number(claimableAmount3));
-    //             expect(Number(afterBalance3)).to.be.gt(Number(beforeBalance3));
-    //         })
-    //     });
-    // })
-
-    // describe("#10. multi Agenda test", () => {
-    //     describe("same targetAddress, different function test", () => {
-    //         it("create Multi Agenda", async () => {
-    //             const noticePeriod = await deployed.daoagendaManager.minimumNoticePeriodSeconds();
-    //             const votingPeriod = await deployed.daoagendaManager.minimumVotingPeriodSeconds();
+    describe("#10. multi Agenda test", () => {
+        describe("same targetAddress, different function test", () => {
+            it("create Multi Agenda", async () => {
+                const noticePeriod = await deployed.daoagendaManager.minimumNoticePeriodSeconds();
+                const votingPeriod = await deployed.daoagendaManager.minimumVotingPeriodSeconds();
     
-    //             let targets = [];
-    //             let functionBytecodes = [];
+                let targets = [];
+                let functionBytecodes = [];
     
-    //             const selector1 = Web3EthAbi.encodeFunctionSignature("setMinimumNoticePeriodSeconds(uint256)");
-    //             const selector2 = Web3EthAbi.encodeFunctionSignature("setCreateAgendaFees(uint256)");
-    //             const selector3 = Web3EthAbi.encodeFunctionSignature("setExecutingPeriodSeconds(uint256)");
+                const selector1 = Web3EthAbi.encodeFunctionSignature("setMinimumNoticePeriodSeconds(uint256)");
+                const selector2 = Web3EthAbi.encodeFunctionSignature("setCreateAgendaFees(uint256)");
+                const selector3 = Web3EthAbi.encodeFunctionSignature("setExecutingPeriodSeconds(uint256)");
     
-    //             const newMinimumNoticePeriod = 150
-    //             const daoAgendaFee = daoAgendaInfo.agendaFee2
-    //             const daoAgendaFee2 = 200000000000000000000
-    //             // console.log("daoAgendaFee :", daoAgendaFee);
-    //             const executingPeriod = 300
-    //             const wtonAmount = 1000000000000000000000000000
+                const newMinimumNoticePeriod = 150
+                const daoAgendaFee = daoAgendaInfo.agendaFee2
+                const daoAgendaFee2 = 200000000000000000000
+                // console.log("daoAgendaFee :", daoAgendaFee);
+                const executingPeriod = 300
+                const wtonAmount = 1000000000000000000000000000
     
-    //             // console.log("------------------------------------")
-    //             // console.log(newMinimumNoticePeriod.toString(16));
-    //             // console.log(daoAgendaFee.toHexString());
-    //             // console.log((daoAgendaFee.toHexString()).substr(2));
-    //             // console.log(daoAgendaFee2.toString(16));
-    //             // console.log(executingPeriod.toString(16));
-    //             // console.log(wtonAmount.toString(16));
-    //             // console.log("------------------------------------")
+                // console.log("------------------------------------")
+                // console.log(newMinimumNoticePeriod.toString(16));
+                // console.log(daoAgendaFee.toHexString());
+                // console.log((daoAgendaFee.toHexString()).substr(2));
+                // console.log(daoAgendaFee2.toString(16));
+                // console.log(executingPeriod.toString(16));
+                // console.log(wtonAmount.toString(16));
+                // console.log("------------------------------------")
     
-    //             const data1 = padLeft(newMinimumNoticePeriod.toString(16), 64);
-    //             // console.log(data1)
-    //             // const data2 = padLeft(daoAgendaFee.toHexString(), 64);
-    //             // console.log(data2)
-    //             // console.log(data2.substr(2));
-    //             const data2 = padLeft(daoAgendaFee2.toString(16), 64);
-    //             // console.log(data2)
-    //             const data3 = padLeft(executingPeriod.toString(16), 64);
-    //             // console.log(data3)
-    //             // const data4 = padLeft(wtonAmount.toString(16), 64);
-    //             // console.log(data4)
+                const data1 = padLeft(newMinimumNoticePeriod.toString(16), 64);
+                // console.log(data1)
+                // const data2 = padLeft(daoAgendaFee.toHexString(), 64);
+                // console.log(data2)
+                // console.log(data2.substr(2));
+                const data2 = padLeft(daoAgendaFee2.toString(16), 64);
+                // console.log(data2)
+                const data3 = padLeft(executingPeriod.toString(16), 64);
+                // console.log(data3)
+                // const data4 = padLeft(wtonAmount.toString(16), 64);
+                // console.log(data4)
     
-    //             const functionBytecode1 = selector1.concat(data1)
-    //             const functionBytecode2 = selector2.concat(data2)
-    //             const functionBytecode3 = selector3.concat(data3)
+                const functionBytecode1 = selector1.concat(data1)
+                const functionBytecode2 = selector2.concat(data2)
+                const functionBytecode3 = selector3.concat(data3)
     
-    //             targets.push(deployed.daoagendaManager.address);
-    //             targets.push(deployed.daoagendaManager.address);
-    //             targets.push(deployed.daoagendaManager.address);
-    //             functionBytecodes.push(functionBytecode1)
-    //             functionBytecodes.push(functionBytecode2)
-    //             functionBytecodes.push(functionBytecode3)
+                targets.push(deployed.daoagendaManager.address);
+                targets.push(deployed.daoagendaManager.address);
+                targets.push(deployed.daoagendaManager.address);
+                functionBytecodes.push(functionBytecode1)
+                functionBytecodes.push(functionBytecode2)
+                functionBytecodes.push(functionBytecode3)
     
-    //             const param = Web3EthAbi.encodeParameters(
-    //                 ["address[]", "uint128", "uint128", "bool", "bytes[]"],
-    //                 [
-    //                     targets, 
-    //                     noticePeriod.toString(),
-    //                     votingPeriod.toString(),
-    //                     false,
-    //                     functionBytecodes
-    //                 ]
-    //             )
+                const param = Web3EthAbi.encodeParameters(
+                    ["address[]", "uint128", "uint128", "bool", "bytes[]"],
+                    [
+                        targets, 
+                        noticePeriod.toString(),
+                        votingPeriod.toString(),
+                        false,
+                        functionBytecodes
+                    ]
+                )
     
-    //             const beforeBalance = await deployed.ton.balanceOf(addr1.address);
-    //             const agendaFee = await deployed.daoagendaManager.createAgendaFees();
-    //             expect(agendaFee).to.be.gt(0);
+                const beforeBalance = await deployed.ton.balanceOf(addr1.address);
+                const agendaFee = await deployed.daoagendaManager.createAgendaFees();
+                expect(agendaFee).to.be.gt(0);
     
-    //             if (agendaFee.gt(beforeBalance))
-    //                 await (await deployed.ton.connect(deployed.tonAdmin).mint(addr1.address, agendaFee)).wait();
+                if (agendaFee.gt(beforeBalance))
+                    await (await deployed.ton.connect(deployed.tonAdmin).mint(addr1.address, agendaFee)).wait();
                 
-    //             const beforeBalance2 = await deployed.ton.balanceOf(addr1.address);
+                const beforeBalance2 = await deployed.ton.balanceOf(addr1.address);
     
-    //             // agendaID = (await deployed.daoagendaManager.numAgendas()).sub(1);
-    //             // console.log("beforeAgendaID : ", agendaID)
-    //             // create agenda
-    //             await deployed.ton.connect(addr1).approveAndCall(
-    //                 DAOProxyLogicV2.address,
-    //                 agendaFee,
-    //                 param
-    //             );
+                // agendaID = (await deployed.daoagendaManager.numAgendas()).sub(1);
+                // console.log("beforeAgendaID : ", agendaID)
+                // create agenda
+                await deployed.ton.connect(addr1).approveAndCall(
+                    DAOProxyLogicV2.address,
+                    agendaFee,
+                    param
+                );
     
-    //             const afterBalance = await deployed.ton.balanceOf(addr1.address);
-    //             expect(afterBalance).to.be.lt(beforeBalance2);
-    //             expect(beforeBalance2.sub(afterBalance)).to.be.equal(agendaFee);
+                const afterBalance = await deployed.ton.balanceOf(addr1.address);
+                expect(afterBalance).to.be.lt(beforeBalance2);
+                expect(beforeBalance2.sub(afterBalance)).to.be.equal(agendaFee);
     
-    //             agendaID = (await deployed.daoagendaManager.numAgendas()).sub(1);
-    //             //agendaId는 1증가 (multi Agenda여도 투표는 한번이다, 한번을 통해서 한번에 여러 function을 실행시킴)
-    //             console.log("afterAgendaID : ", agendaID) 
+                agendaID = (await deployed.daoagendaManager.numAgendas()).sub(1);
+                //agendaId는 1증가 (multi Agenda여도 투표는 한번이다, 한번을 통해서 한번에 여러 function을 실행시킴)
+                console.log("afterAgendaID : ", agendaID) 
     
-    //             const executionInfo = await deployed.daoagendaManager.getExecutionInfo(agendaID);
-    //             // console.log(executionInfo)
-    //             // console.log(executionInfo[0][0])
-    //             // console.log(executionInfo[1][0])
-    //             expect(executionInfo[0][0]).to.be.equal(deployed.daoagendaManager.address)
-    //             expect(executionInfo[0][1]).to.be.equal(deployed.daoagendaManager.address)
-    //             expect(executionInfo[0][2]).to.be.equal(deployed.daoagendaManager.address)
-    //             expect(executionInfo[1][0]).to.be.equal(functionBytecode1);
-    //             expect(executionInfo[1][1]).to.be.equal(functionBytecode2);
-    //             expect(executionInfo[1][2]).to.be.equal(functionBytecode3);
-    //         })
+                const executionInfo = await deployed.daoagendaManager.getExecutionInfo(agendaID);
+                // console.log(executionInfo)
+                // console.log(executionInfo[0][0])
+                // console.log(executionInfo[1][0])
+                expect(executionInfo[0][0]).to.be.equal(deployed.daoagendaManager.address)
+                expect(executionInfo[0][1]).to.be.equal(deployed.daoagendaManager.address)
+                expect(executionInfo[0][2]).to.be.equal(deployed.daoagendaManager.address)
+                expect(executionInfo[1][0]).to.be.equal(functionBytecode1);
+                expect(executionInfo[1][1]).to.be.equal(functionBytecode2);
+                expect(executionInfo[1][2]).to.be.equal(functionBytecode3);
+            })
     
-    //         it('increase block time and check votable', async function () {
-    //             const agenda = await deployed.daoagendaManager.agendas(agendaID);  
-    //             const noticeEndTimestamp = agenda[AGENDA_INDEX_NOTICE_END_TIMESTAMP];
-    //             await time.increaseTo(Number(noticeEndTimestamp));
-    //             expect(await deployed.daoagendaManager.isVotableStatus(agendaID)).to.be.equal(true);
-    //         });
+            it('increase block time and check votable', async function () {
+                const agenda = await deployed.daoagendaManager.agendas(agendaID);  
+                const noticeEndTimestamp = agenda[AGENDA_INDEX_NOTICE_END_TIMESTAMP];
+                await time.increaseTo(Number(noticeEndTimestamp));
+                expect(await deployed.daoagendaManager.isVotableStatus(agendaID)).to.be.equal(true);
+            });
     
-    //         it(`cast vote`, async function () {
-    //             await castVote(agendaID, candidates[0], VOTE_YES, sequencerIndexSave);
-    //             await castVote(agendaID, candidates[1], VOTE_YES, sequencerIndexSave);
-    //         });
+            it(`cast vote`, async function () {
+                await castVote(agendaID, candidates[0], VOTE_YES, sequencerIndexSave);
+                await castVote(agendaID, candidates[1], VOTE_YES, sequencerIndexSave);
+            });
     
-    //         it("check vote result/status", async function () {
-    //             const agenda = await deployed.daoagendaManager.agendas(agendaID);
-    //             expect(agenda[AGENDA_INDEX_RESULT]).to.be.equal(AGENDA_RESULT_ACCEPTED);
-    //             expect(agenda[AGENDA_INDEX_STATUS]).to.be.equal(AGENDA_STATUS_WAITING_EXEC);
-    //         });
+            it("check vote result/status", async function () {
+                const agenda = await deployed.daoagendaManager.agendas(agendaID);
+                expect(agenda[AGENDA_INDEX_RESULT]).to.be.equal(AGENDA_RESULT_ACCEPTED);
+                expect(agenda[AGENDA_INDEX_STATUS]).to.be.equal(AGENDA_STATUS_WAITING_EXEC);
+            });
     
-    //         it('increase block time', async function () {
-    //             const agenda = await deployed.daoagendaManager.agendas(agendaID);  
-    //             const noticeEndTimestamp = agenda[AGENDA_INDEX_VOTING_END_TIMESTAMP];
-    //             await time.increaseTo(Number(noticeEndTimestamp)+1);
-    //             expect(await deployed.daoagendaManager.isVotableStatus(agendaID)).to.be.equal(false);
-    //         });
+            it('increase block time', async function () {
+                const agenda = await deployed.daoagendaManager.agendas(agendaID);  
+                const noticeEndTimestamp = agenda[AGENDA_INDEX_VOTING_END_TIMESTAMP];
+                await time.increaseTo(Number(noticeEndTimestamp)+1);
+                expect(await deployed.daoagendaManager.isVotableStatus(agendaID)).to.be.equal(false);
+            });
     
-    //         it("execute & check functionBytes1,2,3 ", async function () {
-    //             const beforeAgenda = await deployed.daoagendaManager.agendas(agendaID); 
-    //             expect(beforeAgenda[AGENDA_INDEX_EXECUTED]).to.be.equal(false);
-    //             const beforeExecutedInfo = await deployed.daoagendaManager.getExecutionInfo(agendaID);
-    //             expect(beforeExecutedInfo.executeStartFrom).to.be.equal(0)
+            it("execute & check functionBytes1,2,3 ", async function () {
+                const beforeAgenda = await deployed.daoagendaManager.agendas(agendaID); 
+                expect(beforeAgenda[AGENDA_INDEX_EXECUTED]).to.be.equal(false);
+                const beforeExecutedInfo = await deployed.daoagendaManager.getExecutionInfo(agendaID);
+                expect(beforeExecutedInfo.executeStartFrom).to.be.equal(0)
                 
-    //             const beforeValue = await deployed.daoagendaManager.minimumNoticePeriodSeconds();
-    //             const beforeValue2 = await deployed.daoagendaManager.createAgendaFees();
-    //             const beforeValue3 = await deployed.daoagendaManager.executingPeriodSeconds();
+                const beforeValue = await deployed.daoagendaManager.minimumNoticePeriodSeconds();
+                const beforeValue2 = await deployed.daoagendaManager.createAgendaFees();
+                const beforeValue3 = await deployed.daoagendaManager.executingPeriodSeconds();
     
-    //             const executeTx = await DAOProxyLogicV1.executeAgenda(agendaID);
+                const executeTx = await DAOProxyLogicV1.executeAgenda(agendaID);
     
-    //             const afterValue = await deployed.daoagendaManager.minimumNoticePeriodSeconds();
-    //             const afterValue2 = await deployed.daoagendaManager.createAgendaFees();
-    //             const afterValue3 = await deployed.daoagendaManager.executingPeriodSeconds();
-    //             expect(beforeValue).to.be.not.equal(afterValue);
-    //             expect(beforeValue2).to.be.not.equal(afterValue2);
-    //             expect(beforeValue3).to.be.not.equal(afterValue3);
-                
-                
-    //             expect(afterValue).to.be.equal(150);
-    //             // expect(afterValue2).to.be.equal(200000000000000000000);
-    //             expect(afterValue2).to.be.equal(daoAgendaInfo.agendaFee2);
-    //             expect(afterValue3).to.be.equal(300);
-    
-    //             const afterExecutedInfo = await deployed.daoagendaManager.getExecutionInfo(agendaID);
-    //             expect(afterExecutedInfo.executeStartFrom).to.be.equal(3)
-    
-    //             const afterAgenda = await deployed.daoagendaManager.agendas(agendaID); 
-    //             expect(afterAgenda[AGENDA_INDEX_EXECUTED]).to.be.equal(true);
-    //             //afterAgenda[AGENDA_INDEX_EXECUTED_TIMESTAMP].should.be.bignumber.gt(toBN("0")); 
-    //         });
-    //     })
-
-    //     describe("different targetAddress, different function test", () => {
-    //         it("create Multi Agenda", async () => {
-    //             const noticePeriod = await deployed.daoagendaManager.minimumNoticePeriodSeconds();
-    //             const votingPeriod = await deployed.daoagendaManager.minimumVotingPeriodSeconds();
-    
-    //             let targets = [];
-    //             let functionBytecodes = [];
-    
-    //             const selector1 = Web3EthAbi.encodeFunctionSignature("setMinimumNoticePeriodSeconds(uint256)");
-    //             const selector2 = Web3EthAbi.encodeFunctionSignature("setCreateAgendaFees(uint256)");
-    //             const selector3 = Web3EthAbi.encodeFunctionSignature("increaseMaxMember(uint256,uint256)");
-    
-    //             const newMinimumNoticePeriod = 100
-    //             const daoAgendaFee = daoAgendaInfo.agendaFee
-    //             const daoAgendaFee2 = 100000000000000000000
-    //             // console.log("daoAgendaFee :", daoAgendaFee);
-    //             const maxMember = 4
-    //             const quorum = 3
-    //             const wtonAmount = 1000000000000000000000000000
-
-    
-    //             const data1 = padLeft(newMinimumNoticePeriod.toString(16), 64);
-    //             const data2 = padLeft(daoAgendaFee2.toString(16), 64);
-    //             const data3 = padLeft(maxMember.toString(16), 64);
-    //             const data4 = padLeft(quorum.toString(16), 64);
-    //             const data5 = data3 + data4
-    //             console.log(data5);
-    
-    //             const functionBytecode1 = selector1.concat(data1)
-    //             const functionBytecode2 = selector2.concat(data2)
-    //             const functionBytecode3 = selector3.concat(data5)
-    
-    //             targets.push(deployed.daoagendaManager.address);
-    //             targets.push(deployed.daoagendaManager.address);
-    //             targets.push(DAOProxyLogicV2.address);
-    //             functionBytecodes.push(functionBytecode1)
-    //             functionBytecodes.push(functionBytecode2)
-    //             functionBytecodes.push(functionBytecode3)
-    
-    //             const param = Web3EthAbi.encodeParameters(
-    //                 ["address[]", "uint128", "uint128", "bool", "bytes[]"],
-    //                 [
-    //                     targets, 
-    //                     noticePeriod.toString(),
-    //                     votingPeriod.toString(),
-    //                     false,
-    //                     functionBytecodes
-    //                 ]
-    //             )
-    
-    //             const beforeBalance = await deployed.ton.balanceOf(addr1.address);
-    //             const agendaFee = await deployed.daoagendaManager.createAgendaFees();
-    //             expect(agendaFee).to.be.gt(0);
-    
-    //             if (agendaFee.gt(beforeBalance))
-    //                 await (await deployed.ton.connect(deployed.tonAdmin).mint(addr1.address, agendaFee)).wait();
-                
-    //             const beforeBalance2 = await deployed.ton.balanceOf(addr1.address);
-    
-    //             agendaID = (await deployed.daoagendaManager.numAgendas()).sub(1);
-    //             console.log("beforeAgendaID : ", agendaID)
-    //             // create agenda
-    //             await deployed.ton.connect(addr1).approveAndCall(
-    //                 DAOProxyLogicV2.address,
-    //                 agendaFee,
-    //                 param
-    //             );
-    
-    //             const afterBalance = await deployed.ton.balanceOf(addr1.address);
-    //             expect(afterBalance).to.be.lt(beforeBalance2);
-    //             expect(beforeBalance2.sub(afterBalance)).to.be.equal(agendaFee);
-    
-    //             agendaID = (await deployed.daoagendaManager.numAgendas()).sub(1);
-    //             console.log("afterAgendaID : ", agendaID)
-    
-    //             const executionInfo = await deployed.daoagendaManager.getExecutionInfo(agendaID);
-    //             // console.log(executionInfo)
-    //             // console.log(executionInfo[0][0])
-    //             // console.log(executionInfo[1][0])
-    //             expect(executionInfo[0][0]).to.be.equal(deployed.daoagendaManager.address)
-    //             expect(executionInfo[0][1]).to.be.equal(deployed.daoagendaManager.address)
-    //             expect(executionInfo[0][2]).to.be.equal(DAOProxyLogicV2.address)
-    //             expect(executionInfo[1][0]).to.be.equal(functionBytecode1);
-    //             expect(executionInfo[1][1]).to.be.equal(functionBytecode2);
-    //             expect(executionInfo[1][2]).to.be.equal(functionBytecode3);
-    //         })
-
-    //         it('increase block time and check votable', async function () {
-    //             const agenda = await deployed.daoagendaManager.agendas(agendaID);  
-    //             const noticeEndTimestamp = agenda[AGENDA_INDEX_NOTICE_END_TIMESTAMP];
-    //             await time.increaseTo(Number(noticeEndTimestamp));
-    //             expect(await deployed.daoagendaManager.isVotableStatus(agendaID)).to.be.equal(true);
-    //         });
-    
-    //         it(`cast vote`, async function () {
-    //             await castVote(agendaID, candidates[0], VOTE_YES, sequencerIndexSave);
-    //             await castVote(agendaID, candidates[1], VOTE_YES, sequencerIndexSave);
-    //         });
-    
-    //         it("check vote result/status", async function () {
-    //             const agenda = await deployed.daoagendaManager.agendas(agendaID);
-    //             expect(agenda[AGENDA_INDEX_RESULT]).to.be.equal(AGENDA_RESULT_ACCEPTED);
-    //             expect(agenda[AGENDA_INDEX_STATUS]).to.be.equal(AGENDA_STATUS_WAITING_EXEC);
-    //         });
-    
-    //         it('increase block time', async function () {
-    //             const agenda = await deployed.daoagendaManager.agendas(agendaID);  
-    //             const noticeEndTimestamp = agenda[AGENDA_INDEX_VOTING_END_TIMESTAMP];
-    //             await time.increaseTo(Number(noticeEndTimestamp)+1);
-    //             expect(await deployed.daoagendaManager.isVotableStatus(agendaID)).to.be.equal(false);
-    //         });
-    
-    //         it("execute & check functionBytes1,2,3 ", async function () {
-    //             const beforeAgenda = await deployed.daoagendaManager.agendas(agendaID); 
-    //             expect(beforeAgenda[AGENDA_INDEX_EXECUTED]).to.be.equal(false);
-    //             const beforeExecutedInfo = await deployed.daoagendaManager.getExecutionInfo(agendaID);
-    //             expect(beforeExecutedInfo.executeStartFrom).to.be.equal(0)
-                
-    //             const beforeValue = await deployed.daoagendaManager.minimumNoticePeriodSeconds();
-    //             const beforeValue2 = await deployed.daoagendaManager.createAgendaFees();
-    //             const beforeValue3 = await DAOProxyLogicV2.maxMember();
-    //             const beforeValue4 = await DAOProxyLogicV2.quorum();
-    
-    //             const executeTx = await DAOProxyLogicV1.executeAgenda(agendaID);
-    
-    //             const afterValue = await deployed.daoagendaManager.minimumNoticePeriodSeconds();
-    //             const afterValue2 = await deployed.daoagendaManager.createAgendaFees();
-    //             const afterValue3 = await DAOProxyLogicV2.maxMember();
-    //             const afterValue4 = await DAOProxyLogicV2.quorum();
-    //             expect(beforeValue).to.be.not.equal(afterValue);
-    //             expect(beforeValue2).to.be.not.equal(afterValue2);
-    //             expect(beforeValue3).to.be.not.equal(afterValue3);
-    //             expect(beforeValue4).to.be.not.equal(afterValue4);
+                const afterValue = await deployed.daoagendaManager.minimumNoticePeriodSeconds();
+                const afterValue2 = await deployed.daoagendaManager.createAgendaFees();
+                const afterValue3 = await deployed.daoagendaManager.executingPeriodSeconds();
+                expect(beforeValue).to.be.not.equal(afterValue);
+                expect(beforeValue2).to.be.not.equal(afterValue2);
+                expect(beforeValue3).to.be.not.equal(afterValue3);
                 
                 
-    //             expect(afterValue).to.be.equal(100);
-    //             expect(afterValue2).to.be.equal(daoAgendaInfo.agendaFee);
-    //             expect(afterValue3).to.be.equal(4);
-    //             expect(afterValue4).to.be.equal(3);
+                expect(afterValue).to.be.equal(150);
+                // expect(afterValue2).to.be.equal(200000000000000000000);
+                expect(afterValue2).to.be.equal(daoAgendaInfo.agendaFee2);
+                expect(afterValue3).to.be.equal(300);
     
-    //             const afterExecutedInfo = await deployed.daoagendaManager.getExecutionInfo(agendaID);
-    //             expect(afterExecutedInfo.executeStartFrom).to.be.equal(3)
+                const afterExecutedInfo = await deployed.daoagendaManager.getExecutionInfo(agendaID);
+                expect(afterExecutedInfo.executeStartFrom).to.be.equal(3)
     
-    //             const afterAgenda = await deployed.daoagendaManager.agendas(agendaID); 
-    //             expect(afterAgenda[AGENDA_INDEX_EXECUTED]).to.be.equal(true);
-    //             //afterAgenda[AGENDA_INDEX_EXECUTED_TIMESTAMP].should.be.bignumber.gt(toBN("0")); 
-    //         });
-    //     })
-    // })
+                const afterAgenda = await deployed.daoagendaManager.agendas(agendaID); 
+                expect(afterAgenda[AGENDA_INDEX_EXECUTED]).to.be.equal(true);
+                //afterAgenda[AGENDA_INDEX_EXECUTED_TIMESTAMP].should.be.bignumber.gt(toBN("0")); 
+            });
+        })
+
+        describe("different targetAddress, different function test", () => {
+            it("create Multi Agenda", async () => {
+                const noticePeriod = await deployed.daoagendaManager.minimumNoticePeriodSeconds();
+                const votingPeriod = await deployed.daoagendaManager.minimumVotingPeriodSeconds();
+    
+                let targets = [];
+                let functionBytecodes = [];
+    
+                const selector1 = Web3EthAbi.encodeFunctionSignature("setMinimumNoticePeriodSeconds(uint256)");
+                const selector2 = Web3EthAbi.encodeFunctionSignature("setCreateAgendaFees(uint256)");
+                const selector3 = Web3EthAbi.encodeFunctionSignature("increaseMaxMember(uint256,uint256)");
+    
+                const newMinimumNoticePeriod = 100
+                const daoAgendaFee = daoAgendaInfo.agendaFee
+                const daoAgendaFee2 = 100000000000000000000
+                // console.log("daoAgendaFee :", daoAgendaFee);
+                const maxMember = 4
+                const quorum = 3
+                const wtonAmount = 1000000000000000000000000000
+
+    
+                const data1 = padLeft(newMinimumNoticePeriod.toString(16), 64);
+                const data2 = padLeft(daoAgendaFee2.toString(16), 64);
+                const data3 = padLeft(maxMember.toString(16), 64);
+                const data4 = padLeft(quorum.toString(16), 64);
+                const data5 = data3 + data4
+                console.log(data5);
+    
+                const functionBytecode1 = selector1.concat(data1)
+                const functionBytecode2 = selector2.concat(data2)
+                const functionBytecode3 = selector3.concat(data5)
+    
+                targets.push(deployed.daoagendaManager.address);
+                targets.push(deployed.daoagendaManager.address);
+                targets.push(DAOProxyLogicV2.address);
+                functionBytecodes.push(functionBytecode1)
+                functionBytecodes.push(functionBytecode2)
+                functionBytecodes.push(functionBytecode3)
+    
+                const param = Web3EthAbi.encodeParameters(
+                    ["address[]", "uint128", "uint128", "bool", "bytes[]"],
+                    [
+                        targets, 
+                        noticePeriod.toString(),
+                        votingPeriod.toString(),
+                        false,
+                        functionBytecodes
+                    ]
+                )
+    
+                const beforeBalance = await deployed.ton.balanceOf(addr1.address);
+                const agendaFee = await deployed.daoagendaManager.createAgendaFees();
+                expect(agendaFee).to.be.gt(0);
+    
+                if (agendaFee.gt(beforeBalance))
+                    await (await deployed.ton.connect(deployed.tonAdmin).mint(addr1.address, agendaFee)).wait();
+                
+                const beforeBalance2 = await deployed.ton.balanceOf(addr1.address);
+    
+                agendaID = (await deployed.daoagendaManager.numAgendas()).sub(1);
+                console.log("beforeAgendaID : ", agendaID)
+                // create agenda
+                await deployed.ton.connect(addr1).approveAndCall(
+                    DAOProxyLogicV2.address,
+                    agendaFee,
+                    param
+                );
+    
+                const afterBalance = await deployed.ton.balanceOf(addr1.address);
+                expect(afterBalance).to.be.lt(beforeBalance2);
+                expect(beforeBalance2.sub(afterBalance)).to.be.equal(agendaFee);
+    
+                agendaID = (await deployed.daoagendaManager.numAgendas()).sub(1);
+                console.log("afterAgendaID : ", agendaID)
+    
+                const executionInfo = await deployed.daoagendaManager.getExecutionInfo(agendaID);
+                // console.log(executionInfo)
+                // console.log(executionInfo[0][0])
+                // console.log(executionInfo[1][0])
+                expect(executionInfo[0][0]).to.be.equal(deployed.daoagendaManager.address)
+                expect(executionInfo[0][1]).to.be.equal(deployed.daoagendaManager.address)
+                expect(executionInfo[0][2]).to.be.equal(DAOProxyLogicV2.address)
+                expect(executionInfo[1][0]).to.be.equal(functionBytecode1);
+                expect(executionInfo[1][1]).to.be.equal(functionBytecode2);
+                expect(executionInfo[1][2]).to.be.equal(functionBytecode3);
+            })
+
+            it('increase block time and check votable', async function () {
+                const agenda = await deployed.daoagendaManager.agendas(agendaID);  
+                const noticeEndTimestamp = agenda[AGENDA_INDEX_NOTICE_END_TIMESTAMP];
+                await time.increaseTo(Number(noticeEndTimestamp));
+                expect(await deployed.daoagendaManager.isVotableStatus(agendaID)).to.be.equal(true);
+            });
+    
+            it(`cast vote`, async function () {
+                await castVote(agendaID, candidates[0], VOTE_YES, sequencerIndexSave);
+                await castVote(agendaID, candidates[1], VOTE_YES, sequencerIndexSave);
+            });
+    
+            it("check vote result/status", async function () {
+                const agenda = await deployed.daoagendaManager.agendas(agendaID);
+                expect(agenda[AGENDA_INDEX_RESULT]).to.be.equal(AGENDA_RESULT_ACCEPTED);
+                expect(agenda[AGENDA_INDEX_STATUS]).to.be.equal(AGENDA_STATUS_WAITING_EXEC);
+            });
+    
+            it('increase block time', async function () {
+                const agenda = await deployed.daoagendaManager.agendas(agendaID);  
+                const noticeEndTimestamp = agenda[AGENDA_INDEX_VOTING_END_TIMESTAMP];
+                await time.increaseTo(Number(noticeEndTimestamp)+1);
+                expect(await deployed.daoagendaManager.isVotableStatus(agendaID)).to.be.equal(false);
+            });
+    
+            it("execute & check functionBytes1,2,3 ", async function () {
+                const beforeAgenda = await deployed.daoagendaManager.agendas(agendaID); 
+                expect(beforeAgenda[AGENDA_INDEX_EXECUTED]).to.be.equal(false);
+                const beforeExecutedInfo = await deployed.daoagendaManager.getExecutionInfo(agendaID);
+                expect(beforeExecutedInfo.executeStartFrom).to.be.equal(0)
+                
+                const beforeValue = await deployed.daoagendaManager.minimumNoticePeriodSeconds();
+                const beforeValue2 = await deployed.daoagendaManager.createAgendaFees();
+                const beforeValue3 = await DAOProxyLogicV2.maxMember();
+                const beforeValue4 = await DAOProxyLogicV2.quorum();
+    
+                const executeTx = await DAOProxyLogicV1.executeAgenda(agendaID);
+    
+                const afterValue = await deployed.daoagendaManager.minimumNoticePeriodSeconds();
+                const afterValue2 = await deployed.daoagendaManager.createAgendaFees();
+                const afterValue3 = await DAOProxyLogicV2.maxMember();
+                const afterValue4 = await DAOProxyLogicV2.quorum();
+                expect(beforeValue).to.be.not.equal(afterValue);
+                expect(beforeValue2).to.be.not.equal(afterValue2);
+                expect(beforeValue3).to.be.not.equal(afterValue3);
+                expect(beforeValue4).to.be.not.equal(afterValue4);
+                
+                
+                expect(afterValue).to.be.equal(100);
+                expect(afterValue2).to.be.equal(daoAgendaInfo.agendaFee);
+                expect(afterValue3).to.be.equal(4);
+                expect(afterValue4).to.be.equal(3);
+    
+                const afterExecutedInfo = await deployed.daoagendaManager.getExecutionInfo(agendaID);
+                expect(afterExecutedInfo.executeStartFrom).to.be.equal(3)
+    
+                const afterAgenda = await deployed.daoagendaManager.agendas(agendaID); 
+                expect(afterAgenda[AGENDA_INDEX_EXECUTED]).to.be.equal(true);
+                //afterAgenda[AGENDA_INDEX_EXECUTED_TIMESTAMP].should.be.bignumber.gt(toBN("0")); 
+            });
+        })
+    })
 
     // describe("#11. callTest", () => {
     //     it("just calldata check", async () => {

@@ -415,11 +415,10 @@ contract DAOv2CommitteeV2 is
         if(checkSender == 0){
             //newMember가 V1일때
 
-            console.log("1");
             CandidateInfo storage candidateInfo = _candidateInfos[msg.sender];
             newMember = ICandidate(candidateInfo.candidateContract).candidate();
-            console.log("msg.sender :", msg.sender);
-            console.log("newMember :", newMember);
+            // console.log("msg.sender :", msg.sender);
+            // console.log("newMember :", newMember);
             require(
                 ICandidate(candidateInfo.candidateContract).isCandidateContract(),
                 "DAO: NC"
@@ -432,7 +431,6 @@ contract DAOv2CommitteeV2 is
                 candidateInfo.memberJoinedTime == 0,
                 "DAO: AM"
             );
-            console.log("2");
             candidateInfo.memberJoinedTime = uint128(block.timestamp);
             candidateInfo.indexMembers = _memberIndex;
 
@@ -441,7 +439,7 @@ contract DAOv2CommitteeV2 is
             seqIndex[_memberIndex] = 0;
 
             if (prevMember == address(0)) {
-                console.log("no this");
+                console.log("before retire member");
                 members[_memberIndex] = newMember;
                 emit ChangedMember(_memberIndex, prevMember, newMember);
                 return true;
@@ -451,7 +449,6 @@ contract DAOv2CommitteeV2 is
             console.log("checkPreMember : ", checkPreMember);
             if(checkPreMember == 0) {
                 //V1끼리 비교
-                console.log("2");
                 address prevMemberContract = candidateContract(prevMember);
                 require(
                     ICandidate(candidateInfo.candidateContract).totalStaked() > ICandidate(prevMemberContract).totalStaked(),
@@ -469,19 +466,11 @@ contract DAOv2CommitteeV2 is
                     console.log("newMember V1, prevMember V2 sequencer");
                     compareAddr = sequencer;
                     compareIndex = prevCandidateInfo.sequencerIndex;
-                    // require(
-                    //     ICandidate(msg.sender).totalStaked() > IStaking(address(sequencer)).balanceOfLton(prevCandidateInfo.sequencerIndex,prevMember),
-                    //     "not enough amount"
-                    // );
                 } else {
                     //newMember는 V1, prevMember는 V2의 candidate    
                     console.log("newMember V1, prevMember V2 candidate");
                     compareAddr = candidate;
                     compareIndex = prevCandidateInfo.candidateIndex;
-                    // require(
-                    //     ICandidate(msg.sender).totalStaked() > IStaking(address(candidate)).balanceOfLton(prevCandidateInfo.candidateIndex,prevMember),
-                    //     "not enough amount"
-                    // );
                 }
                 console.log("V2 -> V1 member change");
                 require(
@@ -536,12 +525,10 @@ contract DAOv2CommitteeV2 is
                     console.log(prevCandidateInfo.candidateIndex);
                     if(checkPreMember == 1) {
                         //newMember는 V2의 sequencer, prevMember는 V2의 sequencerCandidate
-                        // console.log("sequencerV2");
                         compareAddr = sequencer;
                         compareIndex = prevCandidateInfo.sequencerIndex;    
                     } else {
                         //newMember는 V2의 sequencer, prevMember는 V2의 candidate    
-                        // console.log("candidateV2");
                         compareAddr = candidate;
                         compareIndex = prevCandidateInfo.candidateIndex;
                     }
