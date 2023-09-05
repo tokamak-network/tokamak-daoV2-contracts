@@ -1,0 +1,250 @@
+{
+  "_format": "hh-sol-artifact-1",
+  "contractName": "StorageStateCommittee",
+  "sourceName": "contracts/dao/StorageStateCommittee.sol",
+  "abi": [
+    {
+      "inputs": [],
+      "name": "activityRewardPerSecond",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "agendaManager",
+      "outputs": [
+        {
+          "internalType": "contract IDAOAgendaManager",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_candidate",
+          "type": "address"
+        }
+      ],
+      "name": "candidateContract",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "candidateFactory",
+      "outputs": [
+        {
+          "internalType": "contract ICandidateFactory",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_candidate",
+          "type": "address"
+        }
+      ],
+      "name": "candidateInfos",
+      "outputs": [
+        {
+          "components": [
+            {
+              "internalType": "address",
+              "name": "candidateContract",
+              "type": "address"
+            },
+            {
+              "internalType": "uint256",
+              "name": "indexMembers",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint128",
+              "name": "memberJoinedTime",
+              "type": "uint128"
+            },
+            {
+              "internalType": "uint128",
+              "name": "rewardPeriod",
+              "type": "uint128"
+            },
+            {
+              "internalType": "uint128",
+              "name": "claimedTimestamp",
+              "type": "uint128"
+            }
+          ],
+          "internalType": "struct IStorageStateCommittee.CandidateInfo",
+          "name": "",
+          "type": "tuple"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "name": "candidates",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "daoVault",
+      "outputs": [
+        {
+          "internalType": "contract IDAOVault",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_candidate",
+          "type": "address"
+        }
+      ],
+      "name": "isMember",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "layer2Registry",
+      "outputs": [
+        {
+          "internalType": "contract ILayer2Registry",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "maxMember",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "name": "members",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "quorum",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "seigManager",
+      "outputs": [
+        {
+          "internalType": "contract ISeigManager",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "ton",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    }
+  ],
+  "bytecode": "0x608060405234801561001057600080fd5b506103ca806100206000396000f3fe608060405234801561001057600080fd5b50600436106100ca5760003560e01c8063651d08cd1161007c578063651d08cd146102495780636fb7f558146102755780637f33163614610288578063a230c52414610291578063b5dd1158146102d8578063cc48b947146102eb578063cf2a239c146102fe57600080fd5b806303e3c9ac146100cf5780631703a018146100eb57806327fd92fd146100f45780632e011c1e1461011f5780633477ee2e146102105780635903bd6c146102235780635daf08ca14610236575b600080fd5b6100d860085481565b6040519081526020015b60405180910390f35b6100d8600a5481565b600254610107906001600160a01b031681565b6040516001600160a01b0390911681526020016100e2565b6101bb61012d36600461034b565b6040805160a0808201835260008083526020808401829052838501829052606080850183905260809485018390526001600160a01b0396871683526009825291859020855193840186528054909616835260018601549083015260028501546001600160801b0380821695840195909552600160801b90048416908201526003909301549091169082015290565b6040805182516001600160a01b0316815260208084015190820152828201516001600160801b03908116928201929092526060808401518316908201526080928301519091169181019190915260a0016100e2565b61010761021e36600461037b565b610311565b600154610107906001600160a01b031681565b61010761024436600461037b565b61033b565b61010761025736600461034b565b6001600160a01b039081166000908152600960205260409020541690565b600554610107906001600160a01b031681565b6100d8600b5481565b6102c861029f36600461034b565b6001600160a01b03166000908152600960205260409020600201546001600160801b0316151590565b60405190151581526020016100e2565b600354610107906001600160a01b031681565b600054610107906001600160a01b031681565b600454610107906001600160a01b031681565b6006818154811061032157600080fd5b6000918252602090912001546001600160a01b0316905081565b6007818154811061032157600080fd5b60006020828403121561035d57600080fd5b81356001600160a01b038116811461037457600080fd5b9392505050565b60006020828403121561038d57600080fd5b503591905056fea26469706673582212204cb9d683ec440874ee2220cbb091ae178b022337c624f473c2ef07504017fdd964736f6c63430008120033",
+  "deployedBytecode": "0x608060405234801561001057600080fd5b50600436106100ca5760003560e01c8063651d08cd1161007c578063651d08cd146102495780636fb7f558146102755780637f33163614610288578063a230c52414610291578063b5dd1158146102d8578063cc48b947146102eb578063cf2a239c146102fe57600080fd5b806303e3c9ac146100cf5780631703a018146100eb57806327fd92fd146100f45780632e011c1e1461011f5780633477ee2e146102105780635903bd6c146102235780635daf08ca14610236575b600080fd5b6100d860085481565b6040519081526020015b60405180910390f35b6100d8600a5481565b600254610107906001600160a01b031681565b6040516001600160a01b0390911681526020016100e2565b6101bb61012d36600461034b565b6040805160a0808201835260008083526020808401829052838501829052606080850183905260809485018390526001600160a01b0396871683526009825291859020855193840186528054909616835260018601549083015260028501546001600160801b0380821695840195909552600160801b90048416908201526003909301549091169082015290565b6040805182516001600160a01b0316815260208084015190820152828201516001600160801b03908116928201929092526060808401518316908201526080928301519091169181019190915260a0016100e2565b61010761021e36600461037b565b610311565b600154610107906001600160a01b031681565b61010761024436600461037b565b61033b565b61010761025736600461034b565b6001600160a01b039081166000908152600960205260409020541690565b600554610107906001600160a01b031681565b6100d8600b5481565b6102c861029f36600461034b565b6001600160a01b03166000908152600960205260409020600201546001600160801b0316151590565b60405190151581526020016100e2565b600354610107906001600160a01b031681565b600054610107906001600160a01b031681565b600454610107906001600160a01b031681565b6006818154811061032157600080fd5b6000918252602090912001546001600160a01b0316905081565b6007818154811061032157600080fd5b60006020828403121561035d57600080fd5b81356001600160a01b038116811461037457600080fd5b9392505050565b60006020828403121561038d57600080fd5b503591905056fea26469706673582212204cb9d683ec440874ee2220cbb091ae178b022337c624f473c2ef07504017fdd964736f6c63430008120033",
+  "linkReferences": {},
+  "deployedLinkReferences": {}
+}

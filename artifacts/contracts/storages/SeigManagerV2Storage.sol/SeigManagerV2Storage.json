@@ -1,0 +1,251 @@
+{
+  "_format": "hh-sol-artifact-1",
+  "contractName": "SeigManagerV2Storage",
+  "sourceName": "contracts/storages/SeigManagerV2Storage.sol",
+  "abi": [
+    {
+      "inputs": [],
+      "name": "candidate",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "dao",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "lastSeigBlock",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "layer2Manager",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "minimumBlocksForUpdateSeig",
+      "outputs": [
+        {
+          "internalType": "uint32",
+          "name": "",
+          "type": "uint32"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "optimismSequencer",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "ratesDao",
+      "outputs": [
+        {
+          "internalType": "uint16",
+          "name": "",
+          "type": "uint16"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "ratesStosHolders",
+      "outputs": [
+        {
+          "internalType": "uint16",
+          "name": "",
+          "type": "uint16"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "ratesTonStakers",
+      "outputs": [
+        {
+          "internalType": "uint16",
+          "name": "",
+          "type": "uint16"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "ratesUnits",
+      "outputs": [
+        {
+          "internalType": "uint16",
+          "name": "",
+          "type": "uint16"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "seigManagerV1",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "seigPerBlock",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "name": "snapshotTime",
+      "outputs": [
+        {
+          "internalType": "uint32",
+          "name": "",
+          "type": "uint32"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "startBlock",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "stosDistribute",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "ton",
+      "outputs": [
+        {
+          "internalType": "contract IERC20",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "tot",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "wton",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    }
+  ],
+  "bytecode": "0x6080604052600c805460ff60601b19166c0100000000000000000000000017905534801561002c57600080fd5b506103178061003c6000396000f3fe608060405234801561001057600080fd5b50600436106100f65760003560e01c80636c8381f8116100925780636c8381f8146101ed5780638b95087b146102005780638d62d94914610218578063a16d6aa71461022b578063cc48b9471461023e578063da0dc13514610251578063f1ae4e9f14610264578063f35c89e814610272578063fb7d324d1461027b57600080fd5b806316b5d5bd146100fb5780631dc0f9bb1461012b578063247e55451461015357806325dea4b01461017a5780634162169f1461019057806348cd4cb1146101a35780634ab6b462146101ba5780635f40a349146101d157806363a3a2f5146101da575b600080fd5b60065461010e906001600160a01b031681565b6040516001600160a01b0390911681526020015b60405180910390f35b61013e6101393660046102c8565b61028e565b60405163ffffffff9091168152602001610122565b600c546101679062010000900461ffff1681565b60405161ffff9091168152602001610122565b600c5461016790640100000000900461ffff1681565b60025461010e906001600160a01b031681565b6101ac600b5481565b604051908152602001610122565b600c5461013e90600160401b900463ffffffff1681565b6101ac60095481565b60045461010e906001600160a01b031681565b60085461010e906001600160a01b031681565b600c54610167906601000000000000900461ffff1681565b60015461010e906001600160a01b031681565b60055461010e906001600160a01b031681565b60005461010e906001600160a01b031681565b60075461010e906001600160a01b031681565b600c546101679061ffff1681565b6101ac600a5481565b60035461010e906001600160a01b031681565b6011818154811061029e57600080fd5b9060005260206000209060089182820401919006600402915054906101000a900463ffffffff1681565b6000602082840312156102da57600080fd5b503591905056fea2646970667358221220b5f436b3683ae5abe5cd52123335375ef92299cba12135672d48ec3afa05cbcb64736f6c63430008120033",
+  "deployedBytecode": "0x608060405234801561001057600080fd5b50600436106100f65760003560e01c80636c8381f8116100925780636c8381f8146101ed5780638b95087b146102005780638d62d94914610218578063a16d6aa71461022b578063cc48b9471461023e578063da0dc13514610251578063f1ae4e9f14610264578063f35c89e814610272578063fb7d324d1461027b57600080fd5b806316b5d5bd146100fb5780631dc0f9bb1461012b578063247e55451461015357806325dea4b01461017a5780634162169f1461019057806348cd4cb1146101a35780634ab6b462146101ba5780635f40a349146101d157806363a3a2f5146101da575b600080fd5b60065461010e906001600160a01b031681565b6040516001600160a01b0390911681526020015b60405180910390f35b61013e6101393660046102c8565b61028e565b60405163ffffffff9091168152602001610122565b600c546101679062010000900461ffff1681565b60405161ffff9091168152602001610122565b600c5461016790640100000000900461ffff1681565b60025461010e906001600160a01b031681565b6101ac600b5481565b604051908152602001610122565b600c5461013e90600160401b900463ffffffff1681565b6101ac60095481565b60045461010e906001600160a01b031681565b60085461010e906001600160a01b031681565b600c54610167906601000000000000900461ffff1681565b60015461010e906001600160a01b031681565b60055461010e906001600160a01b031681565b60005461010e906001600160a01b031681565b60075461010e906001600160a01b031681565b600c546101679061ffff1681565b6101ac600a5481565b60035461010e906001600160a01b031681565b6011818154811061029e57600080fd5b9060005260206000209060089182820401919006600402915054906101000a900463ffffffff1681565b6000602082840312156102da57600080fd5b503591905056fea2646970667358221220b5f436b3683ae5abe5cd52123335375ef92299cba12135672d48ec3afa05cbcb64736f6c63430008120033",
+  "linkReferences": {},
+  "deployedLinkReferences": {}
+}

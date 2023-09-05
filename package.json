@@ -1,5 +1,5 @@
 {
-  "name": "hardhat-project",
+  "name": "@tokamak-network/tokamak-daov2-contracts",
   "devDependencies": {
     "@ethersproject/providers": "^5.7.2",
     "@nomicfoundation/hardhat-chai-matchers": "^1.0.6",
@@ -37,5 +37,22 @@
   "dependencies": {
     "@openzeppelin/contracts": "^4.8.2",
     "web3-eth-abi": "^1.9.0"
-  }
+  },
+  "description": "As TON Staking is upgraded to V2, the DAO contract is also upgraded.",
+  "version": "1.0.0",
+  "main": "index.js",
+  "directories": {
+    "test": "test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tokamak-network/tokamak-daoV2-contracts.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/tokamak-network/tokamak-daoV2-contracts/issues"
+  },
+  "homepage": "https://github.com/tokamak-network/tokamak-daoV2-contracts#readme"
 }

@@ -1,0 +1,16 @@
+{
+  "_format": "hh-sol-artifact-1",
+  "contractName": "MockL2Messenger",
+  "sourceName": "contracts/test/MockL2Messenger.sol",
+  "abi": [
+    {
+      "inputs": [],
+      "stateMutability": "nonpayable",
+      "type": "constructor"
+    }
+  ],
+  "bytecode": "0x6080604052348015600f57600080fd5b50603f80601d6000396000f3fe6080604052600080fdfea2646970667358221220c4e0afae5b99fd6a00b5c0e9dc66a4ec4b57ba0436dcb80967e9670126754e6a64736f6c63430008120033",
+  "deployedBytecode": "0x6080604052600080fdfea2646970667358221220c4e0afae5b99fd6a00b5c0e9dc66a4ec4b57ba0436dcb80967e9670126754e6a64736f6c63430008120033",
+  "linkReferences": {},
+  "deployedLinkReferences": {}
+}

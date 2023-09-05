@@ -1,0 +1,10 @@
+{
+  "_format": "hh-sol-artifact-1",
+  "contractName": "OptimismSequencerStorage",
+  "sourceName": "contracts/storages/OptimismSequencerStorage.sol",
+  "abi": [],
+  "bytecode": "0x6080604052348015600f57600080fd5b50603f80601d6000396000f3fe6080604052600080fdfea264697066735822122021fbf08249220e1e6febee85f33a4307fde6f1620534671722ce105e82948e0164736f6c63430008120033",
+  "deployedBytecode": "0x6080604052600080fdfea264697066735822122021fbf08249220e1e6febee85f33a4307fde6f1620534671722ce105e82948e0164736f6c63430008120033",
+  "linkReferences": {},
+  "deployedLinkReferences": {}
+}
