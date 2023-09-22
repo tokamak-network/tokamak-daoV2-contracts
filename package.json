@@ -39,7 +39,7 @@
     "web3-eth-abi": "^1.9.0"
   },
   "description": "As TON Staking is upgraded to V2, the DAO contract is also upgraded.",
-  "version": "1.0.1",
+  "version": "0.0.1",
   "main": "index.js",
   "directories": {
     "test": "test"
