@@ -113,7 +113,7 @@ export const daostakingV2Fixtures = async function (): Promise<DAOStakingV2Fixtu
     const optimismSequencer = OptimismSequencerLogic_.attach(optimismSequencerProxy.address) as OptimismSequencer
 
     //
-    const Candidate_ = await ethers.getContractFactory('Candidate' , {
+    const Candidate_ = await ethers.getContractFactory('CandidateV2' , {
         signer: deployer, libraries: { LibOperator: libOperator.address }
     })
     // const Candidate_ = await ethers.getContractFactory('Candidate')

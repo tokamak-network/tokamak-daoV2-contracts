@@ -1,0 +1,11 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`DAOv2Committee #7. DAOv2Committee set #7-3. V2 createSequencerCandidate Approve the minimum security deposit and create. 1`] = `452256`;
+
+exports[`DAOv2Committee #7. DAOv2Committee set #7-4. V2 createCandidate Approve the minimum deposit and create candidate1. 1`] = `694189`;
+
+exports[`DAOv2Committee #7. DAOv2Committee set #7-4. V2 createCandidate Approve the minimum deposit and create candidate2. 1`] = `541492`;
+
+exports[`DAOv2Committee #7. DAOv2Committee set #7-4. V2 createCandidate Approve the minimum deposit and create candidate3. 1`] = `541480`;
+
+exports[`DAOv2Committee #7. DAOv2Committee set #7-4. V2 createCandidate Approve the minimum deposit and create candidate4. 1`] = `541468`;
